@@ -1,0 +1,50 @@
+{
+  "apiKey": "your-reachu-api-key-here",
+  "environment": "production",
+  "theme": {
+    "name": "Minimal Monochrome",
+    "mode": "automatic",
+    "lightColors": {
+      "primary": "#333333",
+      "secondary": "#666666",
+      "success": "#4CAF50",
+      "warning": "#FF9800",
+      "error": "#F44336",
+      "info": "#2196F3",
+      "background": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "surfaceSecondary": "#F5F5F5",
+      "textPrimary": "#212121",
+      "textSecondary": "#757575",
+      "textTertiary": "#BDBDBD",
+      "border": "#E0E0E0",
+      "borderSecondary": "#CCCCCC"
+    },
+    "darkColors": {
+      "primary": "#CCCCCC",
+      "secondary": "#999999",
+      "success": "#66BB6A",
+      "warning": "#FFB74D",
+      "error": "#EF5350",
+      "info": "#42A5F5",
+      "background": "#111111",
+      "surface": "#222222",
+      "surfaceSecondary": "#333333",
+      "textPrimary": "#EEEEEE",
+      "textSecondary": "#AAAAAA",
+      "textTertiary": "#777777",
+      "border": "#444444",
+      "borderSecondary": "#555555"
+    }
+  },
+  "cart": {
+    "floatingCartPosition": "bottomLeft",
+    "floatingCartDisplayMode": "iconOnly",
+    "floatingCartSize": "small"
+  },
+  "ui": {
+    "enableAnimations": false,
+    "showProductBrands": false,
+    "enableHapticFeedback": false
+  }
+}

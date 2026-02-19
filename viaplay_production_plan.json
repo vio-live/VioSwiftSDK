@@ -1,0 +1,376 @@
+{
+  "project": "Viaplay Production Implementation Plan",
+  "description": "Granular production implementation plan for converting Viaplay demo into production-ready system with backend, iOS (Swift), and Kotlin (Android) support",
+  "total_cards": 120,
+  "estimations": {
+    "total_project_hours": 1200,
+    "total_project_days": 150,
+    "total_project_weeks": 30,
+    "mvp_hours": 832,
+    "mvp_days": 104,
+    "mvp_weeks": 21,
+    "post_mvp_hours": 480,
+    "post_mvp_days": 60,
+    "post_mvp_weeks": 12
+  },
+  "board_id": "697341164d92cf9e79c30887",
+  "list_id": "697341337d07268929149039",
+  "modules": [
+    {
+      "module": 0,
+      "name": "Project Planning & Research",
+      "description": "Initial planning, research, estimation, and task review",
+      "cards": [
+        "0.1: Review Existing Codebase Structure",
+        "0.2: Research Technology Stack Requirements",
+        "0.3: Create Detailed Project Estimation",
+        "0.4: Review Tasks with Development Team",
+        "0.5: Assign Tasks to Developers",
+        "0.6: Setup Development Environment",
+        "0.7: Create Project Repository Structure",
+        "0.8: Define API Contract Specifications",
+        "0.9: Create Architecture Diagrams",
+        "0.10: Define Coding Standards and Guidelines"
+      ]
+    },
+    {
+      "module": 1,
+      "name": "Backend - Database Schema",
+      "description": "Database schema design and implementation",
+      "cards": [
+        "1.1: Create Matches Table",
+        "1.2: Create Timeline Events Table",
+        "1.3: Create Event Types Table",
+        "1.4: Create Match Phases Table",
+        "1.5: Create Chat Messages Table",
+        "1.6: Create Chat Users Table",
+        "1.7: Create Message Moderation Table",
+        "1.8: Create Polls Table",
+        "1.9: Create Poll Options Table",
+        "1.10: Create Poll Responses Table",
+        "1.11: Create Contests Table",
+        "1.12: Create Contest Participants Table",
+        "1.13: Create Highlights Table",
+        "1.14: Create Match Statistics Table"
+      ]
+    },
+    {
+      "module": 2,
+      "name": "Backend - REST API Setup",
+      "description": "Basic REST API infrastructure setup",
+      "cards": [
+        "2.1: Setup Express.js Server",
+        "2.2: Configure Database Connection",
+        "2.3: Setup API Routes Structure",
+        "2.4: Implement Request Validation",
+        "2.5: Setup Error Handling Middleware",
+        "2.6: Configure CORS"
+      ]
+    },
+    {
+      "module": 3,
+      "name": "Backend - Timeline API Endpoints",
+      "description": "REST API endpoints for timeline functionality",
+      "cards": [
+        "3.1: GET Timeline Events Endpoint",
+        "3.2: POST Create Timeline Event Endpoint",
+        "3.3: GET Timeline Events by Type Endpoint",
+        "3.4: GET Timeline Events by Phase Endpoint",
+        "3.5: POST Update Timeline Event Endpoint"
+      ]
+    },
+    {
+      "module": 4,
+      "name": "Backend - Chat API Endpoints",
+      "description": "REST API endpoints for chat functionality",
+      "cards": [
+        "4.1: GET Chat Messages Endpoint",
+        "4.2: POST Send Chat Message Endpoint",
+        "4.3: POST Delete Chat Message Endpoint",
+        "4.4: POST Report Chat Message Endpoint",
+        "4.5: GET Chat Users Endpoint",
+        "4.6: POST Join Chat Endpoint"
+      ]
+    },
+    {
+      "module": 5,
+      "name": "Backend - Polls API Endpoints",
+      "description": "REST API endpoints for polls functionality",
+      "cards": [
+        "5.1: GET Polls Endpoint",
+        "5.2: POST Create Poll Endpoint",
+        "5.3: POST Vote on Poll Endpoint",
+        "5.4: GET Poll Results Endpoint",
+        "5.5: POST Close Poll Endpoint",
+        "5.6: GET Poll by ID Endpoint"
+      ]
+    },
+    {
+      "module": 6,
+      "name": "Backend - WebSocket Setup",
+      "description": "WebSocket infrastructure for real-time updates",
+      "cards": [
+        "6.1: Setup Socket.io Server",
+        "6.2: Implement WebSocket Authentication",
+        "6.3: Create Timeline Event Emitter",
+        "6.4: Create Chat Message Emitter",
+        "6.5: Create Poll Update Emitter",
+        "6.6: Implement Room Management"
+      ]
+    },
+    {
+      "module": 7,
+      "name": "Swift SDK - Timeline Manager",
+      "description": "Swift SDK timeline management implementation",
+      "cards": [
+        "7.1: Create TimelineManager Class",
+        "7.2: Implement Timeline API Client",
+        "7.3: Implement WebSocket Timeline Handler",
+        "7.4: Create Timeline Event Models",
+        "7.5: Implement Timeline Event Parsing",
+        "7.6: Add Timeline Error Handling"
+      ]
+    },
+    {
+      "module": 8,
+      "name": "Swift SDK - Chat Manager",
+      "description": "Swift SDK chat management implementation",
+      "cards": [
+        "8.1: Create ChatManager Class",
+        "8.2: Implement Chat API Client",
+        "8.3: Implement WebSocket Chat Handler",
+        "8.4: Create Chat Message Models",
+        "8.5: Implement Message Moderation",
+        "8.6: Add Chat Error Handling"
+      ]
+    },
+    {
+      "module": 9,
+      "name": "Swift SDK - Polls Manager",
+      "description": "Swift SDK polls management implementation",
+      "cards": [
+        "9.1: Create PollsManager Class",
+        "9.2: Implement Polls API Client",
+        "9.3: Implement WebSocket Polls Handler",
+        "9.4: Create Poll Models",
+        "9.5: Implement Vote Submission",
+        "9.6: Add Polls Error Handling"
+      ]
+    },
+    {
+      "module": 10,
+      "name": "Kotlin SDK - Timeline Manager",
+      "description": "Kotlin SDK timeline management implementation",
+      "cards": [
+        "10.1: Create TimelineManager Class",
+        "10.2: Implement Timeline API Client",
+        "10.3: Implement WebSocket Timeline Handler",
+        "10.4: Create Timeline Event Models",
+        "10.5: Implement Timeline Event Parsing",
+        "10.6: Add Timeline Error Handling"
+      ]
+    },
+    {
+      "module": 11,
+      "name": "Kotlin SDK - Chat Manager",
+      "description": "Kotlin SDK chat management implementation",
+      "cards": [
+        "11.1: Create ChatManager Class",
+        "11.2: Implement Chat API Client",
+        "11.3: Implement WebSocket Chat Handler",
+        "11.4: Create Chat Message Models",
+        "11.5: Implement Message Moderation",
+        "11.6: Add Chat Error Handling"
+      ]
+    },
+    {
+      "module": 12,
+      "name": "Kotlin SDK - Polls Manager",
+      "description": "Kotlin SDK polls management implementation",
+      "cards": [
+        "12.1: Create PollsManager Class",
+        "12.2: Implement Polls API Client",
+        "12.3: Implement WebSocket Polls Handler",
+        "12.4: Create Poll Models",
+        "12.5: Implement Vote Submission",
+        "12.6: Add Polls Error Handling"
+      ]
+    },
+    {
+      "module": 13,
+      "name": "Backend - Additional Endpoints",
+      "description": "Highlights, Statistics, and Contests endpoints",
+      "cards": [
+        "13.1: GET Highlights Endpoint",
+        "13.2: POST Create Highlight Endpoint",
+        "13.3: GET Match Statistics Endpoint",
+        "13.4: POST Update Match Statistics Endpoint",
+        "13.5: GET Contests Endpoint",
+        "13.6: POST Create Contest Endpoint",
+        "13.7: POST Join Contest Endpoint"
+      ]
+    },
+    {
+      "module": 14,
+      "name": "Backend - Authentication",
+      "description": "JWT authentication and authorization",
+      "cards": [
+        "14.1: Setup JWT Authentication",
+        "14.2: Create Authentication Middleware",
+        "14.3: Create Role-Based Access Control"
+      ]
+    },
+    {
+      "module": 15,
+      "name": "Backend - Performance & Security",
+      "description": "Caching, rate limiting, and performance optimization",
+      "cards": [
+        "15.1: Setup Redis Caching",
+        "15.2: Implement Cache Middleware",
+        "15.3: Implement Rate Limiting"
+      ]
+    },
+    {
+      "module": 16,
+      "name": "Swift SDK - UI Components",
+      "description": "SwiftUI components for user interface",
+      "cards": [
+        "16.1: Create Timeline UI Component",
+        "16.2: Create Chat UI Component",
+        "16.3: Create Polls UI Component",
+        "16.4: Integrate Video Player with Timeline"
+      ]
+    },
+    {
+      "module": 17,
+      "name": "Kotlin SDK - UI Components",
+      "description": "Jetpack Compose components for user interface",
+      "cards": [
+        "17.1: Create Timeline UI Component",
+        "17.2: Create Chat UI Component",
+        "17.3: Create Polls UI Component",
+        "17.4: Integrate ExoPlayer with Timeline"
+      ]
+    },
+    {
+      "module": 18,
+      "name": "Testing",
+      "description": "Unit tests, integration tests, and E2E tests",
+      "cards": [
+        "18.1: Write Backend Unit Tests",
+        "18.2: Write Backend Integration Tests",
+        "18.3: Write Swift SDK Unit Tests",
+        "18.4: Write Kotlin SDK Unit Tests",
+        "18.5: Write E2E Tests"
+      ]
+    },
+    {
+      "module": 19,
+      "name": "Deployment & DevOps",
+      "description": "Docker, CI/CD, environment configuration, and monitoring",
+      "cards": [
+        "19.1: Setup Docker Configuration",
+        "19.2: Setup CI/CD Pipeline",
+        "19.3: Setup Environment Variables",
+        "19.4: Setup Monitoring and Logging"
+      ]
+    },
+    {
+      "module": 20,
+      "name": "Documentation",
+      "description": "API documentation, SDK documentation, and integration guides",
+      "cards": [
+        "20.1: Write API Documentation",
+        "20.2: Write Swift SDK Documentation",
+        "20.3: Write Kotlin SDK Documentation",
+        "20.4: Write Integration Guide"
+      ]
+    }
+  ],
+  "labels": {
+    "backend": "6977612281afd7703cd5aa97",
+    "api": "697761251bc377bd1f1460d9",
+    "rest": "6977612c6ae894296427975a",
+    "websocket": "6977612f1e45febcab452252",
+    "swift": "69776125e4e9c65e963446f9",
+    "kotlin": "6977612534afb0e53fef5bee",
+    "android": "6977613c5888a334801b670b",
+    "swiftui": "6977612c0743ac986c40f496",
+    "compose": "697761387aad63afb381fd19",
+    "ui": "697761303c0f8e54279b8326",
+    "components": "697761380eaaca6ae9618ec9",
+    "timeline": "69776125f931c4507d553943",
+    "chat": "697761256bdd8373dc61e85b",
+    "polls": "69776125e2d5f40eef859dc8",
+    "video": "69776134bcbcd3301b9c8cad",
+    "exoplayer": "6977613826c87f32ffffaff0",
+    "testing": "69776125ceb4f9cbd71c79ee",
+    "unit-tests": "69776125ceb4f9cbd71c79ee",
+    "integration-tests": "69776125ceb4f9cbd71c79ee",
+    "e2e": "69776125ceb4f9cbd71c79ee",
+    "deployment": "6977612586aac5bd40ac4af1",
+    "docker": "6977612586aac5bd40ac4af1",
+    "ci-cd": "6977612586aac5bd40ac4af1",
+    "documentation": "6977612f06b222b64d3dfcc9",
+    "auth": "69776134418298b8f953dbbd",
+    "jwt": "69776138658d7cd62551d1fe",
+    "security": "69776126733c6e792e36aa49",
+    "middleware": "69776134b31feae7a9767eab",
+    "admin": "6977613405b9b1eb3088d629",
+    "redis": "6977612586aac5bd40ac4af1",
+    "caching": "6977612586aac5bd40ac4af1",
+    "rate-limiting": "6977613c4f128e56ecbf61d8",
+    "performance": "6977612586aac5bd40ac4af1",
+    "highlights": "6977612f1e45febcab452252",
+    "statistics": "6977612f103983e9e8b0ef3d",
+    "contests": "6977612f103983e9e8b0ef3d",
+    "configuration": "6977612e1eb9e5f689c9fcc0",
+    "env": "6977613837e2df12f05aa84f",
+    "monitoring": "6977612586aac5bd40ac4af1",
+    "logging": "6977612586aac5bd40ac4af1",
+    "integration": "69776134bda5e017252aedd2",
+    "sdk": "6977612c0743ac986c40f496",
+    "priority-high": "69776126733c6e792e36aa49",
+    "priority-medium": "6977612586aac5bd40ac4af1"
+  },
+  "technologies": {
+    "backend": {
+      "framework": "Node.js with Express.js",
+      "database": "PostgreSQL",
+      "orm": "Prisma or TypeORM",
+      "websocket": "Socket.io",
+      "caching": "Redis",
+      "authentication": "JWT",
+      "validation": "Zod or Joi",
+      "testing": "Jest, Supertest",
+      "documentation": "OpenAPI/Swagger"
+    },
+    "swift": {
+      "framework": "SwiftUI",
+      "networking": "URLSession or Alamofire",
+      "websocket": "Starscream or SocketRocket",
+      "reactive": "Combine",
+      "testing": "XCTest",
+      "documentation": "Jazzy or DocC"
+    },
+    "kotlin": {
+      "framework": "Jetpack Compose",
+      "networking": "Ktor or Retrofit",
+      "websocket": "Ktor WebSocket",
+      "reactive": "Kotlin Coroutines, Flow",
+      "testing": "JUnit",
+      "documentation": "Dokka"
+    }
+  },
+  "features": [
+    "Live match timeline",
+    "Interactive chat",
+    "Video highlights",
+    "Polls and quizzes",
+    "Match statistics",
+    "Social media integration (Tweets)",
+    "E-commerce integration (Tipio/Reachu SDK)"
+  ],
+  "created_date": "2026-01-23",
+  "status": "Planning Complete - Ready for Development"
+}

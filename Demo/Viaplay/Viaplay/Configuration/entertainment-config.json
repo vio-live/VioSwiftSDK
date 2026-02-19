@@ -1,0 +1,378 @@
+{
+  "entertainment": {
+    "enabled": true,
+    "autoStart": true,
+    "showNotifications": true,
+    "soundEnabled": true,
+    "components": [
+      {
+        "id": "trivia-world-cup",
+        "type": "trivia",
+        "state": "active",
+        "title": "¿Quién ganó el último Mundial de Fútbol?",
+        "description": "Demuestra tus conocimientos sobre el Mundial 2022",
+        "startTime": "2024-12-15T19:00:00Z",
+        "endTime": "2024-12-15T19:05:00Z",
+        "interactionType": "single_choice",
+        "options": [
+          {
+            "id": "opt-argentina",
+            "text": "Argentina",
+            "value": "argentina",
+            "emoji": "🇦🇷",
+            "isCorrect": true
+          },
+          {
+            "id": "opt-france",
+            "text": "Francia",
+            "value": "france",
+            "emoji": "🇫🇷",
+            "isCorrect": false
+          },
+          {
+            "id": "opt-brazil",
+            "text": "Brasil",
+            "value": "brazil",
+            "emoji": "🇧🇷",
+            "isCorrect": false
+          },
+          {
+            "id": "opt-germany",
+            "text": "Alemania",
+            "value": "germany",
+            "emoji": "🇩🇪",
+            "isCorrect": false
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": true,
+        "points": 10,
+        "timeLimit": 30,
+        "metadata": {
+          "category": "sports",
+          "difficulty": "easy",
+          "source": "fifa"
+        }
+      },
+      {
+        "id": "poll-favorite-team",
+        "type": "poll",
+        "state": "active",
+        "title": "¿Cuál es tu equipo favorito de La Liga?",
+        "description": "Vota por tu equipo preferido",
+        "startTime": "2024-12-15T19:00:00Z",
+        "endTime": "2024-12-15T20:00:00Z",
+        "interactionType": "single_choice",
+        "options": [
+          {
+            "id": "team-real-madrid",
+            "text": "Real Madrid",
+            "value": "real_madrid",
+            "emoji": "⚪",
+            "voteCount": 145
+          },
+          {
+            "id": "team-barcelona",
+            "text": "FC Barcelona",
+            "value": "barcelona",
+            "emoji": "🔵",
+            "voteCount": 132
+          },
+          {
+            "id": "team-atletico",
+            "text": "Atlético Madrid",
+            "value": "atletico",
+            "emoji": "🔴",
+            "voteCount": 87
+          },
+          {
+            "id": "team-sevilla",
+            "text": "Sevilla FC",
+            "value": "sevilla",
+            "emoji": "⚪🔴",
+            "voteCount": 45
+          },
+          {
+            "id": "team-other",
+            "text": "Otro equipo",
+            "value": "other",
+            "emoji": "⭐",
+            "voteCount": 23
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": true,
+        "metadata": {
+          "category": "sports",
+          "league": "la_liga"
+        }
+      },
+      {
+        "id": "prediction-next-goal",
+        "type": "prediction",
+        "state": "upcoming",
+        "title": "¿Quién marcará el próximo gol?",
+        "description": "Predice qué jugador anotará el siguiente gol del partido",
+        "startTime": "2024-12-15T19:30:00Z",
+        "endTime": "2024-12-15T19:35:00Z",
+        "interactionType": "single_choice",
+        "options": [
+          {
+            "id": "player-1",
+            "text": "Cristiano Ronaldo",
+            "value": "ronaldo",
+            "emoji": "⚽"
+          },
+          {
+            "id": "player-2",
+            "text": "Lionel Messi",
+            "value": "messi",
+            "emoji": "⚽"
+          },
+          {
+            "id": "player-3",
+            "text": "Kylian Mbappé",
+            "value": "mbappe",
+            "emoji": "⚽"
+          },
+          {
+            "id": "player-4",
+            "text": "Erling Haaland",
+            "value": "haaland",
+            "emoji": "⚽"
+          },
+          {
+            "id": "no-goal",
+            "text": "Ninguno (0-0)",
+            "value": "no_goal",
+            "emoji": "🚫"
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": false,
+        "points": 20,
+        "timeLimit": 60,
+        "metadata": {
+          "category": "sports",
+          "type": "live_prediction"
+        }
+      },
+      {
+        "id": "quiz-football-history",
+        "type": "quiz",
+        "state": "upcoming",
+        "title": "Historia del Fútbol - Quiz",
+        "description": "Pon a prueba tus conocimientos sobre la historia del fútbol",
+        "startTime": "2024-12-15T20:00:00Z",
+        "endTime": "2024-12-15T20:10:00Z",
+        "interactionType": "single_choice",
+        "options": [
+          {
+            "id": "q1-opt1",
+            "text": "1930",
+            "value": "1930",
+            "isCorrect": true
+          },
+          {
+            "id": "q1-opt2",
+            "text": "1934",
+            "value": "1934",
+            "isCorrect": false
+          },
+          {
+            "id": "q1-opt3",
+            "text": "1950",
+            "value": "1950",
+            "isCorrect": false
+          },
+          {
+            "id": "q1-opt4",
+            "text": "1954",
+            "value": "1954",
+            "isCorrect": false
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": true,
+        "points": 15,
+        "timeLimit": 45,
+        "metadata": {
+          "category": "sports",
+          "difficulty": "medium",
+          "questionNumber": 1,
+          "totalQuestions": 5
+        }
+      },
+      {
+        "id": "reaction-goal-celebration",
+        "type": "reaction",
+        "state": "upcoming",
+        "title": "¡Reacciona al gol!",
+        "description": "Expresa tu emoción con una reacción rápida",
+        "startTime": "2024-12-15T19:45:00Z",
+        "endTime": "2024-12-15T19:46:00Z",
+        "interactionType": "emoji",
+        "options": [
+          {
+            "id": "react-fire",
+            "text": "Increíble",
+            "value": "fire",
+            "emoji": "🔥"
+          },
+          {
+            "id": "react-heart",
+            "text": "Me encanta",
+            "value": "heart",
+            "emoji": "❤️"
+          },
+          {
+            "id": "react-wow",
+            "text": "Wow",
+            "value": "wow",
+            "emoji": "😮"
+          },
+          {
+            "id": "react-clap",
+            "text": "Aplauso",
+            "value": "clap",
+            "emoji": "👏"
+          },
+          {
+            "id": "react-party",
+            "text": "Fiesta",
+            "value": "party",
+            "emoji": "🎉"
+          }
+        ],
+        "allowMultipleResponses": true,
+        "showResults": true,
+        "timeLimit": 10,
+        "metadata": {
+          "category": "engagement",
+          "trigger": "goal_scored"
+        }
+      },
+      {
+        "id": "voting-motm",
+        "type": "voting",
+        "state": "upcoming",
+        "title": "Jugador del Partido",
+        "description": "Vota por el mejor jugador del partido",
+        "startTime": "2024-12-15T21:00:00Z",
+        "endTime": "2024-12-15T21:15:00Z",
+        "interactionType": "single_choice",
+        "options": [
+          {
+            "id": "motm-1",
+            "text": "Jugador #10",
+            "value": "player_10",
+            "imageUrl": "https://example.com/player10.jpg"
+          },
+          {
+            "id": "motm-2",
+            "text": "Jugador #7",
+            "value": "player_7",
+            "imageUrl": "https://example.com/player7.jpg"
+          },
+          {
+            "id": "motm-3",
+            "text": "Jugador #9",
+            "value": "player_9",
+            "imageUrl": "https://example.com/player9.jpg"
+          },
+          {
+            "id": "motm-4",
+            "text": "Portero #1",
+            "value": "player_1",
+            "imageUrl": "https://example.com/player1.jpg"
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": true,
+        "points": 5,
+        "metadata": {
+          "category": "sports",
+          "award": "man_of_the_match"
+        }
+      },
+      {
+        "id": "challenge-score-prediction",
+        "type": "challenge",
+        "state": "upcoming",
+        "title": "Desafío: Predice el Marcador Final",
+        "description": "Adivina el resultado exacto del partido",
+        "startTime": "2024-12-15T18:45:00Z",
+        "endTime": "2024-12-15T19:00:00Z",
+        "interactionType": "numeric",
+        "options": [
+          {
+            "id": "score-home",
+            "text": "Goles Local",
+            "value": "home_goals"
+          },
+          {
+            "id": "score-away",
+            "text": "Goles Visitante",
+            "value": "away_goals"
+          }
+        ],
+        "allowMultipleResponses": false,
+        "showResults": false,
+        "points": 50,
+        "metadata": {
+          "category": "sports",
+          "difficulty": "hard",
+          "reward": "bonus_points"
+        }
+      }
+    ],
+    "leaderboard": {
+      "enabled": true,
+      "refreshInterval": 30,
+      "showTop": 10,
+      "prizes": [
+        {
+          "rank": 1,
+          "prize": "Entrada VIP",
+          "icon": "🏆"
+        },
+        {
+          "rank": 2,
+          "prize": "Camiseta Oficial",
+          "icon": "🥈"
+        },
+        {
+          "rank": 3,
+          "prize": "Descuento 50%",
+          "icon": "🥉"
+        }
+      ]
+    },
+    "notifications": {
+      "newComponent": {
+        "enabled": true,
+        "sound": "notification.mp3",
+        "vibrate": true
+      },
+      "componentStarting": {
+        "enabled": true,
+        "advanceWarning": 30
+      },
+      "componentEnding": {
+        "enabled": true,
+        "advanceWarning": 10
+      },
+      "resultsAvailable": {
+        "enabled": true
+      }
+    },
+    "analytics": {
+      "trackViews": true,
+      "trackInteractions": true,
+      "trackCompletions": true,
+      "trackResponseTime": true
+    }
+  }
+}
+
+

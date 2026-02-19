@@ -1,0 +1,24 @@
+{
+  "type": "component_status_changed",
+  "campaignId": 3,
+  "componentId": "offer-banner-xxl-sports-001",
+  "status": "active",
+  "component": {
+    "id": "offer-banner-xxl-sports-001",
+    "type": "offer_banner",
+    "config": {
+      "logoUrl": "https://via.placeholder.com/100x30/00FF00/FFFFFF?text=XXL",
+      "title": "Ukens tilbud",
+      "subtitle": "Se denne ukes beste tilbud",
+      "backgroundImageUrl": "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=400&fit=crop",
+      "countdownEndDate": "2025-12-31T23:59:59Z",
+      "discountBadgeText": "Opp til 30%",
+      "ctaText": "Se alle tilbud →",
+      "ctaLink": "https://xxlsports.no/offers",
+      "overlayOpacity": 0.4,
+      "buttonColor": "#FF6B6B",
+      "deeplinkUrl": "myapp://offers/special",
+      "deeplinkAction": "navigate_to_offers"
+    }
+  }
+}

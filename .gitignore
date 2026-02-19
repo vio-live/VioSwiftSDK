@@ -1,0 +1,27 @@
+.DS_Store
+/.build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.netrc
+# Demo app build artifacts
+Demo/*/.build/
+Demo/*/Package.resolved
+Demo/*/.swiftpm/
+**/ins.instructions.md
+# Backup files
+*.backup
+*.pre-manual
+# Package resolved (should be generated)
+Package.resolved
+
+# Demo applications (only in main branch, ignored in sdk branch)
+# Demo/ - Removed to allow tracking in main branch
+
+# Development workspace (only in main branch, ignored in sdk branch)
+ReachuWorkspace.xcworkspace/
+
+# Kotlin implementation guide (moved to trello-mcp-server)
+KOTLIN_IMPLEMENTATION_GUIDE.md

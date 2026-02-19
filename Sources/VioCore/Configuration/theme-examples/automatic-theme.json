@@ -1,0 +1,53 @@
+{
+  "apiKey": "your-reachu-api-key-here",
+  "environment": "production",
+  "theme": {
+    "name": "Automatic Theme",
+    "mode": "automatic",
+    "lightColors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "success": "#34C759",
+      "warning": "#FF9500",
+      "error": "#FF3B30",
+      "info": "#007AFF",
+      "background": "#F2F2F7",
+      "surface": "#FFFFFF",
+      "surfaceSecondary": "#F9F9F9",
+      "textPrimary": "#000000",
+      "textSecondary": "#8E8E93",
+      "textTertiary": "#C7C7CC",
+      "border": "#E5E5EA",
+      "borderSecondary": "#D1D1D6"
+    },
+    "darkColors": {
+      "primary": "#0A84FF",
+      "secondary": "#5E5CE6",
+      "success": "#32D74B",
+      "warning": "#FF9F0A",
+      "error": "#FF453A",
+      "info": "#0A84FF",
+      "background": "#000000",
+      "surface": "#1C1C1E",
+      "surfaceSecondary": "#2C2C2E",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#8E8E93",
+      "textTertiary": "#48484A",
+      "border": "#38383A",
+      "borderSecondary": "#48484A"
+    }
+  },
+  "cart": {
+    "floatingCartPosition": "bottomRight",
+    "floatingCartDisplayMode": "full",
+    "floatingCartSize": "medium",
+    "autoSaveCart": true,
+    "showCartNotifications": true,
+    "enableGuestCheckout": true
+  },
+  "ui": {
+    "enableAnimations": true,
+    "showProductBrands": true,
+    "enableHapticFeedback": true
+  }
+}

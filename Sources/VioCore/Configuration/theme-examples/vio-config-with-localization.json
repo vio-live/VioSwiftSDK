@@ -1,0 +1,29 @@
+{
+  "apiKey": "your-api-key-here",
+  "environment": "sandbox",
+  "theme": {
+    "name": "Localized Theme",
+    "mode": "automatic",
+    "lightColors": {
+      "primary": "#007AFF",
+      "secondary": "#5856D6",
+      "background": "#FFFFFF",
+      "surface": "#F2F2F7",
+      "textPrimary": "#000000",
+      "textSecondary": "#8E8E93"
+    },
+    "darkColors": {
+      "primary": "#0A84FF",
+      "secondary": "#5E5CE6",
+      "background": "#000000",
+      "surface": "#1C1C1E",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#8E8E93"
+    }
+  },
+  "localization": {
+    "defaultLanguage": "en",
+    "fallbackLanguage": "en",
+    "translationsFile": "reachu-translations"
+  }
+}

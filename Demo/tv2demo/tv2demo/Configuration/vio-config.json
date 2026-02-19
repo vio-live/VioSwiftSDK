@@ -1,0 +1,182 @@
+{
+  "name": "TV2 Demo Configuration",
+  "version": "1.0.0",
+  "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+  "environment": "development",
+  "theme": {
+    "name": "TV2 Dark Theme",
+    "mode": "dark",
+    "lightColors": {
+      "primary": "#7B5FFF",
+      "secondary": "#E893CF",
+      "background": "#FFFFFF",
+      "surface": "#F5F5F5",
+      "surfaceSecondary": "#E0E0E0",
+      "error": "#B00020",
+      "success": "#00C853",
+      "warning": "#FFB300",
+      "info": "#2196F3",
+      "textPrimary": "#000000",
+      "textSecondary": "#757575",
+      "textTertiary": "#9E9E9E",
+      "textOnPrimary": "#FFFFFF",
+      "border": "#E0E0E0",
+      "borderSecondary": "#BDBDBD"
+    },
+    "darkColors": {
+      "primary": "#7B5FFF",
+      "secondary": "#E893CF",
+      "background": "#16001A",
+      "surface": "#2B2438",
+      "surfaceSecondary": "#3D3450",
+      "error": "#CF6679",
+      "success": "#00E676",
+      "warning": "#FFD54F",
+      "info": "#64B5F6",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#B3B3B3",
+      "textTertiary": "#808080",
+      "textOnPrimary": "#FFFFFF",
+      "border": "#3D3450",
+      "borderSecondary": "#4A4A4A"
+    }
+  },
+  "typography": {
+    "fontFamily": "System",
+    "sizes": {
+      "largeTitle": 32,
+      "title": 24,
+      "headline": 18,
+      "body": 16,
+      "caption": 14,
+      "small": 12
+    }
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 16,
+    "lg": 24,
+    "xl": 32,
+    "xxl": 48
+  },
+  "borderRadius": {
+    "small": 8,
+    "medium": 12,
+    "large": 16,
+    "extraLarge": 20,
+    "round": 999
+  },
+  "features": {
+    "enableLiveStreaming": true,
+    "enableProductCatalog": true,
+    "enableCheckout": true,
+    "enableCart": true,
+    "enableWishlist": false,
+    "enableSearch": false,
+    "enableNotifications": false
+  },
+  "ui": {
+    "enableAnimations": true,
+    "showProductBrands": true,
+    "showProductDescriptions": false,
+    "showDiscountBadge": true,
+    "discountBadgeText": "-30%",
+    "enableHapticFeedback": true
+  },
+  "cart": {
+    "floatingCartPosition": "bottomRight",
+    "floatingCartDisplayMode": "iconOnly",
+    "floatingCartSize": "small",
+    "autoSaveCart": true,
+    "showCartNotifications": true,
+    "enableGuestCheckout": true,
+    "requirePhoneNumber": true,
+    "defaultShippingCountry": "NO",
+    "supportedPaymentMethods": ["stripe", "klarna", "vipps", "paypal"]
+  },
+  "productDetail": {
+    "showNavigationTitle": false,
+    "imageFullWidth": true,
+    "imageCornerRadius": 0,
+    "imageHeight": 400
+  },
+  "marketFallback": {
+    "countryCode": "NO",
+    "countryName": "Norway",
+    "currencyCode": "NOK",
+    "currencySymbol": "kr",
+    "phoneCode": "+47",
+    "flag": "https://flagcdn.com/w320/no.png"
+  },
+  "liveShow": {
+    "campaignId": 3,
+    "tipio": {
+      "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+      "baseUrl": "https://stg-dev-microservices.tipioapp.com"
+    }
+  },
+  "localization": {
+    "defaultLanguage": "no",
+    "fallbackLanguage": "en",
+    "translationsFile": "reachu-translations"
+  },
+  "analytics": {
+    "enabled": true,
+    "mixpanelToken": "9195a4c4d8a7bb1ea3df1554a3f0b127",
+    "apiHost": "https://api-eu.mixpanel.com",
+    "trackComponentViews": true,
+    "trackComponentClicks": true,
+    "trackImpressions": true,
+    "trackTransactions": true,
+    "trackProductEvents": true,
+    "autocapture": false,
+    "recordSessionsPercent": 0
+  },
+  "_cartOptions": {
+    "_comment": "Available options for cart configuration",
+    "floatingCartPosition": ["topLeft", "topCenter", "topRight", "centerLeft", "centerRight", "bottomLeft", "bottomCenter", "bottomRight"],
+    "floatingCartDisplayMode": ["iconOnly", "minimal", "compact", "full"],
+    "floatingCartDisplayModeDescription": {
+      "iconOnly": "Circle icon with badge only (smallest)",
+      "minimal": "Icon + item count",
+      "compact": "Icon + item count + price",
+      "full": "Icon + item count + price + arrow (complete)"
+    },
+    "floatingCartSize": ["small", "medium", "large"],
+    "floatingCartSizeDescription": {
+      "small": "Compact size with title3 icon",
+      "medium": "Standard size with title2 icon",
+      "large": "Large size with title icon"
+    }
+  },
+  "_productDetailOptions": {
+    "_comment": "Available options for product detail modal configuration",
+    "modalHeight": ["full", "half", "threeQuarters"],
+    "modalHeightDescription": {
+      "full": "Modal takes full screen height",
+      "half": "Modal takes half screen height (50%)",
+      "threeQuarters": "Modal takes 75% of screen height"
+    },
+    "imageFullWidth": "Boolean - true: image extends to edges without padding, false: image has standard padding",
+    "imageCornerRadius": "Number - Corner radius for product images (0 for square edges)",
+    "imageHeight": "Number (optional) - Fixed height for product images in pixels (e.g., 380). If not set, uses default heights (240 for single image, 300 for gallery)",
+    "showImageGallery": "Boolean - true: show thumbnail gallery for multiple images, false: hide gallery thumbnails and page indicators",
+    "headerStyle": ["standard", "compact"],
+    "headerStyleDescription": {
+      "standard": "Normal header with standard spacing",
+      "compact": "Reduced header height for more content space"
+    },
+    "enableImageZoom": "Boolean - true: allow pinch-to-zoom on product images, false: disable zoom",
+    "showNavigationTitle": "Boolean - true: show 'Product Details' navigation title, false: hide title for immersive view",
+    "closeButtonStyle": ["navigationBar", "overlayTopLeft", "overlayTopRight"],
+    "closeButtonStyleDescription": {
+      "navigationBar": "Standard close button in navigation bar (default)",
+      "overlayTopLeft": "Floating close button on top left corner of image",
+      "overlayTopRight": "Floating close button on top right corner of image"
+    },
+    "showDescription": "Boolean - true: show product description section, false: hide description",
+    "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
+  }
+}
+

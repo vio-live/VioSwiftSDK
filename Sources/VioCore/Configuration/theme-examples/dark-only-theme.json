@@ -1,0 +1,35 @@
+{
+  "apiKey": "your-reachu-api-key-here",
+  "environment": "production",
+  "theme": {
+    "name": "Dark Gaming Theme",
+    "mode": "dark",
+    "darkColors": {
+      "primary": "#00D4AA",
+      "secondary": "#FF6B9D",
+      "success": "#00E676",
+      "warning": "#FFD54F",
+      "error": "#FF5252",
+      "info": "#40C4FF",
+      "background": "#0D1117",
+      "surface": "#1A1A1A",
+      "surfaceSecondary": "#262626",
+      "textPrimary": "#F0F6FC",
+      "textSecondary": "#7D8590",
+      "textTertiary": "#484F58",
+      "border": "#30363D",
+      "borderSecondary": "#21262D"
+    }
+  },
+  "cart": {
+    "floatingCartPosition": "topRight",
+    "floatingCartDisplayMode": "full",
+    "floatingCartSize": "large",
+    "showCartNotifications": true
+  },
+  "ui": {
+    "enableAnimations": true,
+    "showProductBrands": true,
+    "enableHapticFeedback": true
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "apiKey": "your-reachu-api-key-here",
+  "environment": "production",
+  "theme": {
+    "name": "Green E-commerce",
+    "mode": "automatic",
+    "lightColors": {
+      "primary": "#00A86B",
+      "secondary": "#FF6B35",
+      "success": "#28A745",
+      "warning": "#FF9500",
+      "error": "#DC3545",
+      "info": "#007AFF",
+      "background": "#F8FDF8",
+      "surface": "#FFFFFF",
+      "surfaceSecondary": "#F1F8F4",
+      "textPrimary": "#1B4D3E",
+      "textSecondary": "#5A7C69",
+      "textTertiary": "#8FA39A",
+      "border": "#D4E8DC",
+      "borderSecondary": "#B8DBC4"
+    },
+    "darkColors": {
+      "primary": "#00D084",
+      "secondary": "#FF8A5B",
+      "success": "#34CE57",
+      "warning": "#FF9F0A",
+      "error": "#FF453A",
+      "info": "#0A84FF",
+      "background": "#0A1A0F",
+      "surface": "#1C2E20",
+      "surfaceSecondary": "#243529",
+      "textPrimary": "#E8F5EA",
+      "textSecondary": "#B3D4B8",
+      "textTertiary": "#7A9B7E",
+      "border": "#354A38",
+      "borderSecondary": "#4A5F4D"
+    }
+  },
+  "cart": {
+    "floatingCartPosition": "bottomRight",
+    "floatingCartDisplayMode": "full",
+    "floatingCartSize": "medium",
+    "showCartNotifications": true
+  },
+  "ui": {
+    "enableAnimations": true,
+    "showProductBrands": true,
+    "enableHapticFeedback": true
+  }
+}

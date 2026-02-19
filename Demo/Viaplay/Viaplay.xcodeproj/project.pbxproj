@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		17B2324E2EAF952300EBA3F8 /* ReachuComplete in Frameworks */ = {isa = PBXBuildFile; productRef = 17B2324D2EAF952300EBA3F8 /* ReachuComplete */; };
+		17B235522EB0FE3900EBA3F8 /* ReachuComplete in Frameworks */ = {isa = PBXBuildFile; productRef = 17B235512EB0FE3900EBA3F8 /* ReachuComplete */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		17B22E962EAF801100EBA3F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 17B22E7B2EAF800F00EBA3F8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 17B22E822EAF800F00EBA3F8;
+			remoteInfo = Viaplay;
+		};
+		17B22EA02EAF801100EBA3F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 17B22E7B2EAF800F00EBA3F8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 17B22E822EAF800F00EBA3F8;
+			remoteInfo = Viaplay;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		17B22E832EAF800F00EBA3F8 /* Viaplay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Viaplay.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		17B22E952EAF801100EBA3F8 /* ViaplayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ViaplayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		17B22E9F2EAF801100EBA3F8 /* ViaplayUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ViaplayUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		17B22E852EAF800F00EBA3F8 /* Viaplay */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Viaplay;
+			sourceTree = "<group>";
+		};
+		17B22E982EAF801100EBA3F8 /* ViaplayTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViaplayTests;
+			sourceTree = "<group>";
+		};
+		17B22EA22EAF801100EBA3F8 /* ViaplayUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViaplayUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		17B22E802EAF800F00EBA3F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				17B2324E2EAF952300EBA3F8 /* ReachuComplete in Frameworks */,
+				17B235522EB0FE3900EBA3F8 /* ReachuComplete in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E922EAF801100EBA3F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E9C2EAF801100EBA3F8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		17B22E7A2EAF800F00EBA3F8 = {
+			isa = PBXGroup;
+			children = (
+				17B22E852EAF800F00EBA3F8 /* Viaplay */,
+				17B22E982EAF801100EBA3F8 /* ViaplayTests */,
+				17B22EA22EAF801100EBA3F8 /* ViaplayUITests */,
+				17B22E842EAF800F00EBA3F8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		17B22E842EAF800F00EBA3F8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				17B22E832EAF800F00EBA3F8 /* Viaplay.app */,
+				17B22E952EAF801100EBA3F8 /* ViaplayTests.xctest */,
+				17B22E9F2EAF801100EBA3F8 /* ViaplayUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		17B22E822EAF800F00EBA3F8 /* Viaplay */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 17B22EA92EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "Viaplay" */;
+			buildPhases = (
+				17B22E7F2EAF800F00EBA3F8 /* Sources */,
+				17B22E802EAF800F00EBA3F8 /* Frameworks */,
+				17B22E812EAF800F00EBA3F8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				17B22E852EAF800F00EBA3F8 /* Viaplay */,
+			);
+			name = Viaplay;
+			packageProductDependencies = (
+				17B2324D2EAF952300EBA3F8 /* ReachuComplete */,
+				17B235512EB0FE3900EBA3F8 /* ReachuComplete */,
+			);
+			productName = Viaplay;
+			productReference = 17B22E832EAF800F00EBA3F8 /* Viaplay.app */;
+			productType = "com.apple.product-type.application";
+		};
+		17B22E942EAF801100EBA3F8 /* ViaplayTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 17B22EAC2EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "ViaplayTests" */;
+			buildPhases = (
+				17B22E912EAF801100EBA3F8 /* Sources */,
+				17B22E922EAF801100EBA3F8 /* Frameworks */,
+				17B22E932EAF801100EBA3F8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				17B22E972EAF801100EBA3F8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				17B22E982EAF801100EBA3F8 /* ViaplayTests */,
+			);
+			name = ViaplayTests;
+			packageProductDependencies = (
+			);
+			productName = ViaplayTests;
+			productReference = 17B22E952EAF801100EBA3F8 /* ViaplayTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		17B22E9E2EAF801100EBA3F8 /* ViaplayUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 17B22EAF2EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "ViaplayUITests" */;
+			buildPhases = (
+				17B22E9B2EAF801100EBA3F8 /* Sources */,
+				17B22E9C2EAF801100EBA3F8 /* Frameworks */,
+				17B22E9D2EAF801100EBA3F8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				17B22EA12EAF801100EBA3F8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				17B22EA22EAF801100EBA3F8 /* ViaplayUITests */,
+			);
+			name = ViaplayUITests;
+			packageProductDependencies = (
+			);
+			productName = ViaplayUITests;
+			productReference = 17B22E9F2EAF801100EBA3F8 /* ViaplayUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		17B22E7B2EAF800F00EBA3F8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					17B22E822EAF800F00EBA3F8 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					17B22E942EAF801100EBA3F8 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 17B22E822EAF800F00EBA3F8;
+					};
+					17B22E9E2EAF801100EBA3F8 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 17B22E822EAF800F00EBA3F8;
+					};
+				};
+			};
+			buildConfigurationList = 17B22E7E2EAF800F00EBA3F8 /* Build configuration list for PBXProject "Viaplay" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 17B22E7A2EAF800F00EBA3F8;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../../../ReachuSwiftSDK" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 17B22E842EAF800F00EBA3F8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				17B22E822EAF800F00EBA3F8 /* Viaplay */,
+				17B22E942EAF801100EBA3F8 /* ViaplayTests */,
+				17B22E9E2EAF801100EBA3F8 /* ViaplayUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		17B22E812EAF800F00EBA3F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E932EAF801100EBA3F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E9D2EAF801100EBA3F8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		17B22E7F2EAF800F00EBA3F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E912EAF801100EBA3F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		17B22E9B2EAF801100EBA3F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		17B22E972EAF801100EBA3F8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 17B22E822EAF800F00EBA3F8 /* Viaplay */;
+			targetProxy = 17B22E962EAF801100EBA3F8 /* PBXContainerItemProxy */;
+		};
+		17B22EA12EAF801100EBA3F8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 17B22E822EAF800F00EBA3F8 /* Viaplay */;
+			targetProxy = 17B22EA02EAF801100EBA3F8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		17B22EA72EAF801100EBA3F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		17B22EA82EAF801100EBA3F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		17B22EAA2EAF801100EBA3F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Viaplay;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app may access the camera to scan product codes or take photos of products for shopping features.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.Viaplay;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		17B22EAB2EAF801100EBA3F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Viaplay;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app may access the camera to scan product codes or take photos of products for shopping features.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.Viaplay;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		17B22EAD2EAF801100EBA3F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.ViaplayTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Viaplay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Viaplay";
+			};
+			name = Debug;
+		};
+		17B22EAE2EAF801100EBA3F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.ViaplayTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Viaplay.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Viaplay";
+			};
+			name = Release;
+		};
+		17B22EB02EAF801100EBA3F8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.ViaplayUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Viaplay;
+			};
+			name = Debug;
+		};
+		17B22EB12EAF801100EBA3F8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = U4R2B2U7E6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = reachudev.ViaplayUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = Viaplay;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		17B22E7E2EAF800F00EBA3F8 /* Build configuration list for PBXProject "Viaplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17B22EA72EAF801100EBA3F8 /* Debug */,
+				17B22EA82EAF801100EBA3F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		17B22EA92EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "Viaplay" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17B22EAA2EAF801100EBA3F8 /* Debug */,
+				17B22EAB2EAF801100EBA3F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		17B22EAC2EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "ViaplayTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17B22EAD2EAF801100EBA3F8 /* Debug */,
+				17B22EAE2EAF801100EBA3F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		17B22EAF2EAF801100EBA3F8 /* Build configuration list for PBXNativeTarget "ViaplayUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				17B22EB02EAF801100EBA3F8 /* Debug */,
+				17B22EB12EAF801100EBA3F8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../../../ReachuSwiftSDK" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../../ReachuSwiftSDK;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		17B2324D2EAF952300EBA3F8 /* ReachuComplete */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReachuComplete;
+		};
+		17B235512EB0FE3900EBA3F8 /* ReachuComplete */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ReachuComplete;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 17B22E7B2EAF800F00EBA3F8 /* Project object */;
+}

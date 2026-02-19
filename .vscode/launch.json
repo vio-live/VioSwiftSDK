@@ -1,0 +1,166 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug SdkDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/SdkDemo",
+            "preLaunchTask": "swift: Build Debug SdkDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release SdkDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/SdkDemo",
+            "preLaunchTask": "swift: Build Release SdkDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug ProductDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/ProductDemo",
+            "preLaunchTask": "swift: Build Debug ProductDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release ProductDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/ProductDemo",
+            "preLaunchTask": "swift: Build Release ProductDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug PaymentDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/PaymentDemo",
+            "preLaunchTask": "swift: Build Debug PaymentDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release PaymentDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/PaymentDemo",
+            "preLaunchTask": "swift: Build Release PaymentDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug MarketDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/MarketDemo",
+            "preLaunchTask": "swift: Build Debug MarketDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release MarketDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/MarketDemo",
+            "preLaunchTask": "swift: Build Release MarketDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug InfoDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/InfoDemo",
+            "preLaunchTask": "swift: Build Debug InfoDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release InfoDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/InfoDemo",
+            "preLaunchTask": "swift: Build Release InfoDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug DiscountDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/DiscountDemo",
+            "preLaunchTask": "swift: Build Debug DiscountDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release DiscountDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/DiscountDemo",
+            "preLaunchTask": "swift: Build Release DiscountDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug CheckoutDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/CheckoutDemo",
+            "preLaunchTask": "swift: Build Debug CheckoutDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release CheckoutDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/CheckoutDemo",
+            "preLaunchTask": "swift: Build Release CheckoutDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug CategoryDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/CategoryDemo",
+            "preLaunchTask": "swift: Build Debug CategoryDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release CategoryDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/CategoryDemo",
+            "preLaunchTask": "swift: Build Release CategoryDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Debug CartDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/debug/CartDemo",
+            "preLaunchTask": "swift: Build Debug CartDemo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ReachuSwiftSDK}",
+            "name": "Release CartDemo",
+            "program": "${workspaceFolder:ReachuSwiftSDK}/.build/release/CartDemo",
+            "preLaunchTask": "swift: Build Release CartDemo"
+        }
+    ]
+}
