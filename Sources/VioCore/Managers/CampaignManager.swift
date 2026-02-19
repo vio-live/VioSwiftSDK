@@ -390,7 +390,7 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Fetch campaign information from API using new v1 endpoint
-    /// Always uses campaignId from configuration file (reachu-config.json)
+    /// Always uses campaignId from configuration file (vio-config.json)
     private func fetchCampaignInfo(campaignId: Int) async {
         let config = VioConfiguration.shared
         
@@ -399,7 +399,7 @@ public class CampaignManager: ObservableObject {
             ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)  // Fallback to SDK API key if not configured
             : config.campaignConfiguration.campaignAdminApiKey
         
-        // Always use campaignId from configuration file (reachu-config.json)
+        // Always use campaignId from configuration file (vio-config.json)
         let configuredCampaignId = config.liveShowConfiguration.campaignId
         print("🎯 [CampaignManager] fetchCampaignInfo - Using campaignId from config: \(configuredCampaignId)")
         print("🎯 [CampaignManager] fetchCampaignInfo - campaignAdminApiKey: \(campaignAdminApiKey.prefix(20))...")
@@ -780,7 +780,7 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Fetch active components from API using new v1 endpoint
-    /// Always uses campaignId from configuration file (reachu-config.json)
+    /// Always uses campaignId from configuration file (vio-config.json)
     private func fetchActiveComponents(campaignId: Int) async {
         let config = VioConfiguration.shared
         
@@ -791,7 +791,7 @@ public class CampaignManager: ObservableObject {
         
         let countryCode = config.marketConfiguration.countryCode
         
-        // Always use campaignId from configuration file (reachu-config.json)
+        // Always use campaignId from configuration file (vio-config.json)
         let configuredCampaignId = config.liveShowConfiguration.campaignId
         guard configuredCampaignId > 0 else {
             VioLogger.warning("No campaignId configured in liveShow.campaignId - skipping components fetch", component: "CampaignManager")
@@ -920,13 +920,13 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Connect to campaign WebSocket
-    /// Always uses campaignId from configuration file (reachu-config.json)
+    /// Always uses campaignId from configuration file (vio-config.json)
     /// According to backend behavior:
     /// - If campaign is Ended: Backend sends campaign_ended immediately
     /// - If campaign is Upcoming: No event sent, waits for campaign_started
     /// - If campaign is Active: No event sent, can fetch components
     private func connectWebSocket(campaignId: Int) async {
-        // Always use campaignId from configuration file (reachu-config.json)
+        // Always use campaignId from configuration file (vio-config.json)
         let config = VioConfiguration.shared
         let configuredCampaignId = config.liveShowConfiguration.campaignId
         guard configuredCampaignId > 0 else {

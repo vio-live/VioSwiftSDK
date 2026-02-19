@@ -751,7 +751,7 @@ public struct VProductCarousel: View {
             }
             .background(adaptiveColors.surface)
             .cornerRadius(VioBorderRadius.large)
-            .reachuCardShadow(for: colorScheme)
+            .vioCardShadow(for: colorScheme)
             .padding(.horizontal, VioSpacing.md)
         }
         .buttonStyle(PlainButtonStyle())
@@ -851,7 +851,7 @@ public struct VProductCarousel: View {
             .padding(VioSpacing.sm) // Reduced padding
             .background(adaptiveColors.surface)
             .cornerRadius(VioBorderRadius.large)
-            .reachuCardShadow(for: colorScheme)
+            .vioCardShadow(for: colorScheme)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1023,7 +1023,7 @@ public struct VProductCarousel: View {
         }
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.large)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .padding(.horizontal, VioSpacing.md)
     }
     
@@ -1067,7 +1067,7 @@ public struct VProductCarousel: View {
         }
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.large)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     /// Horizontal layout skeleton
@@ -1138,7 +1138,7 @@ public struct VProductCarousel: View {
         .padding(VioSpacing.sm)
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.large)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     // MARK: - Helper Methods

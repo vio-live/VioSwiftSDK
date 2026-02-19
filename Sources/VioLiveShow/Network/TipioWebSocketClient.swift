@@ -456,7 +456,7 @@ extension TipioWebSocketClient {
             guard let self = self, let first = data.first else { return }
             print("🟢 [TipioWS] Evento recibido: HEART")
             DispatchQueue.main.async {
-                NotificationCenter.default.post(name: Notification.Name("reachu.heart.received"), object: nil)
+                NotificationCenter.default.post(name: Notification.Name("vio.heart.received"), object: nil)
             }
         }
 

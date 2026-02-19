@@ -88,7 +88,7 @@ public class VioConfiguration: ObservableObject {
         instance.campaignConfiguration = campaignConfig ?? .default
         instance.analyticsConfiguration = analyticsConfig ?? .default
         instance.demoDataConfiguration = demoDataConfig ?? ConfigurationLoader.loadDemoDataConfiguration()
-        // Brand: demo data overrides reachu-config for consistency (single source per demo)
+        // Brand: demo data overrides vio-config for consistency (single source per demo)
         if let demoBrand = instance.demoDataConfiguration.brand {
             instance.brandConfiguration = demoBrand
         } else if let brand = brandConfig {

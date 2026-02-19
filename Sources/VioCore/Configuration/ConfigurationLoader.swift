@@ -24,7 +24,7 @@ public class ConfigurationLoader {
     /// ConfigurationLoader.loadConfiguration()
     /// 
     /// // Option 2: Specific file
-    /// ConfigurationLoader.loadConfiguration(fileName: "reachu-config")
+    /// ConfigurationLoader.loadConfiguration(fileName: "vio-config")
     /// 
     /// // Option 3: Custom bundle (for frameworks/modules)
     /// ConfigurationLoader.loadConfiguration(bundle: Bundle(for: MyClass.self))
@@ -47,9 +47,9 @@ public class ConfigurationLoader {
             }
             
             // 2. Check environment variable
-            if let configType = ProcessInfo.processInfo.environment["REACHU_CONFIG_TYPE"] {
+            if let configType = ProcessInfo.processInfo.environment["VIO_CONFIG_TYPE"] {
                 VioLogger.debug("Using environment config type: \(configType)", component: "Config")
-                let envFileName = "reachu-config-\(configType)"
+                let envFileName = "vio-config-\(configType)"
                 try loadFromJSON(fileName: envFileName, bundle: bundle, userCountryCode: userCountryCode)
                 return
             }
@@ -57,9 +57,9 @@ public class ConfigurationLoader {
             // 3. Check for config files in order of preference
             let configFiles = [
                 "reachu-config",                 // User custom (highest priority)
-                "reachu-config-automatic",       // Automatic theme (preferred)
-                "reachu-config-example",         // Default fallback
-                "reachu-config-dark-streaming"   // Dark theme (lowest priority)
+                "vio-config-automatic",       // Automatic theme (preferred)
+                "vio-config-example",         // Default fallback
+                "vio-config-dark-streaming"   // Dark theme (lowest priority)
             ]
             
             for configFile in configFiles {
@@ -90,8 +90,8 @@ public class ConfigurationLoader {
             theme: VioTheme(
                 name: "Default SDK Theme",
                 mode: .automatic,
-                lightColors: .reachu,
-                darkColors: .reachuDark
+                lightColors: .vio,
+                darkColors: .vioDark
             ),
             marketConfig: .default
         )

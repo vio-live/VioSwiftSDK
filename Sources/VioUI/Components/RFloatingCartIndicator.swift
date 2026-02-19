@@ -215,7 +215,7 @@ public struct VFloatingCartIndicator: View {
         .padding(.vertical, size.verticalPadding)
         .background(cartBackground)
         .clipShape(Capsule())
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
@@ -233,7 +233,7 @@ public struct VFloatingCartIndicator: View {
         .padding(.vertical, size.verticalPadding)
         .background(cartBackground)
         .clipShape(Capsule())
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
@@ -251,7 +251,7 @@ public struct VFloatingCartIndicator: View {
         .padding(.vertical, size.verticalPadding)
         .background(cartBackground)
         .clipShape(Capsule())
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
@@ -265,7 +265,7 @@ public struct VFloatingCartIndicator: View {
             Circle()
                 .fill(VioColors.primary)
         )
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isPressed)
     }

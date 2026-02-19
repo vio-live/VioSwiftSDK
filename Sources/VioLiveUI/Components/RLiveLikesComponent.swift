@@ -131,7 +131,7 @@ public class LiveLikesManager: ObservableObject {
     // MARK: - Initialization
     private init() {
         // Escuchar HEART del socket para disparar corazones blancos (de otros usuarios)
-        NotificationCenter.default.addObserver(forName: Notification.Name("reachu.heart.received"), object: nil, queue: .main) { [weak self] _ in
+        NotificationCenter.default.addObserver(forName: Notification.Name("vio.heart.received"), object: nil, queue: .main) { [weak self] _ in
             guard let self = self else { return }
             // Disparar 1-2 corazones blancos simples al recibir un HEART
             let count = Int.random(in: 1...2)

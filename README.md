@@ -1,24 +1,24 @@
-# Reachu Swift SDK
+# Vio Swift SDK
 
-Note: Demos live in the separate repository `ReachuSwiftSDK-Demos`. Each demo depends on this SDK via SPM (by URL and version tag).
+Note: Demos are included in this repository under `Demo/`. Each demo depends on this SDK via SPM (local path).
 
-A modular Swift SDK for the Reachu ecommerce platform. Add shopping cart, checkout, and livestream features to any iOS, macOS, tvOS or watchOS application.
+A modular Swift SDK for the Vio platform. Add engagement, monetization, and broadcasting to live events. Add shopping cart, checkout, and livestream features to any iOS, macOS, tvOS or watchOS application.
 
 ## 🏗️ Modular Architecture
 
 This SDK is designed with a modular architecture that allows you to import only the features you need:
 
-- **ReachuCore** (Required) - Core ecommerce functionality, models, and configuration
-- **ReachuUI** (Optional) - SwiftUI ecommerce components (Product Cards, Sliders, Cart, Checkout)
-- **ReachuLiveShow** (Optional) - Livestream shopping logic and data models
-- **ReachuLiveUI** (Optional) - Livestream UI components (Video player, Chat, Shopping overlays)
-- **ReachuComplete** (All-in-One) - All modules included
+- **VioCore** (Required) - Core ecommerce functionality, models, and configuration
+- **VioUI** (Optional) - SwiftUI ecommerce components (Product Cards, Sliders, Cart, Checkout)
+- **VioLiveShow** (Optional) - Livestream shopping logic and data models
+- **VioLiveUI** (Optional) - Livestream UI components (Video player, Chat, Shopping overlays)
+- **VioComplete** (All-in-One) - All modules included
 
 ## 📦 Installation
 
 ### Swift Package Manager (Recommended)
 
-Add the Reachu Swift SDK to your project using Swift Package Manager:
+Add the Vio Swift SDK to your project using Swift Package Manager:
 
 #### Using Xcode
 
@@ -26,7 +26,7 @@ Add the Reachu Swift SDK to your project using Swift Package Manager:
 2. **Go to File → Add Package Dependencies...**
 3. **Enter the repository URL:**
    ```
-   https://github.com/ReachuDevteam/ReachuSwiftSDK.git
+   https://github.com/angelosv/VioSwiftSDK.git
    ```
 4. **Select the version**: `1.0.0` (or latest version)
 5. **Choose your modules** based on your needs
@@ -37,7 +37,7 @@ Add this to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ReachuDevteam/ReachuSwiftSDK.git", from: "1.0.0")
+    .package(url: "https://github.com/angelosv/VioSwiftSDK.git", from: "1.0.0")
 ]
 ```
 
@@ -47,8 +47,8 @@ Then add the products you need to your target:
 .target(
     name: "YourApp",
     dependencies: [
-        .product(name: "ReachuUI", package: "ReachuSwiftSDK"),
-        // or other modules: ReachuCore, ReachuLiveShow, ReachuLiveUI
+        .product(name: "VioUI", package: "VioSwiftSDK"),
+        // or other modules: VioCore, VioLiveShow, VioLiveUI
     ]
 )
 ```
@@ -63,8 +63,8 @@ platform :ios, '15.0'
 target 'YourApp' do
   use_frameworks!
   
-  # Reachu Swift SDK
-  pod 'ReachuSwiftSDK', :git => 'https://github.com/ReachuDevteam/ReachuSwiftSDK.git', :tag => '1.0.0'
+  # Vio Swift SDK
+  pod 'VioSwiftSDK', :git => 'https://github.com/angelosv/VioSwiftSDK.git', :tag => '1.0.0'
 end
 ```
 
@@ -75,29 +75,29 @@ pod install
 ```
 
 :::tip Stable Release
-This is the stable release (`1.0.0`) of Reachu Swift SDK. For beta versions, you can specify `1.0.0-beta.1` explicitly.
+This is the stable release (`1.0.0`) of Vio Swift SDK. For beta versions, you can specify `1.0.0-beta.1` explicitly.
 :::
 
 ### 🎨 Configuration Setup
 
 1. **Copy configuration files** from the demos repo to your project:
    ```bash
-   # Copy from: ReachuSwiftSDK-Demos/ReachuDemoApp/ReachuDemoApp/Configuration/
-   # To your app bundle as: reachu-config.json
+   # Copy from: Demo/Viaplay/Viaplay/Configuration/ or Demo/Vg/Vg/Configuration/
+   # To your app bundle as: vio-config.json
    ```
 
 2. **Choose your theme**:
-   - `reachu-config-example.json` - **Dark Streaming Theme** (default)
-   - `reachu-config-automatic.json` - **Automatic Light/Dark Theme**
-   - `reachu-config-starter.json` - **Minimal configuration**
+   - `vio-config-example.json` - **Dark Streaming Theme** (default)
+   - `vio-config-automatic.json` - **Automatic Light/Dark Theme**
+   - `vio-config-starter.json` - **Minimal configuration**
 
 3. **Load configuration** in your app:
 
 ```swift title="App.swift"
 import SwiftUI
-import ReachuCore
-import ReachuUI
-import ReachuDesignSystem
+import VioCore
+import VioUI
+import VioDesignSystem
 
 @main
 struct YourApp: App {
@@ -106,7 +106,7 @@ struct YourApp: App {
     @StateObject private var checkoutDraft = CheckoutDraft()
     
     init() {
-        // Load configuration from reachu-config.json
+        // Load configuration from vio-config.json
         // This reads the config file with API key, theme colors, and settings
         ConfigurationLoader.loadConfiguration()
         
@@ -137,7 +137,7 @@ struct YourApp: App {
 ```
 
 **What this does:**
-- ✅ Loads theme, colors, and settings from `reachu-config.json`
+- ✅ Loads theme, colors, and settings from `vio-config.json`
 - ✅ Initializes Stripe payments automatically
 - ✅ Sets up CartManager for global cart state
 - ✅ Configures CheckoutDraft for address normalization
@@ -145,7 +145,7 @@ struct YourApp: App {
 
 4. **Optional: Set environment variables** in your app for quick theme switching:
    - **In Xcode**: Edit Scheme → Run → Environment Variables
-   - **Add**: `REACHU_CONFIG_TYPE` = `dark-streaming` (or `automatic`)
+   - **Add**: `VIO_CONFIG_TYPE` = `dark-streaming` (or `automatic`)
    - **The SDK will automatically use the correct theme**
 
 ### Choose Your Modules
@@ -154,19 +154,19 @@ Import only what you need:
 
 ```swift
 // Core functionality only (models, configuration, business logic)
-.product(name: "ReachuCore", package: "ReachuSwiftSDK")
+.product(name: "VioCore", package: "VioSwiftSDK")
 
 // Core + UI Components (ecommerce: cards, sliders, cart, checkout)
-.product(name: "ReachuUI", package: "ReachuSwiftSDK")
+.product(name: "VioUI", package: "VioSwiftSDK")
 
 // Core + LiveShow Logic (livestream data models and manager)
-.product(name: "ReachuLiveShow", package: "ReachuSwiftSDK")
+.product(name: "VioLiveShow", package: "VioSwiftSDK")
 
 // Core + LiveShow + UI Components (full livestream experience)
-.product(name: "ReachuLiveUI", package: "ReachuSwiftSDK")
+.product(name: "VioLiveUI", package: "VioSwiftSDK")
 
 // Everything (complete SDK with all features)
-.product(name: "ReachuComplete", package: "ReachuSwiftSDK")
+.product(name: "VioComplete", package: "VioSwiftSDK")
 ```
 
 ## 🎨 UI Components
@@ -212,7 +212,7 @@ Removable floating indicator for active streams:
 ### Ecommerce Components
 ```swift
 import SwiftUI
-import ReachuUI
+import VioUI
 
 struct ProductView: View {
     let products: [Product]
@@ -260,8 +260,8 @@ struct ProductView: View {
 ### LiveShow Integration
 ```swift
 import SwiftUI
-import ReachuLiveShow
-import ReachuLiveUI
+import VioLiveShow
+import VioLiveUI
 
 struct MainAppView: View {
     var body: some View {
@@ -281,21 +281,21 @@ Button("Join Live Show") {
 
 ## 📱 Demos
 
-Demos are managed in the `ReachuSwiftSDK-Demos` repository. Each demo consumes the SDK via SPM pinned to a version tag (`vX.Y.Z`).
+Demos are managed in the `VioSwiftSDK-Demos` repository. Each demo consumes the SDK via SPM pinned to a version tag (`vX.Y.Z`).
 
 ## 📚 Documentation
 
-- **[Complete Documentation](https://docs.reachu.io/swift-sdk)** - Full documentation site
+- **[Complete Documentation](https://docs.vio.live/swift-sdk)** - Full documentation site
 - **CHANGELOG.md** - Notable changes by version
 
 ## 🔧 Development
 
 ### Current Status
-- ✅ **ReachuCore**: Core models, business logic, and configuration system
-- ✅ **ReachuUI**: Complete ecommerce components (Cards, Sliders, Cart, Checkout)
-- ✅ **ReachuLiveShow**: Livestream logic and data models
-- ✅ **ReachuLiveUI**: Livestream UI components (3 layouts, mini-player, indicators)
-- ✅ **ReachuDesignSystem**: Complete design tokens and base components  
+- ✅ **VioCore**: Core models, business logic, and configuration system
+- ✅ **VioUI**: Complete ecommerce components (Cards, Sliders, Cart, Checkout)
+- ✅ **VioLiveShow**: Livestream logic and data models
+- ✅ **VioLiveUI**: Livestream UI components (3 layouts, mini-player, indicators)
+- ✅ **VioDesignSystem**: Complete design tokens and base components  
 - ✅ **Demo App**: Fully functional iOS app with all features
 - ✅ **Documentation**: Professional docs integrated with Docusaurus
 - ✅ **Dark/Light Mode**: Complete theme system
@@ -304,16 +304,16 @@ Demos are managed in the `ReachuSwiftSDK-Demos` repository. Each demo consumes t
 
 ```bash
 # Build individual modules
-swift build --target ReachuCore
-swift build --target ReachuUI  
-swift build --target ReachuLiveShow
-swift build --target ReachuLiveUI
+swift build --target VioCore
+swift build --target VioUI  
+swift build --target VioLiveShow
+swift build --target VioLiveUI
 
 # Build complete SDK
-swift build --product ReachuComplete
+swift build --product VioComplete
 
 # SDK testing
-# (Demos are built from the ReachuSwiftSDK-Demos repository)
+# (Demos are built from the VioSwiftSDK-Demos repository)
 ```
 
 ### Current Branch

@@ -399,7 +399,7 @@ public struct VProductSpotlight: View {
             }
             .background(adaptiveColors.surface)
             .cornerRadius(VioBorderRadius.xl)
-            .reachuCardShadow(for: colorScheme)
+            .vioCardShadow(for: colorScheme)
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(item: $showingProductDetail) { product in
@@ -545,7 +545,7 @@ public struct VProductSpotlight: View {
             }
             .background(adaptiveColors.surface)
             .cornerRadius(VioBorderRadius.xl)
-            .reachuCardShadow(for: colorScheme)
+            .vioCardShadow(for: colorScheme)
             .padding(.horizontal, VioSpacing.md)
         }
         .padding(.vertical, VioSpacing.md)

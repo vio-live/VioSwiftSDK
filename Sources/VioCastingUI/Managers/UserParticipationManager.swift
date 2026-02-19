@@ -16,9 +16,9 @@ public class UserParticipationManager: ObservableObject {
     @Published public private(set) var participatedContests: Set<String> = []
     @Published public private(set) var pollVotes: [String: String] = [:]  // pollId: optionId
     
-    private let pollsKey = "reachu.participated.polls"
-    private let contestsKey = "reachu.participated.contests"
-    private let votesKey = "reachu.poll.votes"
+    private let pollsKey = "vio.participated.polls"
+    private let contestsKey = "vio.participated.contests"
+    private let votesKey = "vio.poll.votes"
     
     private init() {
         loadState()

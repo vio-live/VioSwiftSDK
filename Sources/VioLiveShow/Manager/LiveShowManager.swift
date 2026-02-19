@@ -34,7 +34,7 @@ public class LiveShowManager: ObservableObject {
     private let configuration: LiveShowConfiguration
     private let heartApiBase: String = "https://stg-dev-microservices.tipioapp.com/stg-hearts"
     private let userDefaults = UserDefaults.standard
-    private let userTrackingKey = "reachu.userTrackingId"
+    private let userTrackingKey = "vio.userTrackingId"
     private var tipioIdToLiveStreamId: [Int: String] = [:] // maps Tipio id -> Tipio.liveStreamId (Vimeo event)
     
     // Tipio clients
@@ -248,7 +248,7 @@ public class LiveShowManager: ObservableObject {
 
         let clientId = userTrackingId
         let emojiChannel = "emojiChannel-\(liveStreamId)"
-        let hasHeartedKey = "reachu.hasHearted.\(liveStreamId)"
+        let hasHeartedKey = "vio.hasHearted.\(liveStreamId)"
         let hasHeartedBefore = userDefaults.bool(forKey: hasHeartedKey)
 
         var urlString: String

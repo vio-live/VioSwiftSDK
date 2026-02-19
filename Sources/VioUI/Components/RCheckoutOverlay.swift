@@ -377,7 +377,7 @@ public struct VCheckoutOverlay: View {
                     .background(
                         RoundedRectangle(cornerRadius: VioBorderRadius.large)
                             .fill(Color.orange)
-                            .reachuCardShadow(for: colorScheme)
+                            .vioCardShadow(for: colorScheme)
                     )
                     .padding(.horizontal, 20)
                     .padding(.bottom, 40)

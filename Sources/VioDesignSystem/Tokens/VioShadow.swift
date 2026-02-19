@@ -65,13 +65,13 @@ public struct VioShadow {
 /// View extension for easy shadow application
 extension View {
     /// Apply card shadow from design system
-    public func reachuCardShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
+    public func vioCardShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
         let shadow = VioShadow.card(for: colorScheme)
         return self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.offset.width, y: shadow.offset.height)
     }
     
     /// Apply button shadow from design system
-    public func reachuButtonShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
+    public func vioButtonShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
         if let shadow = VioShadow.button(for: colorScheme) {
             return AnyView(self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.offset.width, y: shadow.offset.height))
         } else {
@@ -80,13 +80,13 @@ extension View {
     }
     
     /// Apply modal shadow from design system
-    public func reachuModalShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
+    public func vioModalShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
         let shadow = VioShadow.modal(for: colorScheme)
         return self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.offset.width, y: shadow.offset.height)
     }
     
     /// Apply text shadow from design system
-    public func reachuTextShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
+    public func vioTextShadow(for colorScheme: SwiftUI.ColorScheme) -> some View {
         let shadow = VioShadow.text(for: colorScheme)
         return self.shadow(color: shadow.color, radius: shadow.radius, x: shadow.offset.width, y: shadow.offset.height)
     }

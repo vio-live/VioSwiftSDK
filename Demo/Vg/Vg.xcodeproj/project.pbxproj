@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D0A5AD682EB3F99E00A8D4B5 /* ReachuComplete in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD672EB3F99E00A8D4B5 /* ReachuComplete */; };
-		D0A5AD6A2EB3F99E00A8D4B5 /* ReachuCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD692EB3F99E00A8D4B5 /* ReachuCore */; };
-		D0A5AD6C2EB3F99E00A8D4B5 /* ReachuDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6B2EB3F99E00A8D4B5 /* ReachuDesignSystem */; };
-		D0A5AD6E2EB3F99E00A8D4B5 /* ReachuLiveShow in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6D2EB3F99E00A8D4B5 /* ReachuLiveShow */; };
-		D0A5AD702EB3F99E00A8D4B5 /* ReachuLiveUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6F2EB3F99E00A8D4B5 /* ReachuLiveUI */; };
+		D0A5AD682EB3F99E00A8D4B5 /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD672EB3F99E00A8D4B5 /* VioComplete */; };
+		D0A5AD6A2EB3F99E00A8D4B5 /* VioCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD692EB3F99E00A8D4B5 /* VioCore */; };
+		D0A5AD6C2EB3F99E00A8D4B5 /* VioDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6B2EB3F99E00A8D4B5 /* VioDesignSystem */; };
+		D0A5AD6E2EB3F99E00A8D4B5 /* VioLiveShow in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6D2EB3F99E00A8D4B5 /* VioLiveShow */; };
+		D0A5AD702EB3F99E00A8D4B5 /* VioLiveUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0A5AD6F2EB3F99E00A8D4B5 /* VioLiveUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,11 +60,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0A5AD702EB3F99E00A8D4B5 /* ReachuLiveUI in Frameworks */,
-				D0A5AD682EB3F99E00A8D4B5 /* ReachuComplete in Frameworks */,
-				D0A5AD6A2EB3F99E00A8D4B5 /* ReachuCore in Frameworks */,
-				D0A5AD6C2EB3F99E00A8D4B5 /* ReachuDesignSystem in Frameworks */,
-				D0A5AD6E2EB3F99E00A8D4B5 /* ReachuLiveShow in Frameworks */,
+				D0A5AD702EB3F99E00A8D4B5 /* VioLiveUI in Frameworks */,
+				D0A5AD682EB3F99E00A8D4B5 /* VioComplete in Frameworks */,
+				D0A5AD6A2EB3F99E00A8D4B5 /* VioCore in Frameworks */,
+				D0A5AD6C2EB3F99E00A8D4B5 /* VioDesignSystem in Frameworks */,
+				D0A5AD6E2EB3F99E00A8D4B5 /* VioLiveShow in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -125,11 +125,11 @@
 			);
 			name = Vg;
 			packageProductDependencies = (
-				D0A5AD672EB3F99E00A8D4B5 /* ReachuComplete */,
-				D0A5AD692EB3F99E00A8D4B5 /* ReachuCore */,
-				D0A5AD6B2EB3F99E00A8D4B5 /* ReachuDesignSystem */,
-				D0A5AD6D2EB3F99E00A8D4B5 /* ReachuLiveShow */,
-				D0A5AD6F2EB3F99E00A8D4B5 /* ReachuLiveUI */,
+				D0A5AD672EB3F99E00A8D4B5 /* VioComplete */,
+				D0A5AD692EB3F99E00A8D4B5 /* VioCore */,
+				D0A5AD6B2EB3F99E00A8D4B5 /* VioDesignSystem */,
+				D0A5AD6D2EB3F99E00A8D4B5 /* VioLiveShow */,
+				D0A5AD6F2EB3F99E00A8D4B5 /* VioLiveUI */,
 			);
 			productName = Vg;
 			productReference = 17B230BE2EAF88A400EBA3F8 /* Vg.app */;
@@ -214,7 +214,7 @@
 			mainGroup = 17B230B52EAF88A400EBA3F8;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D0A5AD662EB3F99E00A8D4B5 /* XCLocalSwiftPackageReference "../../../ReachuSwiftSDK" */,
+				D0A5AD662EB3F99E00A8D4B5 /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17B230BF2EAF88A400EBA3F8 /* Products */;
@@ -431,7 +431,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.Vg;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.Vg;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -463,7 +463,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.Vg;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.Vg;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -485,7 +485,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.VgTests;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.VgTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -507,7 +507,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.VgTests;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.VgTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -527,7 +527,7 @@
 				DEVELOPMENT_TEAM = U4R2B2U7E6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.VgUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.VgUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -547,7 +547,7 @@
 				DEVELOPMENT_TEAM = U4R2B2U7E6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = reachudev.VgUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = viodev.VgUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -601,32 +601,32 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		D0A5AD662EB3F99E00A8D4B5 /* XCLocalSwiftPackageReference "../../../ReachuSwiftSDK" */ = {
+		D0A5AD662EB3F99E00A8D4B5 /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../ReachuSwiftSDK;
+			relativePath = ../../../VioSwiftSDK;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		D0A5AD672EB3F99E00A8D4B5 /* ReachuComplete */ = {
+		D0A5AD672EB3F99E00A8D4B5 /* VioComplete */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = ReachuComplete;
+			productName = VioComplete;
 		};
-		D0A5AD692EB3F99E00A8D4B5 /* ReachuCore */ = {
+		D0A5AD692EB3F99E00A8D4B5 /* VioCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = ReachuCore;
+			productName = VioCore;
 		};
-		D0A5AD6B2EB3F99E00A8D4B5 /* ReachuDesignSystem */ = {
+		D0A5AD6B2EB3F99E00A8D4B5 /* VioDesignSystem */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = ReachuDesignSystem;
+			productName = VioDesignSystem;
 		};
-		D0A5AD6D2EB3F99E00A8D4B5 /* ReachuLiveShow */ = {
+		D0A5AD6D2EB3F99E00A8D4B5 /* VioLiveShow */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = ReachuLiveShow;
+			productName = VioLiveShow;
 		};
-		D0A5AD6F2EB3F99E00A8D4B5 /* ReachuLiveUI */ = {
+		D0A5AD6F2EB3F99E00A8D4B5 /* VioLiveUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = ReachuLiveUI;
+			productName = VioLiveUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

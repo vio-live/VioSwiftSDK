@@ -90,7 +90,7 @@ public struct AdaptiveColorsModifier: ViewModifier {
     
     public func body(content: Content) -> some View {
         content
-            .environment(\.reachuAdaptiveColors, AdaptiveVioColors())
+            .environment(\.vioAdaptiveColors, AdaptiveVioColors())
             .preferredColorScheme(preferredColorScheme)
     }
     
@@ -114,7 +114,7 @@ private struct VioAdaptiveColorsKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    public var reachuAdaptiveColors: AdaptiveVioColors {
+    public var vioAdaptiveColors: AdaptiveVioColors {
         get { self[VioAdaptiveColorsKey.self] }
         set { self[VioAdaptiveColorsKey.self] = newValue }
     }

@@ -21,7 +21,8 @@ Package.resolved
 # Demo/ - Removed to allow tracking in main branch
 
 # Development workspace (only in main branch, ignored in sdk branch)
-ReachuWorkspace.xcworkspace/
+VioWorkspace.xcworkspace/
 
 # Kotlin implementation guide (moved to trello-mcp-server)
 KOTLIN_IMPLEMENTATION_GUIDE.md
+ReachuWorkspace.xcworkspace/

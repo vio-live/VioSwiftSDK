@@ -1,4 +1,4 @@
-# Referencia de Componentización - ReachuSwiftSDK
+# Referencia de Componentización - VioSwiftSDK
 
 Documento de referencia de todos los cambios realizados para dejar el SDK y demos componentizados, dinámicos y listos para cambiar entre demos (Viaplay/Elkjøp, Skistar, etc.) sin hardcodear.
 
@@ -8,13 +8,13 @@ Documento de referencia de todos los cambios realizados para dejar el SDK y demo
 
 ### Archivos clave
 - **`Demo/Viaplay/Viaplay/Configuration/demo-static-data.json`** – Sección `brand` con `name` e `iconAsset`
-- **`Demo/Viaplay/Viaplay/Configuration/reachu-config.json`** – Sección `brand` (fallback)
-- **`Sources/ReachuCore/Configuration/ReachuConfiguration.swift`** – Merge de brand en `configure()`
-- **`Sources/ReachuCore/Configuration/ModuleConfigurations.swift`** – `DemoDataConfiguration.brand: BrandConfiguration?`
+- **`Demo/Viaplay/Viaplay/Configuration/vio-config.json`** – Sección `brand` (fallback)
+- **`Sources/VioCore/Configuration/VioConfiguration.swift`** – Merge de brand en `configure()`
+- **`Sources/VioCore/Configuration/ModuleConfigurations.swift`** – `DemoDataConfiguration.brand: BrandConfiguration?`
 
 ### Lógica de merge
 1. Si `demo-static-data.json` tiene sección `brand` → se usa como fuente única
-2. Si no tiene `brand` → se usa `reachu-config` y se sincroniza `iconAsset` con `assets.defaultAvatar`
+2. Si no tiene `brand` → se usa `vio-config` y se sincroniza `iconAsset` con `assets.defaultAvatar`
 
 ### Ejemplo para nuevo demo (Skistar)
 ```json
@@ -28,7 +28,7 @@ Documento de referencia de todos los cambios realizados para dejar el SDK y demo
 
 ## 2. Assets desde Configuración
 
-### DemoDataManager (ReachuCore)
+### DemoDataManager (VioCore)
 - `defaultLogo` – Logo por defecto
 - `defaultAvatar` – Avatar por defecto (legacy; para brand usar `effectiveBrandConfiguration.iconAsset`)
 - `backgroundImage(for:)` – footballField, mainBackground, sportDetail, sportDetailImage
@@ -36,7 +36,7 @@ Documento de referencia de todos los cambios realizados para dejar el SDK y demo
 - `contestAsset(for:)` – giftCard, championsLeagueTickets
 - `productUrl(for:)` / `checkoutUrl(for:)` – URLs de productos desde `productMappings`
 
-### ReachuConfiguration
+### VioConfiguration
 - `effectiveBrandConfiguration.name` – Nombre de marca
 - `effectiveBrandConfiguration.iconAsset` – Avatar/icono de marca (usar en casting cards)
 
@@ -45,19 +45,19 @@ Documento de referencia de todos los cambios realizados para dejar el SDK y demo
 ## 3. Componentes actualizados (sin hardcode)
 
 ### Avatar/Icono de marca
-Usan `ReachuConfiguration.shared.effectiveBrandConfiguration.iconAsset`:
-- `Sources/ReachuCastingUI/Components/Products/RCastingProductCard.swift`
-- `Sources/ReachuCastingUI/Components/Contests/RCastingContestCard.swift`
+Usan `VioConfiguration.shared.effectiveBrandConfiguration.iconAsset`:
+- `Sources/VioCastingUI/Components/Products/RCastingProductCard.swift`
+- `Sources/VioCastingUI/Components/Contests/RCastingContestCard.swift`
 - `Demo/Viaplay/Viaplay/Components/Products/CastingProductCard.swift`
 - `Demo/Viaplay/Viaplay/Components/Contests/CastingContestCard.swift`
 
 ### Icon (brandAssets.icon)
 Usan `DemoDataManager.shared.brandAsset(for: .icon)`:
-- `Sources/ReachuCastingUI/Components/Match/LineupCard.swift`
-- `Sources/ReachuCastingUI/Components/Timeline/HighlightVideoCard.swift`
-- `Sources/ReachuCastingUI/Components/Statistics/StatPreviewCard.swift`
-- `Sources/ReachuCastingUI/Components/Statistics/FinalStatsCard.swift` (+ `import ReachuCore`)
-- `Sources/ReachuCastingUI/Components/Social/AdminCommentCard.swift`
+- `Sources/VioCastingUI/Components/Match/LineupCard.swift`
+- `Sources/VioCastingUI/Components/Timeline/HighlightVideoCard.swift`
+- `Sources/VioCastingUI/Components/Statistics/StatPreviewCard.swift`
+- `Sources/VioCastingUI/Components/Statistics/FinalStatsCard.swift` (+ `import VioCore`)
+- `Sources/VioCastingUI/Components/Social/AdminCommentCard.swift`
 - `Demo/Viaplay/...` (versiones equivalentes)
 - `Demo/Viaplay/Viaplay/Views/ViaplayHomeView.swift`
 - `Demo/Viaplay/Viaplay/Components/HeroSection.swift`
@@ -69,29 +69,29 @@ Usan `DemoDataManager.shared.brandAsset(for: .logo)`:
 
 ### Backgrounds
 Usan `DemoDataManager.shared.backgroundImage(for:)`:
-- `Sources/ReachuCastingUI/Components/Promo/ROfferBannerView.swift` – footballField
+- `Sources/VioCastingUI/Components/Promo/ROfferBannerView.swift` – footballField
 - `Demo/Viaplay/Viaplay/Components/ViaplayOfferBannerView.swift` – footballField
 - `Demo/Viaplay/Viaplay/Components/HeroSection.swift` – mainBackground
 - `Demo/Viaplay/Viaplay/Views/SportDetailView.swift` – sportDetail, sportDetailImage
 
 ### Labels con nombre de marca
-Usan `ReachuConfiguration.shared.effectiveBrandConfiguration.name`:
-- `Sources/ReachuCastingUI/Models/TimelineEventProtocol.swift` – castingContest, castingProduct
-- `Sources/ReachuCastingUI/Components/Timeline/HighlightVideoCard.swift` – "X Highlights"
-- `Sources/ReachuCastingUI/Components/Statistics/StatPreviewCard.swift` – "X Statistics"
-- `Sources/ReachuCastingUI/Components/Match/LineupCard.swift` – "X Oppstilling"
-- `Sources/ReachuCastingUI/Components/Polls/TimelinePollCard.swift` – "X Avstemning"
-- `Sources/ReachuCastingUI/Components/Polls/PredictionPollCard.swift` – "X Spådom"
-- `Sources/ReachuCastingUI/Components/Polls/ContestCard.swift` – "X Konkurranse"
-- `Sources/ReachuCastingUI/Components/Products/RCastingProductModal.swift` – "Kontakt X for å fullføre kjøpet"
+Usan `VioConfiguration.shared.effectiveBrandConfiguration.name`:
+- `Sources/VioCastingUI/Models/TimelineEventProtocol.swift` – castingContest, castingProduct
+- `Sources/VioCastingUI/Components/Timeline/HighlightVideoCard.swift` – "X Highlights"
+- `Sources/VioCastingUI/Components/Statistics/StatPreviewCard.swift` – "X Statistics"
+- `Sources/VioCastingUI/Components/Match/LineupCard.swift` – "X Oppstilling"
+- `Sources/VioCastingUI/Components/Polls/TimelinePollCard.swift` – "X Avstemning"
+- `Sources/VioCastingUI/Components/Polls/PredictionPollCard.swift` – "X Spådom"
+- `Sources/VioCastingUI/Components/Polls/ContestCard.swift` – "X Konkurranse"
+- `Sources/VioCastingUI/Components/Products/RCastingProductModal.swift` – "Kontakt X for å fullføre kjøpet"
 
 ---
 
 ## 4. URLs de productos
 
 Usan `DemoDataManager.shared.productUrl(for: productId)`:
-- `Sources/ReachuCastingUI/Components/Products/RCastingProductCard.swift`
-- `Sources/ReachuCastingUI/Components/Products/RCastingProductCardWrapper.swift`
+- `Sources/VioCastingUI/Components/Products/RCastingProductCard.swift`
+- `Sources/VioCastingUI/Components/Products/RCastingProductCardWrapper.swift`
 - `Demo/Viaplay/Viaplay/Components/Products/CastingProductCard.swift`
 - `Demo/Viaplay/Viaplay/Components/Products/CastingProductCardWrapper.swift`
 
@@ -102,15 +102,15 @@ Configuración en `demo-static-data.json` → `productMappings`.
 ## 5. Debug y prints eliminados
 
 - `Demo/Viaplay/Viaplay/Components/Match/AllContentFeed.swift` – prints de Elkjøp, onAppear debug
-- `Sources/ReachuCastingUI/Components/Polls/PollsListView.swift` – print en onParticipate
+- `Sources/VioCastingUI/Components/Polls/PollsListView.swift` – print en onParticipate
 
 ---
 
 ## 6. Imports necesarios
 
-Componentes que usan `DemoDataManager` o `ReachuConfiguration` deben tener:
+Componentes que usan `DemoDataManager` o `VioConfiguration` deben tener:
 ```swift
-import ReachuCore
+import VioCore
 ```
 
 Archivos que lo requieren:
@@ -162,7 +162,7 @@ Archivos que lo requieren:
 
 1. Crear/copiar `demo-static-data.json` con `brand`, `assets`, `productMappings`, etc.
 2. Añadir assets al bundle: `avatar_skistar`, icon, logo, backgrounds
-3. Ajustar `reachu-config.json` si hace falta (theme, colores)
+3. Ajustar `vio-config.json` si hace falta (theme, colores)
 4. No tocar código Swift; todo se configura por JSON
 
 ---
@@ -171,7 +171,7 @@ Archivos que lo requieren:
 
 | Área | Archivos |
 |------|----------|
-| Config | ModuleConfigurations, ConfigurationLoader, ReachuConfiguration, demo-static-data.json |
+| Config | ModuleConfigurations, ConfigurationLoader, VioConfiguration, demo-static-data.json |
 | Casting | RCastingProductCard, RCastingContestCard, RCastingProductCardWrapper, RCastingProductModal |
 | Demo Casting | CastingProductCard, CastingContestCard, CastingProductCardWrapper |
 | Timeline | TimelineEventProtocol, HighlightVideoCard |
@@ -184,4 +184,4 @@ Archivos que lo requieren:
 
 ---
 
-*Última actualización: sesión de componentización ReachuSwiftSDK*
+*Última actualización: sesión de componentización VioSwiftSDK*

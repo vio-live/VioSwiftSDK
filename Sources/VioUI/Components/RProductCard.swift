@@ -155,7 +155,7 @@ public struct VProductCard: View {
         }
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.large)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     /// List Layout - Horizontal card for search results
@@ -196,7 +196,7 @@ public struct VProductCard: View {
         .padding(VioSpacing.sm)
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.small)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     /// Hero Layout - Large featured product
@@ -246,7 +246,7 @@ public struct VProductCard: View {
         }
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.xl)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     /// Minimal Layout - Compact for carousels
@@ -268,7 +268,7 @@ public struct VProductCard: View {
         .frame(width: 100, height: 140)
         .background(adaptiveColors.surface)
         .cornerRadius(VioBorderRadius.small)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
     }
     
     // MARK: - Image Components

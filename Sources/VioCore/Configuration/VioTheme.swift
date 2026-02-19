@@ -104,8 +104,8 @@ public struct VioTheme {
     public static let `default` = VioTheme(
         name: "Vio Default",
         mode: .automatic,
-        lightColors: .reachu,
-        darkColors: .reachuDark
+        lightColors: .vio,
+        darkColors: .vioDark
     )
     
     /// Light theme (forced light mode)
@@ -146,7 +146,7 @@ public struct VioTheme {
         )
     }
     
-    // Smart defaults are handled by using existing .reachu and .reachuDark schemes
+    // Smart defaults are handled by using existing .vio and .vioDark schemes
 }
 
 // MARK: - Color Scheme
@@ -223,7 +223,7 @@ extension ColorScheme {
     // MARK: - Light Color Schemes
     
     /// Default Vio brand colors (light)
-    public static let reachu = ColorScheme(
+    public static let vio = ColorScheme(
         primary: Color(.sRGB, red: 0.0, green: 0.478, blue: 1.0, opacity: 1.0), // #007AFF
         secondary: Color(.sRGB, red: 0.345, green: 0.337, blue: 0.839, opacity: 1.0) // #5856D6
     )
@@ -243,7 +243,7 @@ extension ColorScheme {
     // MARK: - Dark Color Schemes
     
     /// Default Vio brand colors (dark)
-    public static let reachuDark = ColorScheme(
+    public static let vioDark = ColorScheme(
         primary: Color(.sRGB, red: 0.039, green: 0.518, blue: 1.0, opacity: 1.0), // #0A84FF
         secondary: Color(.sRGB, red: 0.369, green: 0.361, blue: 0.902, opacity: 1.0), // #5E5CE6
         success: Color(.sRGB, red: 0.196, green: 0.843, blue: 0.294, opacity: 1.0), // #32D74B

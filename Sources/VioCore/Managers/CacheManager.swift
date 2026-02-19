@@ -11,13 +11,13 @@ public class CacheManager {
     
     // MARK: - Cache Keys
     private enum CacheKeys {
-        static let campaign = "reachu.cache.campaign"
-        static let components = "reachu.cache.components"
-        static let campaignState = "reachu.cache.campaignState"
-        static let isCampaignActive = "reachu.cache.isCampaignActive"
-        static let lastUpdated = "reachu.cache.lastUpdated"
-        static let cacheConfigHash = "reachu.cache.configHash"
-        static let cacheVersion = "reachu.cache.version"
+        static let campaign = "vio.cache.campaign"
+        static let components = "vio.cache.components"
+        static let campaignState = "vio.cache.campaignState"
+        static let isCampaignActive = "vio.cache.isCampaignActive"
+        static let lastUpdated = "vio.cache.lastUpdated"
+        static let cacheConfigHash = "vio.cache.configHash"
+        static let cacheVersion = "vio.cache.version"
     }
     
     // MARK: - Cache Version

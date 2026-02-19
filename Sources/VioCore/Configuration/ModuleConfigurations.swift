@@ -32,7 +32,7 @@ public struct CartConfiguration {
         floatingCartDisplayMode: FloatingCartDisplayMode = .minimal,
         floatingCartSize: FloatingCartSize = .small,
         autoSaveCart: Bool = true,
-        cartPersistenceKey: String = "reachu_cart",
+        cartPersistenceKey: String = "vio_cart",
         maxQuantityPerItem: Int = 99,
         showCartNotifications: Bool = true,
         enableGuestCheckout: Bool = true,
@@ -491,7 +491,7 @@ public struct CampaignConfiguration {
     public let restAPIBaseURL: String    // REST API endpoint for campaigns (same as WebSocket base URL)
     /// API key for campaign admin endpoints (different from SDK API key)
     /// Used for endpoints like GET /v1/sdk/config and GET /v1/offers
-    /// Configured in reachu-config.json under "campaigns.campaignAdminApiKey"
+    /// Configured in vio-config.json under "campaigns.campaignAdminApiKey"
     /// Only needed if autoDiscover is false (legacy mode)
     public let campaignAdminApiKey: String
     /// Enable auto-discovery of campaigns using only the Vio SDK API key

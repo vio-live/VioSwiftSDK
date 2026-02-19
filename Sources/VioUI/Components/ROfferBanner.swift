@@ -144,7 +144,7 @@ public struct VOfferBanner: View {
         }
         .frame(height: customHeight ?? 160)
         .cornerRadius(VioBorderRadius.large)
-        .reachuCardShadow(for: colorScheme)
+        .vioCardShadow(for: colorScheme)
         .onAppear {
             // Initialize isImageLoaded based on whether there's an image or background color
             if config.backgroundImageUrl != nil && !config.backgroundImageUrl!.isEmpty {

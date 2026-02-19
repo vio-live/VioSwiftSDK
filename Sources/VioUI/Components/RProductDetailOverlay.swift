@@ -148,7 +148,7 @@ public struct VProductDetailOverlay: View {
                             Capsule()
                                 .fill(adaptiveColors.surface.opacity(0.8))
                                 .frame(width: 36, height: 5)
-                                .reachuTextShadow(for: colorScheme)
+                                .vioTextShadow(for: colorScheme)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.top, 12)
@@ -696,7 +696,7 @@ public struct VProductDetailOverlay: View {
                     RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                         .stroke(VioColors.primary.opacity(0.3), lineWidth: 1)
                 )
-                .reachuCardShadow(for: colorScheme)
+                .vioCardShadow(for: colorScheme)
             }
             .disabled(!isInStock || isAddingToCart)
             .scaleEffect(buttonScale)
@@ -955,7 +955,7 @@ public struct VProductDetailOverlay: View {
             .background(
                 RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                     .fill(VioColors.surface)
-                    .reachuCardShadow(for: colorScheme)
+                    .vioCardShadow(for: colorScheme)
             )
             .padding(.horizontal, VioSpacing.lg)
             .padding(.top, VioSpacing.lg)

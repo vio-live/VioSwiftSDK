@@ -11,7 +11,7 @@ public class ProductService {
     
     // MARK: - Private Properties
     private var cachedSdkClient: SdkClient?
-    private let sdkClientQueue = DispatchQueue(label: "com.reachu.productsdk")
+    private let sdkClientQueue = DispatchQueue(label: "com.vio.productsdk")
     
     private init() {}
     
