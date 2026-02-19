@@ -106,7 +106,7 @@ struct OfferBannerComparisonDemo: View {
                     .background(Color.green.opacity(0.1))
                     .cornerRadius(8)
                 
-                Text("• Campaign ID read from reachu-config.json")
+                Text("• Campaign ID read from vio-config.json")
                 Text("• No manual parameters needed")
                 Text("• Automatic lifecycle management")
             }

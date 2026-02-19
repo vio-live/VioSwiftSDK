@@ -1,8 +1,8 @@
 {
-  "_comment": "Static demo data configuration for Viaplay demo. This data can be replaced with backend data or moved to reachu-config.json in the future.",
+  "_comment": "Static demo data configuration for Viaplay demo. This data can be replaced with backend data or moved to vio-config.json in the future.",
   "version": "1.0.0",
   "brand": {
-    "_comment": "Brand name and icon - single source for demo consistency. Overrides reachu-config when present.",
+    "_comment": "Brand name and icon - single source for demo consistency. Overrides vio-config when present.",
     "name": "Elkjøp",
     "iconAsset": "avatar_el"
   },

@@ -953,7 +953,7 @@ public enum SyncStrategy: String, CaseIterable {
 // MARK: - Demo Data Configuration
 
 /// Configuration for static demo data used in demos and development
-/// This data can be replaced with backend data or moved to reachu-config.json
+/// This data can be replaced with backend data or moved to vio-config.json
 public struct DemoDataConfiguration {
     
     // MARK: - Assets
@@ -1261,7 +1261,7 @@ public struct DemoDataConfiguration {
         }
     }
     
-    // MARK: - Brand Override (optional - when set, overrides reachu-config brand for demo consistency)
+    // MARK: - Brand Override (optional - when set, overrides vio-config brand for demo consistency)
     
     public let brand: BrandConfiguration?
     

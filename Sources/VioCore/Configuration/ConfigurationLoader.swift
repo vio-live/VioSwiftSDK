@@ -56,7 +56,7 @@ public class ConfigurationLoader {
             
             // 3. Check for config files in order of preference
             let configFiles = [
-                "reachu-config",                 // User custom (highest priority)
+                "vio-config",                    // User custom (highest priority)
                 "vio-config-automatic",       // Automatic theme (preferred)
                 "vio-config-example",         // Default fallback
                 "vio-config-dark-streaming"   // Dark theme (lowest priority)

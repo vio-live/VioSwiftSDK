@@ -22,7 +22,7 @@ struct ViaplayApp: App {
     
     init() {
         // Load Vio SDK configuration
-        // This reads the reachu-config.json file with Viaplay colors and theme
+        // This reads the vio-config.json file with Viaplay colors and theme
         // Stripe is initialized automatically by the SDK
         print("🚀 [Viaplay] Loading Vio SDK configuration...")
         ConfigurationLoader.loadConfiguration()

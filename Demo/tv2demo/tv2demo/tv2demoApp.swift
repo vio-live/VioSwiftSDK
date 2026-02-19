@@ -18,7 +18,7 @@ struct tv2demoApp: App {
     
     init() {
         // Load Vio SDK configuration
-        // This reads the reachu-config.json file with TV2 colors and theme
+        // This reads the vio-config.json file with TV2 colors and theme
         // Stripe is initialized automatically by the SDK
         print("🚀 [TV2Demo] Loading Vio SDK configuration...")
         ConfigurationLoader.loadConfiguration()

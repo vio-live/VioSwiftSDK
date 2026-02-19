@@ -153,11 +153,11 @@ NEW_FEATURES_CARDS = [
         "desc": """Implement dynamic configuration management from backend
 
 **Archivos creados/modificados:**
-- `Sources/ReachuCore/Managers/DynamicConfigurationManager.swift` (nuevo)
-- `Sources/ReachuCore/Models/DynamicConfigModels.swift` (nuevo)
-- `Sources/ReachuCore/Network/ConfigAPIClient.swift` (nuevo)
-- `Sources/ReachuCore/Managers/CampaignManager.swift` (actualizado)
-- `Sources/ReachuCore/Configuration/ReachuConfiguration.swift` (actualizado)
+- `Sources/VioCore/Managers/DynamicConfigurationManager.swift` (nuevo)
+- `Sources/VioCore/Models/DynamicConfigModels.swift` (nuevo)
+- `Sources/VioCore/Network/ConfigAPIClient.swift` (nuevo)
+- `Sources/VioCore/Managers/CampaignManager.swift` (actualizado)
+- `Sources/VioCore/Configuration/VioConfiguration.swift` (actualizado)
 - `Documentation/BACKEND_API_SPEC.md` (nuevo)
 - `Documentation/BACKEND_IMPLEMENTATION_GUIDE.md` (nuevo)
 - `Documentation/BACKEND_QA_RESPONSES.md` (nuevo)
@@ -175,7 +175,7 @@ NEW_FEATURES_CARDS = [
             "DynamicConfigModels definidos",
             "ConfigAPIClient implementado",
             "CampaignManager integrado",
-            "ReachuConfiguration actualizado con effectiveBrandConfiguration",
+            "VioConfiguration actualizado con effectiveBrandConfiguration",
             "Documentación BACKEND_API_SPEC.md creada",
             "Documentación BACKEND_IMPLEMENTATION_GUIDE.md creada",
             "Documentación BACKEND_QA_RESPONSES.md creada"

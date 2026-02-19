@@ -59,7 +59,7 @@ public struct VCustomLoader: View {
     
     // MARK: - Rotating Loader (default)
     private var rotatingLoader: some View {
-        reachuLogoPath
+        vioLogoPath
             .fill(color)
             .rotationEffect(.degrees(rotation))
             .onAppear {
@@ -76,7 +76,7 @@ public struct VCustomLoader: View {
     
     // MARK: - Pulsing Loader
     private var pulsingLoader: some View {
-        reachuLogoPath
+        vioLogoPath
             .fill(color)
             .scaleEffect(scale)
             .opacity(opacity)
@@ -93,7 +93,7 @@ public struct VCustomLoader: View {
     
     // MARK: - Bouncing Loader
     private var bouncingLoader: some View {
-        reachuLogoPath
+        vioLogoPath
             .fill(color)
             .offset(y: bounceOffset)
             .onAppear {
@@ -108,7 +108,7 @@ public struct VCustomLoader: View {
     
     // MARK: - Fading Loader
     private var fadingLoader: some View {
-        reachuLogoPath
+        vioLogoPath
             .fill(color)
             .opacity(opacity)
             .onAppear {
@@ -122,7 +122,7 @@ public struct VCustomLoader: View {
     }
     
     // MARK: - Vio Logo Path (from SVG)
-    private var reachuLogoPath: Path {
+    private var vioLogoPath: Path {
         // SVG viewBox: "0 0 45 48"
         // Logo dimensions: 45 wide x 48 tall
         // Scale to fit within the desired size while maintaining aspect ratio
