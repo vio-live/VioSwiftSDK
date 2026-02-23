@@ -26,3 +26,26 @@ VioWorkspace.xcworkspace/
 # Kotlin implementation guide (moved to trello-mcp-server)
 KOTLIN_IMPLEMENTATION_GUIDE.md
 ReachuWorkspace.xcworkspace/
+
+# Internal documentation (personal use only, not for main branch)
+CURSOR_SDK_INFRASTRUCTURE*.md
+BACKEND_*.md
+REACHU_IO_URLS_LIST.md
+HARDCODED_VALUES_REPLACEMENT_LIST.md
+TRELLO_CARDS_TO_CREATE.md
+IMPLEMENTATION_STATUS.md
+BRAND_COLORS_REFERENCE.md
+KOTLIN_IMPLEMENTATION_TASKS.md
+REPLIT_*.md
+ARCHITECTURE_DIAGRAM.md
+CHANGELOG_ENGAGEMENT_IMPROVEMENTS.md
+BACKEND_FAQ.md
+SDK_INFRASTRUCTURE.md
+CASTING_CONSIDERATIONS.md
+Viaplay_Casting_Components_Analysis.md
+SOLUCION_TEMPORAL_VIDEO_TIME.md
+PRICE_LOGGING_GUIDE.md
+Documentation/*.md
+Demo/Viaplay/**/*.md
+Demo/tv2demo/**/Configuration/README.md
+Sources/VioCore/Configuration/theme-examples/README.md
