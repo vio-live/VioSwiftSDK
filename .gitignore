@@ -49,3 +49,7 @@ Documentation/*.md
 Demo/Viaplay/**/*.md
 Demo/tv2demo/**/Configuration/README.md
 Sources/VioCore/Configuration/theme-examples/README.md
+
+# Internal planning/tools (personal use only)
+create_trello_cards_new_features.py
+viaplay_production_plan.json
