@@ -19,16 +19,16 @@
 ## 1. Árbol de Directorios Completo
 
 ```
-ReachuSwiftSDK/
+VioSwiftSDK/
 ├── Sources/
-│   ├── ReachuCore/                          # Core SDK - Configuración y Managers
+│   ├── VioCore/                          # Core SDK - Configuración y Managers
 │   │   ├── Configuration/
-│   │   │   ├── ReachuConfiguration.swift    # Singleton de configuración global
+│   │   │   ├── VioConfiguration.swift    # Singleton de configuración global
 │   │   │   ├── ConfigurationLoader.swift    # Carga de configuraciones desde JSON
 │   │   │   ├── ModuleConfigurations.swift   # Estructuras de configuración
-│   │   │   ├── ReachuTheme.swift            # Sistema de temas
-│   │   │   ├── ReachuLocalization.swift     # Sistema de localización
-│   │   │   └── ReachuTranslationKey.swift  # Claves de traducción
+│   │   │   ├── VioTheme.swift            # Sistema de temas
+│   │   │   ├── VioLocalization.swift     # Sistema de localización
+│   │   │   └── VioTranslationKey.swift  # Claves de traducción
 │   │   ├── Managers/
 │   │   │   ├── CampaignManager.swift       # Gestión de campañas y WebSocket
 │   │   │   ├── DemoDataManager.swift       # Acceso a datos estáticos del demo
@@ -45,7 +45,7 @@ ReachuSwiftSDK/
 │   │   ├── Analytics/
 │   │   │   └── AnalyticsManager.swift     # Manager de analytics
 │   │   ├── Utils/
-│   │   │   └── ReachuLogger.swift         # Sistema de logging
+│   │   │   └── VioLogger.swift         # Sistema de logging
 │   │   ├── Sdk/                            # GraphQL SDK
 │   │   │   ├── Core/
 │   │   │   │   ├── Errors/
@@ -96,9 +96,9 @@ ReachuSwiftSDK/
 │   │   │       ├── DiscountModule.swift
 │   │   │       ├── MarketModule.swift
 │   │   │       └── PaymentModule.swift
-│   │   └── ReachuCore.swift                 # Exports principales
+│   │   └── VioCore.swift                 # Exports principales
 │   │
-│   ├── ReachuEngagementSystem/              # Sistema de Engagement (Polls, Contests)
+│   ├── VioEngagementSystem/              # Sistema de Engagement (Polls, Contests)
 │   │   ├── Managers/
 │   │   │   ├── EngagementManager.swift     # Manager principal (singleton)
 │   │   │   └── VideoSyncManager.swift      # Sincronización con video
@@ -115,9 +115,9 @@ ReachuSwiftSDK/
 │   │   │   └── DemoDataConverter.swift             # Conversor de datos demo
 │   │   ├── Models/
 │   │   │   └── EngagementModels.swift     # Modelos (Poll, Contest, etc.)
-│   │   └── ReachuEngagementSystem.swift   # Exports principales
+│   │   └── VioEngagementSystem.swift   # Exports principales
 │   │
-│   ├── ReachuEngagementUI/                  # UI de Engagement
+│   ├── VioEngagementUI/                  # UI de Engagement
 │   │   ├── Components/
 │   │   │   ├── REngagementPollCard.swift   # Tarjeta de poll
 │   │   │   ├── REngagementContestCard.swift # Tarjeta de contest
@@ -127,9 +127,9 @@ ReachuSwiftSDK/
 │   │   │   ├── REngagementPollOverlay.swift # Overlay de poll
 │   │   │   ├── REngagementContestOverlay.swift # Overlay de contest
 │   │   │   └── REngagementProductOverlay.swift # Overlay de producto
-│   │   └── ReachuEngagementUI.swift         # Exports principales
+│   │   └── VioEngagementUI.swift         # Exports principales
 │   │
-│   ├── ReachuLiveUI/                         # UI de Live Show
+│   ├── VioLiveUI/                         # UI de Live Show
 │   │   ├── Components/
 │   │   │   ├── DynamicComponentManager.swift      # Manager de componentes dinámicos
 │   │   │   ├── DynamicComponentRenderer.swift      # Renderizador de componentes
@@ -147,9 +147,9 @@ ReachuSwiftSDK/
 │   │   │   └── RLiveShowOverlay.swift             # Overlay principal
 │   │   ├── Configuration/
 │   │   │   └── RLiveShowConfiguration.swift       # Configuración de live show
-│   │   └── ReachuLiveUI.swift               # Exports principales
+│   │   └── VioLiveUI.swift               # Exports principales
 │   │
-│   ├── ReachuUI/                             # UI General
+│   ├── VioUI/                             # UI General
 │   │   ├── Components/
 │   │   │   ├── RProductCard.swift          # Tarjeta de producto
 │   │   │   ├── RProductCarousel.swift      # Carrusel de productos
@@ -177,14 +177,14 @@ ReachuSwiftSDK/
 │   │   │   └── VippsPaymentHandler.swift   # Handler de Vipps
 │   │   ├── Helpers/
 │   │   │   ├── ImageLoader.swift           # Cargador de imágenes
-│   │   │   └── ReachuComponentWrapper.swift # Wrapper de componentes
+│   │   │   └── VioComponentWrapper.swift # Wrapper de componentes
 │   │   ├── Services/
 │   │   │   └── ProductService.swift       # Servicio de productos
 │   │   ├── Resources/
 │   │   │   └── PaymentIcons/              # Iconos de pago
-│   │   └── ReachuUI.swift                 # Exports principales
+│   │   └── VioUI.swift                 # Exports principales
 │   │
-│   ├── ReachuDesignSystem/                  # Sistema de Diseño
+│   ├── VioDesignSystem/                  # Sistema de Diseño
 │   │   ├── Components/
 │   │   │   ├── RButton.swift              # Botón base
 │   │   │   ├── RToastNotification.swift   # Notificación toast
@@ -192,32 +192,32 @@ ReachuSwiftSDK/
 │   │   │   ├── CachedAsyncImage.swift     # Imagen async con caché
 │   │   │   └── CampaignSponsorBadge.swift # Badge de sponsor de campaña
 │   │   ├── Tokens/
-│   │   │   ├── ReachuColors.swift         # Colores
+│   │   │   ├── VioColors.swift         # Colores
 │   │   │   ├── AdaptiveColors.swift      # Colores adaptativos
-│   │   │   ├── ReachuTypography.swift     # Tipografía
-│   │   │   ├── ReachuSpacing.swift        # Espaciado
-│   │   │   ├── ReachuBorderRadius.swift  # Radio de borde
-│   │   │   └── ReachuShadow.swift        # Sombras
-│   │   └── ReachuDesignSystem.swift       # Exports principales
+│   │   │   ├── VioTypography.swift     # Tipografía
+│   │   │   ├── VioSpacing.swift        # Espaciado
+│   │   │   ├── VioBorderRadius.swift  # Radio de borde
+│   │   │   └── VioShadow.swift        # Sombras
+│   │   └── VioDesignSystem.swift       # Exports principales
 │   │
-│   ├── ReachuLiveShow/                      # Live Show Core
+│   ├── VioLiveShow/                      # Live Show Core
 │   │   └── [Archivos del módulo Live Show]
 │   │
-│   ├── ReachuNetwork/                       # Network Core
+│   ├── VioNetwork/                       # Network Core
 │   │   └── [Archivos de red]
 │   │
-│   └── ReachuTesting/                      # Testing Utilities
+│   └── VioTesting/                      # Testing Utilities
 │       ├── MockDataProvider.swift          # Proveedor de datos mock
-│       └── ReachuTesting.swift             # Exports principales
+│       └── VioTesting.swift             # Exports principales
 │
 └── Demo/
     └── Viaplay/                            # Demo de Viaplay
         └── Viaplay/
             ├── Configuration/
-            │   ├── reachu-config.json      # Configuración principal
+            │   ├── vio-config.json      # Configuración principal
             │   ├── demo-static-data.json  # Data estática del demo
             │   ├── entertainment-config.json # Config de entretenimiento
-            │   └── reachu-translations.json # Traducciones
+            │   └── vio-translations.json # Traducciones
             ├── Views/
             ├── Components/
             ├── Managers/
@@ -228,11 +228,11 @@ ReachuSwiftSDK/
 
 ## 2. Descripción de Módulos
 
-### ReachuCore
+### VioCore
 **Propósito**: Core del SDK - Configuración, managers principales, y operaciones GraphQL.
 
 **Responsabilidades**:
-- Gestión de configuración global (`ReachuConfiguration`)
+- Gestión de configuración global (`VioConfiguration`)
 - Carga de configuraciones desde JSON (`ConfigurationLoader`)
 - Gestión de campañas y WebSocket (`CampaignManager`)
 - Acceso a datos estáticos del demo (`DemoDataManager`)
@@ -242,7 +242,7 @@ ReachuSwiftSDK/
 
 **Dependencias**: Ninguna (módulo base)
 
-### ReachuEngagementSystem
+### VioEngagementSystem
 **Propósito**: Sistema de engagement - Polls, Contests, y participación de usuarios.
 
 **Responsabilidades**:
@@ -252,9 +252,9 @@ ReachuSwiftSDK/
 - Caché y validación de datos
 - Manejo de errores y reintentos
 
-**Dependencias**: `ReachuCore`
+**Dependencias**: `VioCore`
 
-### ReachuEngagementUI
+### VioEngagementUI
 **Propósito**: Componentes UI para engagement - Cards y overlays.
 
 **Responsabilidades**:
@@ -262,9 +262,9 @@ ReachuSwiftSDK/
 - Overlays interactivos
 - Componentes de productos relacionados
 
-**Dependencias**: `ReachuEngagementSystem`, `ReachuCore`
+**Dependencias**: `VioEngagementSystem`, `VioCore`
 
-### ReachuLiveUI
+### VioLiveUI
 **Propósito**: UI para live shows - Componentes dinámicos y overlays.
 
 **Responsabilidades**:
@@ -273,9 +273,9 @@ ReachuSwiftSDK/
 - Layouts de live stream
 - Componentes de chat y productos en vivo
 
-**Dependencias**: `ReachuCore`
+**Dependencias**: `VioCore`
 
-### ReachuUI
+### VioUI
 **Propósito**: UI general - Componentes de productos, carrito, checkout.
 
 **Responsabilidades**:
@@ -285,9 +285,9 @@ ReachuSwiftSDK/
 - Selector de mercado (`MarketManager`)
 - Descuentos (`DiscountManager`)
 
-**Dependencias**: `ReachuCore`
+**Dependencias**: `VioCore`
 
-### ReachuDesignSystem
+### VioDesignSystem
 **Propósito**: Sistema de diseño - Tokens y componentes base.
 
 **Responsabilidades**:
@@ -302,7 +302,7 @@ ReachuSwiftSDK/
 ## 3. Responsabilidades de Managers
 
 ### CampaignManager
-**Ubicación**: `ReachuCore/Managers/CampaignManager.swift`
+**Ubicación**: `VioCore/Managers/CampaignManager.swift`
 
 **Responsabilidades**:
 - Gestión del ciclo de vida de campañas
@@ -324,7 +324,7 @@ CampaignManager.shared
 ```
 
 ### DemoDataManager
-**Ubicación**: `ReachuCore/Managers/DemoDataManager.swift`
+**Ubicación**: `VioCore/Managers/DemoDataManager.swift`
 
 **Responsabilidades**:
 - Acceso a datos estáticos del demo
@@ -343,7 +343,7 @@ DemoDataManager.shared
 ```
 
 ### EngagementManager
-**Ubicación**: `ReachuEngagementSystem/Managers/EngagementManager.swift`
+**Ubicación**: `VioEngagementSystem/Managers/EngagementManager.swift`
 
 **Responsabilidades**:
 - Gestión de polls y contests por `broadcastId`
@@ -363,7 +363,7 @@ EngagementManager.shared
 ```
 
 ### CartManager
-**Ubicación**: `ReachuUI/Managers/CartManager.swift`
+**Ubicación**: `VioUI/Managers/CartManager.swift`
 
 **Responsabilidades**:
 - Gestión del carrito de compras
@@ -382,7 +382,7 @@ CartManager.shared
 ```
 
 ### VideoSyncManager
-**Ubicación**: `ReachuEngagementSystem/Managers/VideoSyncManager.swift`
+**Ubicación**: `VioEngagementSystem/Managers/VideoSyncManager.swift`
 
 **Responsabilidades**:
 - Sincronización de polls/contests con tiempo de video
@@ -408,9 +408,9 @@ App Launch
     ↓
 ConfigurationLoader.loadConfiguration()
     ↓
-ReachuConfiguration.configure(...)
+VioConfiguration.configure(...)
     ↓
-├── Load reachu-config.json
+├── Load vio-config.json
 ├── Load demo-static-data.json (si existe)
 ├── Initialize CampaignManager
 ├── Initialize DemoDataManager
@@ -424,7 +424,7 @@ Componente SwiftUI necesita asset/URL
     ↓
 DemoDataManager.shared.defaultLogo
     ↓
-ReachuConfiguration.shared.demoDataConfiguration
+VioConfiguration.shared.demoDataConfiguration
     ↓
 DemoDataConfiguration (desde JSON o defaults)
     ↓
@@ -474,44 +474,44 @@ CampaignManager handles interaction
 
 ```mermaid
 graph TD
-    ReachuCore[ReachuCore<br/>Base Module]
-    ReachuDesignSystem[ReachuDesignSystem<br/>Design Tokens]
-    ReachuEngagementSystem[ReachuEngagementSystem<br/>Engagement Logic]
-    ReachuEngagementUI[ReachuEngagementUI<br/>Engagement UI]
-    ReachuLiveUI[ReachuLiveUI<br/>Live Show UI]
-    ReachuUI[ReachuUI<br/>General UI]
-    ReachuLiveShow[ReachuLiveShow<br/>Live Show Core]
-    ReachuNetwork[ReachuNetwork<br/>Network]
-    ReachuTesting[ReachuTesting<br/>Testing Utils]
+    VioCore[VioCore<br/>Base Module]
+    VioDesignSystem[VioDesignSystem<br/>Design Tokens]
+    VioEngagementSystem[VioEngagementSystem<br/>Engagement Logic]
+    VioEngagementUI[VioEngagementUI<br/>Engagement UI]
+    VioLiveUI[VioLiveUI<br/>Live Show UI]
+    VioUI[VioUI<br/>General UI]
+    VioLiveShow[VioLiveShow<br/>Live Show Core]
+    VioNetwork[VioNetwork<br/>Network]
+    VioTesting[VioTesting<br/>Testing Utils]
     
-    ReachuCore --> ReachuDesignSystem
-    ReachuCore --> ReachuNetwork
+    VioCore --> VioDesignSystem
+    VioCore --> VioNetwork
     
-    ReachuEngagementSystem --> ReachuCore
-    ReachuEngagementSystem --> ReachuNetwork
+    VioEngagementSystem --> VioCore
+    VioEngagementSystem --> VioNetwork
     
-    ReachuEngagementUI --> ReachuEngagementSystem
-    ReachuEngagementUI --> ReachuCore
-    ReachuEngagementUI --> ReachuDesignSystem
+    VioEngagementUI --> VioEngagementSystem
+    VioEngagementUI --> VioCore
+    VioEngagementUI --> VioDesignSystem
     
-    ReachuLiveUI --> ReachuCore
-    ReachuLiveUI --> ReachuDesignSystem
+    VioLiveUI --> VioCore
+    VioLiveUI --> VioDesignSystem
     
-    ReachuUI --> ReachuCore
-    ReachuUI --> ReachuDesignSystem
-    ReachuUI --> ReachuNetwork
+    VioUI --> VioCore
+    VioUI --> VioDesignSystem
+    VioUI --> VioNetwork
     
-    ReachuLiveShow --> ReachuCore
-    ReachuLiveShow --> ReachuNetwork
+    VioLiveShow --> VioCore
+    VioLiveShow --> VioNetwork
     
-    ReachuTesting --> ReachuCore
+    VioTesting --> VioCore
 ```
 
 **Notas**:
-- `ReachuCore` es el módulo base, sin dependencias externas
-- `ReachuDesignSystem` es independiente (solo tokens)
-- Todos los módulos UI dependen de `ReachuCore` y `ReachuDesignSystem`
-- Los módulos de lógica dependen de `ReachuCore` y `ReachuNetwork`
+- `VioCore` es el módulo base, sin dependencias externas
+- `VioDesignSystem` es independiente (solo tokens)
+- Todos los módulos UI dependen de `VioCore` y `VioDesignSystem`
+- Los módulos de lógica dependen de `VioCore` y `VioNetwork`
 
 ---
 
@@ -519,11 +519,11 @@ graph TD
 
 ### 1. Configuración Inicial
 
-**Archivo**: `ReachuCore/Configuration/ReachuConfiguration.swift`
+**Archivo**: `VioCore/Configuration/VioConfiguration.swift`
 
 ```swift
 // En App.swift o AppDelegate
-ReachuConfiguration.configure(
+VioConfiguration.configure(
     environment: .production,
     apiKey: "your-api-key",
     campaignConfig: CampaignConfiguration(...),

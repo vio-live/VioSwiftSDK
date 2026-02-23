@@ -14,7 +14,7 @@ Este documento explica cómo usar el sistema de configuración de data estática
 - ✅ `DemoDataManager` singleton implementado
 - ✅ `demo-static-data.json` creado con toda la data estática
 - ✅ `ConfigurationLoader.loadDemoDataConfiguration()` implementado
-- ✅ Integrado en `ReachuConfiguration` (carga automática)
+- ✅ Integrado en `VioConfiguration` (carga automática)
 - ✅ Default initializers con valores por defecto
 - ✅ Documentación completa creada
 
@@ -50,7 +50,7 @@ El archivo JSON debe estar en el bundle de la app:
 
 ### Cargar Configuración
 
-La configuración se carga automáticamente cuando se inicializa `ReachuConfiguration`:
+La configuración se carga automáticamente cuando se inicializa `VioConfiguration`:
 
 ```swift
 // En App.swift o AppDelegate
@@ -79,7 +79,7 @@ let countdown = DemoDataManager.shared.offerBannerCountdown
 
 ## Migración a Backend/Configuración Dinámica
 
-### Opción 1: Integrar en `reachu-config.json`
+### Opción 1: Integrar en `vio-config.json`
 
 **Ventajas:**
 - Todo en un solo archivo de configuración
@@ -88,7 +88,7 @@ let countdown = DemoDataManager.shared.offerBannerCountdown
 
 **Implementación:**
 
-1. Mover la sección `demoData` a `reachu-config.json`:
+1. Mover la sección `demoData` a `vio-config.json`:
 ```json
 {
   "demoData": {
@@ -103,7 +103,7 @@ let countdown = DemoDataManager.shared.offerBannerCountdown
 ```swift
 if let demoDataJson = config.demoData {
     let demoDataConfig = createDemoDataConfiguration(from: demoDataJson)
-    ReachuConfiguration.shared.demoDataConfiguration = demoDataConfig
+    VioConfiguration.shared.demoDataConfiguration = demoDataConfig
 }
 ```
 
@@ -135,7 +135,7 @@ public class DemoDataService {
 }
 ```
 
-3. Actualizar `ReachuConfiguration`:
+3. Actualizar `VioConfiguration`:
 ```swift
 // En el método configure o en un método separado
 Task {
@@ -145,11 +145,11 @@ Task {
             broadcastId: broadcastContext?.broadcastId
         )
         await MainActor.run {
-            ReachuConfiguration.shared.demoDataConfiguration = demoData
+            VioConfiguration.shared.demoDataConfiguration = demoData
         }
     } catch {
         // Fallback a JSON local
-        ReachuConfiguration.shared.demoDataConfiguration = 
+        VioConfiguration.shared.demoDataConfiguration = 
             ConfigurationLoader.loadDemoDataConfiguration()
     }
 }
@@ -184,16 +184,16 @@ public class DemoDataManager {
                 )
                 cachedConfig = config
                 lastFetchDate = Date()
-                ReachuConfiguration.shared.demoDataConfiguration = config
+                VioConfiguration.shared.demoDataConfiguration = config
                 return
             } catch {
-                ReachuLogger.warning("Failed to load demo data from backend: \(error)", component: "DemoData")
+                VioLogger.warning("Failed to load demo data from backend: \(error)", component: "DemoData")
             }
         }
         
         // 2. Fallback a JSON local
         let localConfig = ConfigurationLoader.loadDemoDataConfiguration()
-        ReachuConfiguration.shared.demoDataConfiguration = localConfig
+        VioConfiguration.shared.demoDataConfiguration = localConfig
     }
     
     private func shouldFetchFromBackend() -> Bool {
@@ -297,7 +297,7 @@ Para probar la migración:
 1. ✅ Crear estructura `DemoDataConfiguration`
 2. ✅ Crear `DemoDataManager`
 3. ✅ Crear loader desde JSON
-4. ✅ Integrar en `ReachuConfiguration`
+4. ✅ Integrar en `VioConfiguration`
 5. ✅ Documentación completa
 6. ⏳ Migrar componentes para usar `DemoDataManager` (Fase 1 - Ver [BACKEND_INTEGRATION_ROADMAP.md](BACKEND_INTEGRATION_ROADMAP.md))
 7. ⏳ Crear endpoint en backend para demo data (Fase 2)

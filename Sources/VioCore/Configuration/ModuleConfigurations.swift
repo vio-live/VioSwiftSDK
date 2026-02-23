@@ -487,7 +487,7 @@ public struct LiveShowConfiguration {
 
 /// Configuration for Campaign endpoints
 public struct CampaignConfiguration {
-    public let webSocketBaseURL: String  // WebSocket endpoint for campaigns (e.g., "https://dev-campaing.reachu.io")
+    public let webSocketBaseURL: String  // WebSocket endpoint for campaigns (e.g., "https://api-dev.vio.live")
     public let restAPIBaseURL: String    // REST API endpoint for campaigns (same as WebSocket base URL)
     /// API key for campaign admin endpoints (different from SDK API key)
     /// Used for endpoints like GET /v1/sdk/config and GET /v1/offers
@@ -502,8 +502,8 @@ public struct CampaignConfiguration {
     public let channelId: Int?
     
     public init(
-        webSocketBaseURL: String = "https://dev-campaing.reachu.io",
-        restAPIBaseURL: String = "https://dev-campaing.reachu.io",
+        webSocketBaseURL: String = "https://api-dev.vio.live",
+        restAPIBaseURL: String = "https://api-dev.vio.live",
         campaignAdminApiKey: String = "",
         autoDiscover: Bool = false,
         channelId: Int? = nil

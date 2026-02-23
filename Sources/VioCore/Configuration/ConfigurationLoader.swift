@@ -959,8 +959,8 @@ private struct JSONLocalizationConfiguration: Codable {
 }
 
 private struct JSONCampaignConfiguration: Codable {
-    let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://dev-campaing.reachu.io")
-    let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://campaing.reachu.io")
+    let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-dev.vio.live")
+    let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://api.vio.live")
     let campaignAdminApiKey: String?  // API key for campaign admin endpoints (different from SDK API key) - Only needed if autoDiscover is false
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
     let channelId: Int?  // Optional channel ID to filter campaigns during auto-discovery

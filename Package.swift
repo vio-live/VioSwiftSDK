@@ -141,7 +141,7 @@ let package = Package(
                 // Theme example JSONs and readme
                 "Configuration/theme-examples/README.md",
                 "Configuration/theme-examples/automatic-theme.json",
-                "Configuration/theme-examples/reachu-translations.json",
+                "Configuration/theme-examples/vio-translations.json",
                 "Configuration/theme-examples/green-ecommerce-theme.json",
                 "Configuration/theme-examples/dark-only-theme.json",
                 "Configuration/theme-examples/minimal-theme.json",

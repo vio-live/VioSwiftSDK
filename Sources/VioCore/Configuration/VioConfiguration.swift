@@ -360,11 +360,11 @@ public enum VioEnvironment: String, CaseIterable {
     public var baseURL: String {
         switch self {
         case .development:
-            return "https://graph-ql-dev.reachu.io"
+            return "https://graph-ql-dev.vio.live"
         case .sandbox:
-            return "https://graph-ql-dev.reachu.io"  // Sandbox uses same endpoint as development
+            return "https://graph-ql-dev.vio.live"  // Sandbox uses same endpoint as development
         case .production:
-            return "https://graph-ql-dev.reachu.io"  // Same as development for now
+            return "https://graph-ql-dev.vio.live"  // Same as development for now
         }
     }
     

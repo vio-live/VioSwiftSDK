@@ -119,7 +119,7 @@
   "localization": {
     "defaultLanguage": "no",
     "fallbackLanguage": "en",
-    "translationsFile": "reachu-translations"
+    "translationsFile": "vio-translations"
   },
   "analytics": {
     "enabled": true,

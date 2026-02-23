@@ -1,14 +1,14 @@
 # Viaplay Demo Configuration
 
-This directory contains the Reachu SDK configuration for the Viaplay demo app.
+This directory contains the Vio SDK configuration for the Viaplay demo app.
 
 ## Files
 
-- `reachu-config.json` - Main configuration file for Reachu SDK
+- `vio-config.json` - Main configuration file for Vio SDK
 
 ## Configuration Details
 
-The `reachu-config.json` file configures:
+The `vio-config.json` file configures:
 
 1. **Theme & Branding**
    - Viaplay pink primary color (#F5142A)
@@ -37,7 +37,7 @@ The `reachu-config.json` file configures:
    ```swift
    ConfigurationLoader.loadConfiguration()
    ```
-   - Loads `reachu-config.json` from the app bundle
+   - Loads `vio-config.json` from the app bundle
    - Initializes SDK with Viaplay theme colors
    - Configures campaign ID and Tipio connection
 
@@ -51,7 +51,7 @@ The `reachu-config.json` file configures:
 
 3. **Components**:
    - Custom overlays (ViaplayPollOverlay, ViaplayProductOverlay, etc.)
-   - Reachu SDK components (DynamicComponentRenderer)
+   - Vio SDK components (DynamicComponentRenderer)
    - Both work together for a complete experience
 
 ## Differences from TV2 Demo
@@ -71,10 +71,10 @@ To verify the configuration is loaded correctly:
 1. Run the app
 2. Check console logs for:
    ```
-   🚀 [Viaplay] Loading Reachu SDK configuration...
-   ✅ [Viaplay] Reachu SDK configured successfully
+   🚀 [Viaplay] Loading Vio SDK configuration...
+   ✅ [Viaplay] Vio SDK configured successfully
    🎨 [Viaplay] Theme: Viaplay Dark Theme
-   🎯 [Reachu][Campaign] campaignId=3
+   🎯 [Vio][Campaign] campaignId=3
    ```
 
 3. Open a video and verify:
@@ -86,7 +86,7 @@ To verify the configuration is loaded correctly:
 
 If configuration doesn't load:
 
-1. Ensure `reachu-config.json` is in the Xcode project
+1. Ensure `vio-config.json` is in the Xcode project
 2. Check it's included in "Copy Bundle Resources" (Build Phases)
 3. Verify JSON syntax is valid
 4. Check console logs for error messages
@@ -99,7 +99,7 @@ If the file doesn't appear in Xcode:
 2. Right-click on Viaplay folder in Project Navigator
 3. Select "Add Files to Viaplay..."
 4. Navigate to `Demo/Viaplay/Viaplay/Configuration/`
-5. Select `reachu-config.json`
+5. Select `vio-config.json`
 6. Ensure "Copy items if needed" is checked
 7. Ensure "Viaplay" target is checked
 8. Click "Add"

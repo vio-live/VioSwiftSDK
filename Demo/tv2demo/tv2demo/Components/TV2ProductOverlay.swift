@@ -655,7 +655,7 @@ struct TV2TwoProductsOverlay: View {
 // MARK: - Previews
 
 #Preview("Single Product") {
-    let baseURL = URL(string: "https://api.reachu.io/graphql")!
+    let baseURL = URL(string: "https://api-ecom.vio.live/graphql")!
     let sdk = SdkClient(baseUrl: baseURL, apiKey: "DEMO_KEY")
     
     ZStack {

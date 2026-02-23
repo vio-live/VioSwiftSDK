@@ -22,8 +22,8 @@
 ## 1. Resumen Ejecutivo
 
 ### Objetivo del Proyecto
-Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
-- Integración completa del SDK de Reachu
+Demo funcional de Viaplay que integre el SDK de Vio para mostrar:
+- Integración completa del SDK de Vio
 - Chat interactivo en tiempo real
 - Polls y trivia conectados a backend
 - E-commerce integrado
@@ -50,7 +50,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 ### ✅ Completado
 
 #### 1. Configuración del SDK (100%)
-- ✅ `reachu-config.json` con tema Viaplay pink (#F5142A)
+- ✅ `vio-config.json` con tema Viaplay pink (#F5142A)
 - ✅ SDK inicializado en `ViaplayApp.swift`
 - ✅ Campaign ID 3 configurado
 - ✅ Tipio WebSocket connection
@@ -83,7 +83,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - ✅ `DemoDataManager` singleton implementado
 - ✅ `demo-static-data.json` con toda la data estática
 - ✅ `ConfigurationLoader` extendido para cargar demo data
-- ✅ Integrado en `ReachuConfiguration`
+- ✅ Integrado en `VioConfiguration`
 - ✅ Default initializers con valores por defecto
 
 ### ⏳ Pendiente
@@ -118,15 +118,15 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 
 ### Módulos Principales (`/Sources/`)
 
-#### 1. **ReachuCore** (Core SDK)
-**Ubicación**: `Sources/ReachuCore/`
+#### 1. **VioCore** (Core SDK)
+**Ubicación**: `Sources/VioCore/`
 
 **Configuration/**
-- `ReachuConfiguration.swift` - Singleton de configuración global
+- `VioConfiguration.swift` - Singleton de configuración global
 - `ConfigurationLoader.swift` - Carga de configuraciones desde JSON
 - `ModuleConfigurations.swift` - Estructuras de configuración (incluye `DemoDataConfiguration`)
-- `ReachuTheme.swift` - Sistema de temas
-- `ReachuLocalization.swift` - Sistema de localización
+- `VioTheme.swift` - Sistema de temas
+- `VioLocalization.swift` - Sistema de localización
 
 **Managers/**
 - `CampaignManager.swift` - Gestión de campañas y WebSocket
@@ -147,8 +147,8 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - `Domain/` - Modelos y repositorios de dominio
 - `Modules/` - Módulos (Cart, Channel, Checkout, Discount, Market, Payment)
 
-#### 2. **ReachuEngagementSystem** (Sistema de Engagement)
-**Ubicación**: `Sources/ReachuEngagementSystem/`
+#### 2. **VioEngagementSystem** (Sistema de Engagement)
+**Ubicación**: `Sources/VioEngagementSystem/`
 
 **Managers/**
 - `EngagementManager.swift` - Manager principal (singleton)
@@ -164,8 +164,8 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 **Models/**
 - `EngagementModels.swift` - Modelos (Poll, Contest, etc.)
 
-#### 3. **ReachuEngagementUI** (UI de Engagement)
-**Ubicación**: `Sources/ReachuEngagementUI/`
+#### 3. **VioEngagementUI** (UI de Engagement)
+**Ubicación**: `Sources/VioEngagementUI/`
 
 **Components/**
 - `REngagementPollCard.swift` - Tarjeta de poll
@@ -173,20 +173,20 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - `REngagementProductCard.swift` - Tarjeta de producto
 - `REngagementCardBase.swift` - Base común
 
-#### 4. **ReachuLiveUI** (UI de Live Show)
-**Ubicación**: `Sources/ReachuLiveUI/`
+#### 4. **VioLiveUI** (UI de Live Show)
+**Ubicación**: `Sources/VioLiveUI/`
 
 **Components/** - Componentes dinámicos para live shows
 **Configuration/** - Configuración de live shows
 
-#### 5. **ReachuUI** (UI General)
-**Ubicación**: `Sources/ReachuUI/`
+#### 5. **VioUI** (UI General)
+**Ubicación**: `Sources/VioUI/`
 
 **Components/** - Componentes de UI (ProductCard, Cart, Checkout, etc.)
 **Managers/** - Managers (CartManager, CheckoutManager, etc.)
 
-#### 6. **ReachuDesignSystem** (Sistema de Diseño)
-**Ubicación**: `Sources/ReachuDesignSystem/`
+#### 6. **VioDesignSystem** (Sistema de Diseño)
+**Ubicación**: `Sources/VioDesignSystem/`
 
 **Components/** - Componentes base (RButton, RToastNotification, etc.)
 **Tokens/** - Tokens de diseño (Colors, Typography, Spacing, etc.)
@@ -209,10 +209,10 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - Ver estructura completa en `REFACTORING_COMPLETE.md`
 
 **Configuración**
-- `Configuration/reachu-config.json` - Config del SDK
+- `Configuration/vio-config.json` - Config del SDK
 - `Configuration/demo-static-data.json` - Data estática del demo (NUEVO)
 - `Configuration/entertainment-config.json` - Config de componentes
-- `Configuration/reachu-translations.json` - Traducciones
+- `Configuration/vio-translations.json` - Traducciones
 
 ---
 
@@ -221,7 +221,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 ### Checklist Consolidado
 
 #### Setup y Configuración ✅
-- [x] `reachu-config.json` creado con tema Viaplay
+- [x] `vio-config.json` creado con tema Viaplay
 - [x] SDK inicializado en `ViaplayApp.swift`
 - [x] Campaign ID 3 configurado
 - [x] Tipio WebSocket connection establecida
@@ -240,7 +240,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - [x] `DemoDataManager` singleton implementado
 - [x] `demo-static-data.json` creado con toda la data estática
 - [x] `ConfigurationLoader` extendido
-- [x] Integrado en `ReachuConfiguration`
+- [x] Integrado en `VioConfiguration`
 - [x] Default initializers implementados
 
 #### Integración SDK ✅
@@ -361,7 +361,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 
 **Objetivo**: Validar flujo completo con backend y deshabilitar modo demo.
 
-- Tarea 3.1: Cambiar `demoMode` a `false` en `reachu-config.json`
+- Tarea 3.1: Cambiar `demoMode` a `false` en `vio-config.json`
 - Tarea 3.2: Verificar flujo completo con backend
 
 **Requisitos previos**:
@@ -380,7 +380,7 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 - **[PROJECT_MASTER_DOCUMENTATION.md](PROJECT_MASTER_DOCUMENTATION.md)** ⭐ - Este documento (consolidado)
 
 #### Setup y Configuración
-- **[SETUP_COMPLETE.md](SETUP_COMPLETE.md)** - Setup del SDK de Reachu
+- **[SETUP_COMPLETE.md](SETUP_COMPLETE.md)** - Setup del SDK de Vio
 - **[Documentation/Configuration-README.md](Documentation/Configuration-README.md)** - Docs de configuración
 
 #### Refactorización y Arquitectura
@@ -408,10 +408,10 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 
 ### Archivos de Configuración
 
-- `Configuration/reachu-config.json` - Configuración principal del SDK
+- `Configuration/vio-config.json` - Configuración principal del SDK
 - `Configuration/demo-static-data.json` - Data estática del demo
 - `Configuration/entertainment-config.json` - Configuración de componentes de entretenimiento
-- `Configuration/reachu-translations.json` - Traducciones
+- `Configuration/vio-translations.json` - Traducciones
 
 ### Scripts
 
@@ -419,10 +419,10 @@ Demo funcional de Viaplay que integre el SDK de Reachu para mostrar:
 
 ### Archivos Clave del SDK
 
-- `Sources/ReachuCore/Managers/DemoDataManager.swift` - Manager de datos estáticos
-- `Sources/ReachuCore/Configuration/ModuleConfigurations.swift` - Estructuras de configuración
-- `Sources/ReachuCore/Configuration/ConfigurationLoader.swift` - Loader de configuraciones
-- `Sources/ReachuCore/Configuration/ReachuConfiguration.swift` - Configuración global
+- `Sources/VioCore/Managers/DemoDataManager.swift` - Manager de datos estáticos
+- `Sources/VioCore/Configuration/ModuleConfigurations.swift` - Estructuras de configuración
+- `Sources/VioCore/Configuration/ConfigurationLoader.swift` - Loader de configuraciones
+- `Sources/VioCore/Configuration/VioConfiguration.swift` - Configuración global
 
 ---
 
@@ -441,7 +441,7 @@ ConfigurationLoader.loadDemoDataConfiguration()
     ↓
 DemoDataConfiguration
     ↓
-ReachuConfiguration.shared.demoDataConfiguration
+VioConfiguration.shared.demoDataConfiguration
     ↓
 DemoDataManager.shared
 ```

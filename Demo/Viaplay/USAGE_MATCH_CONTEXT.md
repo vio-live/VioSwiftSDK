@@ -18,7 +18,7 @@ Cuando se abre el video player (`ViaplayVideoPlayer`), automáticamente:
 
 ### 2. Configuración
 
-En `reachu-config.json`:
+En `vio-config.json`:
 
 ```json
 {
@@ -85,14 +85,14 @@ Una vez establecido el broadcast context:
 
 ### Para Habilitar Auto-Discovery
 
-1. Cambiar `autoDiscover: true` en `reachu-config.json`
+1. Cambiar `autoDiscover: true` en `vio-config.json`
 2. Asegurarse de que `apiKey` esté configurado correctamente
 3. El backend debe tener campañas con `broadcastId` correspondiente
 
 ### Para Usar Broadcast Context en Otros Lugares
 
 ```swift
-import ReachuCore
+import VioCore
 
 // Crear broadcast context desde Match
 let broadcastContext = match.toBroadcastContext(channelId: 1)

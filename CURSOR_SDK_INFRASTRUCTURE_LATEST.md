@@ -154,7 +154,7 @@ Users (agencias/marcas)
 | Columna | Tipo | Descripcion |
 |---------|------|-------------|
 | id | serial PK | ID auto-incremental |
-| reachu_user_id | varchar(255) UNIQUE | ID externo del usuario |
+| vio_user_id | varchar(255) UNIQUE | ID externo del usuario |
 | email | text | Email opcional |
 | name | text | Nombre opcional |
 | firebase_token | text | Token FCM para push notifications |
@@ -168,7 +168,7 @@ Users (agencias/marcas)
 | name | varchar(255) | Nombre de la app |
 | bundle_id | varchar(255) UNIQUE | Bundle ID (com.example.app) |
 | api_key | text UNIQUE | API Key para autenticacion SDK |
-| reachu_api_key | text | API Key de Reachu (opcional) |
+| vio_api_key | text | API Key de Vio (opcional) |
 | created_at | timestamp | Fecha de creacion |
 
 ### 3.3 `channels`
@@ -193,8 +193,8 @@ Users (agencias/marcas)
 | start_date | timestamp | Fecha de inicio |
 | end_date | timestamp | Fecha de fin |
 | is_paused | varchar(10) | 'true'/'false' - estado de pausa |
-| reachu_channel_id | varchar(255) | ID canal Reachu |
-| reachu_api_key | text | API Key Reachu |
+| vio_channel_id | varchar(255) | ID canal Vio |
+| vio_api_key | text | API Key Vio |
 | tipio_liveshow_id | varchar(255) | ID de Tipio Liveshow |
 | tipio_livestream_data | json | Datos de livestream |
 | is_segmented | varchar(10) | 'true'/'false' - targeting activo |
@@ -341,7 +341,7 @@ Users (agencias/marcas)
 
 ```
 POST /api/auth/token
-Body: { "reachuUserId": "user123" }
+Body: { "vioUserId": "user123" }
 Response: { "token": "eyJhbGciOi...", "expiresIn": "7d" }
 ```
 
@@ -370,7 +370,7 @@ X-App-Bundle-ID: com.example.app
 ### 4.3 Sin Auth - Dashboard interno
 
 - Los endpoints `/api/*` (excepto `/api/auth/token`) no requieren autenticacion
-- Proteccion por sesion simulada en el frontend (localStorage `reachu_simulated_user_id`)
+- Proteccion por sesion simulada en el frontend (localStorage `vio_simulated_user_id`)
 
 ---
 

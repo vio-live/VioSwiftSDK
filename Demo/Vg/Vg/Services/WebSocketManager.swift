@@ -25,7 +25,7 @@ class WebSocketManager: NSObject, ObservableObject {
         
         // Obtener campaignId del config dinámicamente
         let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
-        let url = URL(string: "wss://dev-campaing.reachu.io/ws/\(campaignId)")!
+        let url = URL(string: "wss://api-dev.vio.live/ws/\(campaignId)")!
         print("🔌 [WebSocket] Conectando a: \(url.absoluteString) (campaignId: \(campaignId))")
         print("🔌 [WebSocket] Verificando si hay eventos activos para campaignId: \(campaignId)")
         

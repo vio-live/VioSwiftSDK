@@ -18,7 +18,7 @@ Duplicar la funcionalidad del demo de Viaplay usando el backend real, paso a pas
 - [ ] Obtener `broadcastId` para usar en el demo
 
 ### 1.3 Configurar Demo con Backend Real
-- [ ] Actualizar `reachu-config.json` con URL del backend real
+- [ ] Actualizar `vio-config.json` con URL del backend real
 - [ ] Configurar `broadcastId` en el demo
 - [ ] Verificar que `demoMode` esté desactivado
 

@@ -1,6 +1,6 @@
 # Entertainment Components - Interactive Features
 
-Esta carpeta contiene la implementación de componentes interactivos de entretenimiento diseñados para ser portables al SDK de Reachu.
+Esta carpeta contiene la implementación de componentes interactivos de entretenimiento diseñados para ser portables al SDK de Vio.
 
 ## 📁 Estructura
 
@@ -99,7 +99,7 @@ InteractiveComponentCard(
 
 ```
 Sources/
-└── ReachuEntertainment/
+└── VioEntertainment/
     ├── Models/
     │   ├── EntertainmentComponentType.swift
     │   └── EntertainmentModels.swift
@@ -108,22 +108,22 @@ Sources/
     ├── Views/
     │   ├── InteractiveComponentCard.swift
     │   └── EntertainmentOverlay.swift
-    └── ReachuEntertainment.swift
+    └── VioEntertainment.swift
 ```
 
 ### Paso 2: Actualizar Package.swift
 
 ```swift
 .library(
-    name: "ReachuEntertainment",
-    targets: ["ReachuEntertainment"]
+    name: "VioEntertainment",
+    targets: ["VioEntertainment"]
 ),
 
 .target(
-    name: "ReachuEntertainment",
+    name: "VioEntertainment",
     dependencies: [
-        "ReachuCore",
-        "ReachuDesignSystem"
+        "VioCore",
+        "VioDesignSystem"
     ]
 ),
 ```
@@ -131,8 +131,8 @@ Sources/
 ### Paso 3: Adaptar para Configuración
 
 El manager debería poder cargar componentes desde:
-1. **Configuración JSON** (como reachu-config.json)
-2. **API REST** (endpoints de Reachu)
+1. **Configuración JSON** (como vio-config.json)
+2. **API REST** (endpoints de Vio)
 3. **WebSocket** (actualizaciones en tiempo real)
 
 Ejemplo de estructura en config:
@@ -164,14 +164,14 @@ Ejemplo de estructura en config:
 }
 ```
 
-### Paso 4: Integración con ReachuCore
+### Paso 4: Integración con VioCore
 
 ```swift
-// En ReachuCore
-public class ReachuSDK {
+// En VioCore
+public class VioSDK {
     public let entertainment: EntertainmentManager
     
-    public init(config: ReachuConfiguration) {
+    public init(config: VioConfiguration) {
         self.entertainment = EntertainmentManager(
             userId: config.userId,
             apiClient: self.apiClient,
@@ -184,7 +184,7 @@ public class ReachuSDK {
 ## 🎨 Personalización
 
 ### Temas
-Los componentes respetan el sistema de temas de `ReachuDesignSystem`:
+Los componentes respetan el sistema de temas de `VioDesignSystem`:
 - Colores adaptativos (light/dark mode)
 - Typography tokens
 - Spacing y border radius consistentes
@@ -273,7 +273,7 @@ Esta implementación está diseñada para ser:
 
 ---
 
-**Autor**: Equipo Reachu  
+**Autor**: Equipo Vio  
 **Fecha**: Diciembre 2025  
 **Versión**: 1.0.0
 

@@ -12,7 +12,7 @@
 
 **¿Quieres probar la app?**
 ```bash
-open /Users/angelo/ReachuSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
+open /Users/angelo/VioSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
 # Cmd+B → Cmd+R → Navegar a Sport → Partido
 ```
 
@@ -51,13 +51,13 @@ open /Users/angelo/ReachuSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
   - Orden recomendado de implementación
 
 ### 🔧 Setup y Configuración
-- **[SETUP_COMPLETE.md](SETUP_COMPLETE.md)** - Setup del SDK de Reachu
-  - Configuración de reachu-config.json
+- **[SETUP_COMPLETE.md](SETUP_COMPLETE.md)** - Setup del SDK de Vio
+  - Configuración de vio-config.json
   - Integración de CampaignManager
   - Verificación de setup
   
 - **[Documentation/Configuration-README.md](Documentation/Configuration-README.md)** - Docs de configuración
-  - Detalles de reachu-config.json
+  - Detalles de vio-config.json
   - Opciones disponibles
 
 ### 📊 Demo Data y Backend Integration
@@ -150,8 +150,8 @@ open /Users/angelo/ReachuSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
 
 ### ✅ Completado
 
-1. **Configuración del SDK de Reachu**
-   - `reachu-config.json` con tema Viaplay (rosa #F5142A)
+1. **Configuración del SDK de Vio**
+   - `vio-config.json` con tema Viaplay (rosa #F5142A)
    - Campaign ID: 3 (Tipio integration)
    - SDK inicializado correctamente en `ViaplayApp.swift`
 
@@ -287,7 +287,7 @@ open /Users/angelo/ReachuSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
 
 ```
 Viaplay Demo
-├── SDK Integration Layer (Reachu SDK)
+├── SDK Integration Layer (Vio SDK)
 │   ├── CampaignManager (Tipio WebSocket)
 │   ├── DynamicComponentRenderer (Campaign components)
 │   ├── CartManager (E-commerce)
@@ -385,7 +385,7 @@ Views/
 
 ### Guías de Setup
 - ✅ `SETUP_COMPLETE.md` - Setup de Viaplay con SDK
-- ✅ `Configuration/reachu-config.json` - Configuración completa
+- ✅ `Configuration/vio-config.json` - Configuración completa
 - ✅ `Documentation/Configuration-README.md` - Docs de config
 
 ### Guías de Desarrollo
@@ -396,7 +396,7 @@ Views/
 - ✅ `Documentation/Entertainment-README.md` - Docs de Entertainment
 
 ### Configuraciones
-- ✅ `Configuration/reachu-config.json` - Config del SDK
+- ✅ `Configuration/vio-config.json` - Config del SDK
 - ✅ `Configuration/entertainment-config.json` - Config de componentes interactivos
 
 ---
@@ -427,10 +427,10 @@ Views/
 
 ```bash
 # Abrir proyecto
-open /Users/angelo/ReachuSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
+open /Users/angelo/VioSwiftSDK/Demo/Viaplay/Viaplay.xcodeproj
 
 # O workspace completo
-open /Users/angelo/ReachuSwiftSDK/ReachuWorkspace.xcworkspace
+open /Users/angelo/VioSwiftSDK/VioWorkspace.xcworkspace
 ```
 
 ### Navegar a Chat Interactivo
@@ -505,14 +505,14 @@ StatBar(name: "Possession", homeValue: 56, awayValue: 44, unit: "%")
 ## 🔗 Enlaces Útiles
 
 ### Repositorios
-- **SDK**: https://github.com/ReachuDevteam/ReachuSwiftSDK
-- **Docs**: https://github.com/ReachuDevteam/Reachu-documentation-v2
+- **SDK**: https://github.com/VioDevteam/VioSwiftSDK
+- **Docs**: https://github.com/VioDevteam/Reachu-documentation-v2
 
 ### Branch Actual
-- **entreteinment-view**: https://github.com/ReachuDevteam/ReachuSwiftSDK/tree/entreteinment-view
+- **entreteinment-view**: https://github.com/VioDevteam/VioSwiftSDK/tree/entreteinment-view
 
 ### Pull Requests
-- Crear PR: https://github.com/ReachuDevteam/ReachuSwiftSDK/pull/new/entreteinment-view
+- Crear PR: https://github.com/VioDevteam/VioSwiftSDK/pull/new/entreteinment-view
 
 ---
 
@@ -521,7 +521,7 @@ StatBar(name: "Possession", homeValue: 56, awayValue: 44, unit: "%")
 ### El proyecto no compila
 ```bash
 # Limpiar build
-cd /Users/angelo/ReachuSwiftSDK
+cd /Users/angelo/VioSwiftSDK
 rm -rf ~/Library/Developer/Xcode/DerivedData
 
 # Reabrir Xcode
@@ -529,7 +529,7 @@ open Demo/Viaplay/Viaplay.xcodeproj
 ```
 
 ### Los componentes de campaña no aparecen
-- Verificar que `reachu-config.json` tiene `campaignId: 3`
+- Verificar que `vio-config.json` tiene `campaignId: 3`
 - Verificar logs en consola para conexión a Tipio
 - Verificar que la campaña esté activa en backend
 

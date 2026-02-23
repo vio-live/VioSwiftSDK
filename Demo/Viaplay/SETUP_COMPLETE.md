@@ -4,12 +4,12 @@
 **Branch**: `entreteinment-view`  
 **Estado**: ✅ SDK configurado + Refactorización completada
 
-This document confirms that the Viaplay demo has been properly configured with Reachu SDK integration and refactored with Atomic Design pattern.
+This document confirms that the Viaplay demo has been properly configured with Vio SDK integration and refactored with Atomic Design pattern.
 
 ## ✅ Completed Tasks
 
 ### 1. Configuration File Created
-**File**: `Viaplay/Configuration/reachu-config.json`
+**File**: `Viaplay/Configuration/vio-config.json`
 
 - ✅ Viaplay pink theme (#F5142A)
 - ✅ Dark mode configuration
@@ -35,7 +35,7 @@ This document confirms that the Viaplay demo has been properly configured with R
 **File**: `Viaplay/Components/ViaplayVideoPlayer.swift`
 
 Changes made:
-- ✅ Added `import ReachuLiveUI`
+- ✅ Added `import VioLiveUI`
 - ✅ Added `@StateObject private var campaignManager = CampaignManager.shared`
 - ✅ Added `DynamicComponentRenderer()` with z-index 10,000,000
 - ✅ Connected to Campaign Manager in `onAppear`
@@ -49,7 +49,7 @@ DynamicComponentRenderer()
 
 // In onAppear
 // CampaignManager.shared initializes automatically with campaignId from config
-let campaignId = ReachuConfiguration.shared.liveShowConfiguration.campaignId
+let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
 print("🎯 [Viaplay] Campaign ID configured: \(campaignId)")
 
 // Reinitialize if needed
@@ -72,16 +72,16 @@ campaignManager.disconnect()
 
 **Expected Console Output**:
 ```
-🚀 [Viaplay] Loading Reachu SDK configuration...
-✅ [Viaplay] Reachu SDK configured successfully
+🚀 [Viaplay] Loading Vio SDK configuration...
+✅ [Viaplay] Vio SDK configured successfully
 🎨 [Viaplay] Theme: Viaplay Dark Theme
 🎨 [Viaplay] Mode: dark
-🔧 [Reachu][Config] environment=development
-🔧 [Reachu][Config] graphQLURL=https://stg-dev-microservices.tipioapp.com/graphql
-🔧 [Reachu][Config] apiKey=****Q9S
-🔧 [Reachu][Market] country=NO currency=NOK
-🎯 [Reachu][Campaign] campaignId=3
-🎯 [Reachu][Tipio] baseUrl=https://stg-dev-microservices.tipioapp.com
+🔧 [Vio][Config] environment=development
+🔧 [Vio][Config] graphQLURL=https://stg-dev-microservices.tipioapp.com/graphql
+🔧 [Vio][Config] apiKey=****Q9S
+🔧 [Vio][Market] country=NO currency=NOK
+🎯 [Vio][Campaign] campaignId=3
+🎯 [Vio][Tipio] baseUrl=https://stg-dev-microservices.tipioapp.com
 ```
 
 ### 4. Documentation Added
@@ -94,18 +94,18 @@ campaignManager.disconnect()
 
 ```
 ViaplayApp.swift
-├── Loads reachu-config.json via ConfigurationLoader
-├── Initializes ReachuConfiguration.shared
+├── Loads vio-config.json via ConfigurationLoader
+├── Initializes VioConfiguration.shared
 └── Provides CartManager & CheckoutDraft to all views
 
 ViaplayVideoPlayer.swift
-├── Imports ReachuLiveUI
+├── Imports VioLiveUI
 ├── Has CampaignManager.shared
 ├── Renders DynamicComponentRenderer()
 ├── Connects to Campaign ID 3 on appear
 └── Disconnects on disappear
 
-reachu-config.json
+vio-config.json
 ├── Defines Viaplay theme (pink #F5142A)
 ├── Sets campaignId: 3
 └── Configures Tipio WebSocket connection
@@ -114,7 +114,7 @@ reachu-config.json
 ### Component Rendering Flow
 
 1. **App Startup**:
-   - `ConfigurationLoader` loads `reachu-config.json`
+   - `ConfigurationLoader` loads `vio-config.json`
    - SDK configured with Viaplay theme
    - Campaign ID 3 set in configuration
 
@@ -166,7 +166,7 @@ reachu-config.json
 ### Config Not Loading
 **Symptom**: Console shows errors about missing config
 **Solution**:
-1. Check `reachu-config.json` is in Xcode project
+1. Check `vio-config.json` is in Xcode project
 2. Verify it's in "Copy Bundle Resources" (Build Phases)
 3. Clean build folder (Cmd+Shift+K)
 4. Rebuild project

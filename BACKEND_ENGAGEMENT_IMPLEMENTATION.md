@@ -716,5 +716,5 @@ R: Debe coincidir con el formato usado en el sistema de campañas. Recomendamos:
 Para preguntas sobre la implementación, contactar al equipo del SDK Swift.
 
 **Documentación del SDK:**
-- Ver código fuente en: `Sources/ReachuCore/Managers/EngagementManager.swift`
-- Ver modelos en: `Sources/ReachuCore/Models/EngagementModels.swift`
+- Ver código fuente en: `Sources/VioCore/Managers/EngagementManager.swift`
+- Ver modelos en: `Sources/VioCore/Models/EngagementModels.swift`

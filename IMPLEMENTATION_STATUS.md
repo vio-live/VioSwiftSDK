@@ -87,7 +87,7 @@ if useAutoIdentification {
 
 #### 2. Configuración para Auto-Identification
 
-**Mejora Propuesta:** Agregar flag en `reachu-config.json`:
+**Mejora Propuesta:** Agregar flag en `vio-config.json`:
 
 ```json
 {
@@ -119,7 +119,7 @@ if useAutoIdentification {
 
 - [x] Backend implementado y probado
 - [x] SDK tiene método `discoverCampaigns()`
-- [ ] (Opcional) Configurar `autoDiscover: true` en `reachu-config.json`
+- [ ] (Opcional) Configurar `autoDiscover: true` en `vio-config.json`
 - [ ] (Opcional) Llamar `discoverCampaigns()` cuando cambia el match
 - [ ] (Opcional) Usar `setMatchContext()` para filtrar componentes
 

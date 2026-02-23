@@ -24,9 +24,9 @@ Elkjøp utiliza un verde distintivo como color primario:
 - **Primary Color (Green)**: `#69A333`
   - RGB: `rgb(105, 163, 51)`
   - Uso: Botones principales, badges de descuento, precios destacados, iconos
-  - Este color debe configurarse en el archivo `reachu-config.json` como `primary` en la configuración del tema
+  - Este color debe configurarse en el archivo `vio-config.json` como `primary` en la configuración del tema
 
-### Configuración en reachu-config.json
+### Configuración en vio-config.json
 
 Para usar los colores de Elkjøp, configura el tema así:
 

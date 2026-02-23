@@ -189,7 +189,7 @@ struct CastingProductCard: View {
                 campaignLogo: nil
             ),
             sdk: SdkClient(
-                baseUrl: URL(string: "https://api.reachu.io/graphql")!,
+                baseUrl: URL(string: "https://api-ecom.vio.live/graphql")!,
                 apiKey: "demo"
             ),
             currency: "NOK",

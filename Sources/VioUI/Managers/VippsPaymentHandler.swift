@@ -106,8 +106,8 @@ public class VippsPaymentHandler: ObservableObject {
             return false
         }
         
-        // Check if it's a reachu-demo:// URL with payment_method=vipps
-        return components.scheme == "reachu-demo" &&
+        // Check if it's a vio-demo:// URL with payment_method=vipps
+        return components.scheme == "vio-demo" &&
                queryItems.contains { $0.name == "payment_method" && $0.value == "vipps" }
     }
 }

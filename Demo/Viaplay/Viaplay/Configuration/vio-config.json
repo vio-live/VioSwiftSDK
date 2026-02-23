@@ -133,7 +133,7 @@
   "localization": {
     "defaultLanguage": "en",
     "fallbackLanguage": "en",
-    "translationsFile": "reachu-translations"
+    "translationsFile": "vio-translations"
   },
   "analytics": {
     "enabled": true,
@@ -148,8 +148,8 @@
     "recordSessionsPercent": 0
   },
   "campaigns": {
-    "webSocketBaseURL": "https://dev-campaing.reachu.io",
-    "restAPIBaseURL": "https://dev-campaing.reachu.io",
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "restAPIBaseURL": "https://api-dev.vio.live",
     "campaignAdminApiKey": "xxl_api_key_507d4014243d8360",
     "_comment": "autoDiscover: true = use auto-discovery endpoint (/v1/sdk/campaigns), false = use legacy single campaign mode (campaignId from liveShow.campaignId)",
     "autoDiscover": true,

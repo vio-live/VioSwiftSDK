@@ -234,8 +234,8 @@ public final class CheckoutDraft: ObservableObject {
     @Published public var appliedDiscount: Double = 0.0
 
     // URLs (can be overridden from context)
-    @Published public var successUrl: String = "reachu-demo://checkout/success"
-    @Published public var cancelUrl: String = "reachu-demo://checkout/cancel"
+    @Published public var successUrl: String = "vio-demo://checkout/success"
+    @Published public var cancelUrl: String = "vio-demo://checkout/cancel"
 
     public init() {}
 

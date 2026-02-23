@@ -165,7 +165,7 @@ public struct VCustomLoader: View {
 // MARK: - View Extension for Easy Usage
 extension View {
     /// Apply custom Vio loader overlay
-    public func reachuLoader(
+    public func vioLoader(
         style: VCustomLoader.LoaderStyle = .rotate,
         size: CGFloat = 48,
         color: Color? = nil,

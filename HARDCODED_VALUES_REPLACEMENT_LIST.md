@@ -122,8 +122,8 @@ Este documento lista todos los valores hardcodeados encontrados en los component
 - ✅ `ViaplayCastingPollCardView.swift` (demo)
 - ✅ `ViaplayCastingContestCardView.swift` (demo)
 - ✅ `ViaplayCastingProductCardView.swift` (demo)
-- ✅ `EngagementManager.swift` (ReachuCore) → Movido a ReachuEngagementSystem
-- ✅ `EngagementModels.swift` (ReachuCore) → Movido a ReachuEngagementSystem
+- ✅ `EngagementManager.swift` (VioCore) → Movido a VioEngagementSystem
+- ✅ `EngagementModels.swift` (VioCore) → Movido a VioEngagementSystem
 
 ## Valores Pendientes de Reemplazar
 

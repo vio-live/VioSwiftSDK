@@ -80,8 +80,8 @@ El `MatchContext` es un identificador que asocia campañas y componentes a un pa
   "channelName": "XXL iOS Channel",
   "environment": "production",
   "campaigns": {
-    "webSocketBaseURL": "https://dev-campaing.reachu.io",
-    "restAPIBaseURL": "https://dev-campaing.reachu.io"
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "restAPIBaseURL": "https://api-dev.vio.live"
   },
   "marketFallback": {...},
   "features": {...}
@@ -105,8 +105,8 @@ El `MatchContext` es un identificador que asocia campañas y componentes a un pa
     "metadata": {}
   },
   "campaigns": {
-    "webSocketBaseURL": "https://dev-campaing.reachu.io",
-    "restAPIBaseURL": "https://dev-campaing.reachu.io"
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "restAPIBaseURL": "https://api-dev.vio.live"
   },
   "marketFallback": {...},
   "features": {...}
@@ -255,7 +255,7 @@ GET /v1/sdk/campaigns?apiKey={sdkApiKey}&matchId={matchId}
 - La `apiKey` debe ser válida y tener permisos para ver campañas
 - **Diferencia importante:** Este endpoint usa `apiKey` del SDK, NO `campaignAdminApiKey`
 - **Clarificación:** El `apiKey` usado aquí es el mismo `client_apps.api_key` que ya existe en la base de datos (ej: `xxl_api_key_507d4014243d8360`)
-- **Nota sobre `reachuApiKey`:** Si existe un campo `reachuApiKey` en `client_apps`, puede usarse como alternativa, pero el SDK actualmente usa `client_apps.api_key` para auto-discovery
+- **Nota sobre `vioApiKey`:** Si existe un campo `vioApiKey` en `client_apps`, puede usarse como alternativa, pero el SDK actualmente usa `client_apps.api_key` para auto-discovery
 - **Identificación Automática (Recomendado):** Si se envía el header `X-App-Bundle-ID`, el backend puede identificar automáticamente el cliente y obtener su `apiKey` desde `client_apps` usando el `bundle_id`. Esto hace que el parámetro `apiKey` sea opcional y mejora la seguridad.
 
 **Ejemplo de uso:**
@@ -282,7 +282,7 @@ Headers:
 
 ### Problema Actual
 
-Actualmente, el SDK requiere que la `apiKey` esté hardcodeada en el archivo de configuración (`reachu-config.json`). Esto presenta varios problemas:
+Actualmente, el SDK requiere que la `apiKey` esté hardcodeada en el archivo de configuración (`vio-config.json`). Esto presenta varios problemas:
 
 1. **Seguridad:** La API key está expuesta en el código de la aplicación
 2. **Flexibilidad:** Cambiar la API key requiere actualizar la app y hacer un release
@@ -364,8 +364,8 @@ Headers:
 ```json
 {
   "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
-  "restAPIBaseURL": "https://dev-campaing.reachu.io",
-  "webSocketBaseURL": "https://dev-campaing.reachu.io",
+  "restAPIBaseURL": "https://api-dev.vio.live",
+  "webSocketBaseURL": "https://api-dev.vio.live",
   "autoDiscover": true,
   "channelId": 1
 }
@@ -743,8 +743,8 @@ R: Los `matchContext` se crean/asignan cuando se crea o edita una campaña. Pued
 - **Opción 2:** Crear programáticamente desde otro sistema (ej: sistema de gestión de partidos) que sincronice con el sistema de campañas
 - **Recomendación:** Empezar con UI en dashboard para flexibilidad, luego puede automatizarse
 
-**P: ¿Se usa `reachuApiKey` en auto-discovery?**
-R: Actualmente el SDK usa `client_apps.api_key` para auto-discovery. Si existe un campo `reachuApiKey` en `client_apps`, puede usarse como alternativa en el futuro, pero por ahora usar `api_key`.
+**P: ¿Se usa `vioApiKey` en auto-discovery?**
+R: Actualmente el SDK usa `client_apps.api_key` para auto-discovery. Si existe un campo `vioApiKey` en `client_apps`, puede usarse como alternativa en el futuro, pero por ahora usar `api_key`.
 
 ---
 
@@ -835,6 +835,6 @@ Agregar flag en configuración:
 Para preguntas sobre la implementación, contactar al equipo del SDK Swift.
 
 **Documentación del SDK:**
-- Ver código fuente en: `Sources/ReachuCore/Managers/CampaignManager.swift`
-- Ver modelos en: `Sources/ReachuCore/Models/CampaignModels.swift`
-- Ver configuración en: `Sources/ReachuCore/Configuration/ModuleConfigurations.swift`
+- Ver código fuente en: `Sources/VioCore/Managers/CampaignManager.swift`
+- Ver modelos en: `Sources/VioCore/Models/CampaignModels.swift`
+- Ver configuración en: `Sources/VioCore/Configuration/ModuleConfigurations.swift`

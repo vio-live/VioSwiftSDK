@@ -24,6 +24,6 @@
   "localization": {
     "defaultLanguage": "en",
     "fallbackLanguage": "en",
-    "translationsFile": "reachu-translations"
+    "translationsFile": "vio-translations"
   }
 }

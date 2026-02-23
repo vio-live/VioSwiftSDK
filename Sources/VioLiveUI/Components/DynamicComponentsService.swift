@@ -28,8 +28,8 @@ public enum DynamicComponentsService {
             throw URLError(.badURL) // o tu error custom
         }
 
-        let urlString = "https://api-qa.reachu.io/api/components/stream/\(streamId)"
-        print("URL https://api-qa.reachu.io/api/components/stream/\(streamId)")
+        let urlString = "https://api-ecom-dev.vio.live/api/components/stream/\(streamId)"
+        print("URL https://api-ecom-dev.vio.live/api/components/stream/\(streamId)")
         guard let url = URL(string: urlString) else { return [] }
 
         var request = URLRequest(url: url)

@@ -185,7 +185,7 @@ CREATE TABLE campaign_ui_config (
 - Color picker para `secondaryColor`
 - Editor JSON para `component_configs` (opcional, puede ser avanzado)
 
-**Nota:** Estos colores son opcionales. Si no se configuran, el SDK usa los colores del tema configurado localmente en `reachu-config.json`.
+**Nota:** Estos colores son opcionales. Si no se configuran, el SDK usa los colores del tema configurado localmente en `vio-config.json`.
 
 ---
 

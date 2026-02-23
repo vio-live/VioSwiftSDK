@@ -7,7 +7,7 @@ Mantener la demo funcional mientras se conecta gradualmente con el backend real.
 - ✅ Sistema de configuración de data estática creado (`DemoDataConfiguration`, `DemoDataManager`)
 - ✅ JSON con toda la data estática (`demo-static-data.json`)
 - ✅ Loader y manager implementados en SDK
-- ✅ Integrado en `ReachuConfiguration`
+- ✅ Integrado en `VioConfiguration`
 - ✅ Default initializers con valores por defecto
 - ✅ Documentación completa creada (`DEMO_DATA_INTEGRATION_GUIDE.md`, `DEMO_DATA_SUMMARY.md`)
 - ⏳ Componentes aún usan valores hardcoded (Fase 1 pendiente)
@@ -172,7 +172,7 @@ func generateBroadcastId() -> String {
 
 ### Tarea 2.2: Crear DemoDataService en SDK
 **Estado**: ⏳ Pendiente  
-**Ubicación**: `Sources/ReachuCore/Services/DemoDataService.swift`
+**Ubicación**: `Sources/VioCore/Services/DemoDataService.swift`
 
 **Funcionalidad**:
 - Fetch desde backend
@@ -199,7 +199,7 @@ func generateBroadcastId() -> String {
 
 ### Tarea 3.1: Cambiar demoMode a false
 **Estado**: ⏳ Pendiente  
-**Archivo**: `reachu-config.json` línea 165
+**Archivo**: `vio-config.json` línea 165
 
 **Requisitos previos**:
 - ✅ Todas las tareas de Fase 1 completadas
@@ -269,6 +269,6 @@ func generateBroadcastId() -> String {
 - **Guía de Integración**: `DEMO_DATA_INTEGRATION_GUIDE.md` - Guía completa de Demo Data
 - **Estado Actual**: `CURRENT_STATUS.md` - Estado actual del proyecto
 - **JSON de Configuración**: `Configuration/demo-static-data.json`
-- **Manager**: `Sources/ReachuCore/Managers/DemoDataManager.swift`
-- **Configuración**: `Sources/ReachuCore/Configuration/ModuleConfigurations.swift` (DemoDataConfiguration)
-- **Loader**: `Sources/ReachuCore/Configuration/ConfigurationLoader.swift` (loadDemoDataConfiguration)
+- **Manager**: `Sources/VioCore/Managers/DemoDataManager.swift`
+- **Configuración**: `Sources/VioCore/Configuration/ModuleConfigurations.swift` (DemoDataConfiguration)
+- **Loader**: `Sources/VioCore/Configuration/ConfigurationLoader.swift` (loadDemoDataConfiguration)

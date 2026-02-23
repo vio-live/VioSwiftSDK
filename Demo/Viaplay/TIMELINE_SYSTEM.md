@@ -455,7 +455,7 @@ let socialEvents = timeline.visibleEvents(ofCategory: .social)
 ```swift
 // En UnifiedTimelineManager
 func loadFromBackend(broadcastId: String) async throws {
-    let url = URL(string: "https://api.reachu.io/timeline/broadcast/\((broadcastId))/events")!
+    let url = URL(string: "https://api-ecom.vio.live/timeline/broadcast/\((broadcastId))/events")!
     let (data, _) = try await URLSession.shared.data(from: url)
     
     let decoder = JSONDecoder()
@@ -496,7 +496,7 @@ func sendChatMessage(text: String) async throws {
     chatManager.loadMessagesFromTimeline()
     
     // Enviar a backend
-    let url = URL(string: "https://api.reachu.io/timeline/chat/message")!
+    let url = URL(string: "https://api-ecom.vio.live/timeline/chat/message")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -514,7 +514,7 @@ func sendChatMessage(text: String) async throws {
 ```swift
 class TimelineWebSocketManager {
     func connect(broadcastId: String) {
-        let url = URL(string: "wss://api.reachu.io/timeline/broadcast/\((broadcastId))")!
+        let url = URL(string: "wss://api-ecom.vio.live/timeline/broadcast/\((broadcastId))")!
         webSocket = URLSession.shared.webSocketTask(with: url)
         webSocket?.resume()
         receiveMessage()

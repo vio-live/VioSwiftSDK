@@ -21,7 +21,7 @@ public struct VioComponentWrapper<Content: View>: View {
 
 extension View {
     /// Conditionally show this view only if Vio SDK market is available and campaign is active
-    public func reachuOnly() -> some View {
+    public func vioOnly() -> some View {
         Group {
             if VioConfiguration.shared.shouldUseSDK && CampaignManager.shared.isCampaignActive {
                 self

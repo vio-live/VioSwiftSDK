@@ -1,4 +1,4 @@
-# ReachuSDK Configuration for TV2 Demo
+# Vio SDK Configuration for TV2 Demo
 
 ## 📁 Ubicación
 
@@ -7,7 +7,7 @@ El archivo de configuración debe estar en el bundle de la app:
 ```
 tv2demo/
 └── Configuration/
-    └── reachu-config.json  ← Archivo de configuración
+    └── vio-config.json  ← Archivo de configuración
 ```
 
 ---
@@ -20,13 +20,13 @@ En `tv2demoApp.swift`:
 
 ```swift
 import SwiftUI
-import ReachuCore
+import VioCore
 
 @main
 struct tv2demoApp: App {
     init() {
         // Carga la configuración automáticamente
-        // Busca "reachu-config.json" en el bundle de la app
+        // Busca "vio-config.json" en el bundle de la app
         ConfigurationLoader.loadConfiguration()
     }
     
@@ -45,25 +45,25 @@ Si tienes múltiples configuraciones:
 
 ```swift
 // Cargar configuración específica
-ConfigurationLoader.loadConfiguration(fileName: "reachu-config-production")
+ConfigurationLoader.loadConfiguration(fileName: "vio-config-production")
 
 // O con variable de entorno
-// REACHU_CONFIG_TYPE=production
+// VIO_CONFIG_TYPE=production
 ConfigurationLoader.loadConfiguration()
-// Buscaría: "reachu-config-production.json"
+// Buscaría: "vio-config-production.json"
 ```
 
 ---
 
 ## 🎨 Estructura del Archivo JSON
 
-El archivo `reachu-config.json` define:
+El archivo `vio-config.json` define:
 
 ### **1. API Configuration**
 ```json
 {
   "api": {
-    "baseURL": "https://api.reachu.io",
+    "baseURL": "https://api-ecom.vio.live",
     "apiKey": "your-api-key",
     "environment": "development"
   }
@@ -153,7 +153,7 @@ El SDK soporta 3 modos:
 Si necesitas cambiar la configuración mientras la app está corriendo:
 
 ```swift
-import ReachuCore
+import VioCore
 
 // Recargar configuración
 ConfigurationLoader.loadConfiguration()
@@ -177,15 +177,15 @@ Una vez cargada la configuración:
 
 ```swift
 import SwiftUI
-import ReachuDesignSystem
+import VioDesignSystem
 
 struct MyView: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         Text("Hello")
-            .foregroundColor(ReachuColors.adaptive(for: colorScheme).textPrimary)
-            .background(ReachuColors.adaptive(for: colorScheme).background)
+            .foregroundColor(VioColors.adaptive(for: colorScheme).textPrimary)
+            .background(VioColors.adaptive(for: colorScheme).background)
     }
 }
 ```
@@ -194,8 +194,8 @@ O usa el tema estático:
 
 ```swift
 Text("Static")
-    .foregroundColor(ReachuColors.textPrimary)
-    .background(ReachuColors.background)
+    .foregroundColor(VioColors.textPrimary)
+    .background(VioColors.background)
 ```
 
 ---
@@ -205,8 +205,8 @@ Text("Static")
 El SDK imprime logs de configuración:
 
 ```
-🔧 [Config] Loading specific config: reachu-config.json
-📄 [Config] Loading configuration from: reachu-config.json
+🔧 [Config] Loading specific config: vio-config.json
+📄 [Config] Loading configuration from: vio-config.json
 ✅ [Config] Configuration loaded successfully: TV2 Demo Configuration
 🎨 [Config] Theme mode: dark
 🌙 [Config] Dark primary: #7B5FFF
@@ -224,7 +224,7 @@ Si no encuentra el archivo:
 ## ⚠️ Importante
 
 1. **El archivo debe estar en el bundle de la app**
-   - Arrastra `reachu-config.json` al proyecto en Xcode
+   - Arrastra `vio-config.json` al proyecto en Xcode
    - Asegúrate de que esté en el target de la app
 
 2. **El archivo debe ser válido JSON**
@@ -237,10 +237,10 @@ Si no encuentra el archivo:
 4. **No incluir la extensión `.json` al cargar**
    ```swift
    // ✅ Correcto
-   ConfigurationLoader.loadConfiguration(fileName: "reachu-config")
+   ConfigurationLoader.loadConfiguration(fileName: "vio-config")
    
    // ❌ Incorrecto
-   ConfigurationLoader.loadConfiguration(fileName: "reachu-config.json")
+   ConfigurationLoader.loadConfiguration(fileName: "vio-config.json")
    ```
 
 ---
@@ -250,8 +250,8 @@ Si no encuentra el archivo:
 ```swift
 // tv2demoApp.swift
 import SwiftUI
-import ReachuCore
-import ReachuDesignSystem
+import VioCore
+import VioDesignSystem
 
 @main
 struct tv2demoApp: App {
@@ -260,7 +260,7 @@ struct tv2demoApp: App {
         ConfigurationLoader.loadConfiguration()
         
         // 2. Verificar que se cargó
-        let config = ReachuConfiguration.shared
+        let config = VioConfiguration.shared
         print("📱 App: \(config.brand?.name ?? "Unknown")")
         print("🎨 Theme: \(config.theme.mode)")
     }
@@ -276,5 +276,5 @@ struct tv2demoApp: App {
 
 ---
 
-**¿Necesitas ayuda?** Revisa los ejemplos en `/Demo/ReachuDemoApp/`
+**¿Necesitas ayuda?** Revisa los ejemplos en `/Demo/VioDemoApp/`
 
