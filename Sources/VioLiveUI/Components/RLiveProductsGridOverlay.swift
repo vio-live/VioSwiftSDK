@@ -64,7 +64,7 @@ public struct RLiveProductsGridOverlay: View {
         .clipped() // Prevent overflow
         .ignoresSafeArea(.container, edges: .bottom) // Remove white border at bottom
         .sheet(item: $selectedProduct) { product in
-            VProductDetailOverlay(
+            VioProductDetailOverlay(
                 product: product,
                 onAddToCart: { product in
                     Task {
@@ -95,7 +95,7 @@ public struct RLiveProductsGridOverlay: View {
                 Rectangle()
                     .fill(adaptiveColors.surfaceSecondary)
                     .overlay(
-                        VCustomLoader(style: .rotate, size: 30)
+                        VioCustomLoader(style: .rotate, size: 30)
                     )
             }
             .frame(height: 100) // More compact height

@@ -88,13 +88,13 @@ struct TV2ProductOverlay: View {
         .sheet(isPresented: $showProductDetail) {
             if let apiProduct = viewModel.product {
                 // Convertir ProductDto a Product para el overlay
-                VProductDetailOverlay(
+                VioProductDetailOverlay(
                     product: convertDtoToProduct(apiProduct),
                     onDismiss: {
                         showProductDetail = false
                     },
                     onAddToCart: { product in
-                        // VProductDetailOverlay ya agrega al cart internamente
+                        // VioProductDetailOverlay ya agrega al cart internamente
                         // Solo cerramos el modal y mostramos feedback
                         showProductDetail = false
                         showCheckmark = true
@@ -195,7 +195,7 @@ struct TV2ProductOverlay: View {
     
     // MARK: - Conversion Helper
     
-    /// Convierte ProductDto a Product para usar con VProductDetailOverlay
+    /// Convierte ProductDto a Product para usar con VioProductDetailOverlay
     private func convertDtoToProduct(_ dto: ProductDto) -> Product {
         // Limpiar HTML de la descripción
         let cleanDescription = dto.description.map { cleanHTMLString($0) }
@@ -453,7 +453,7 @@ struct TV2ProductOverlay: View {
 }
 
 /// Componente para mostrar dos productos lado a lado
-/// Similar a VProductSlider pero más compacto
+/// Similar a VioProductSlider pero más compacto
 struct TV2TwoProductsOverlay: View {
     let product1: ProductEventData
     let product2: ProductEventData

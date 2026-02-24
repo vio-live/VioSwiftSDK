@@ -185,6 +185,18 @@ struct TimelineDataGenerator {
             metadata: ["type": "halftime"]
         )))
         
+        // 45'10" - Halftime stats
+        events.append(AnyTimelineEvent(AnnouncementEvent(
+            id: "halftime-stats",
+            videoTimestamp: 2710,
+            title: "Statistikk første omgang",
+            message: "Se tallene fra første omgang",
+            imageUrl: nil,
+            actionUrl: nil,
+            actionText: "Se statistikk",
+            metadata: ["type": "halftime-stats", "phase": "halftime"]
+        )))
+        
         // MARK: - Casting Events (during halftime break) - from DemoDataManager config
         
         let dm = DemoDataManager.shared

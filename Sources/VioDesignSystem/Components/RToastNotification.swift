@@ -4,7 +4,7 @@ import SwiftUI
 /// 
 /// Provides elegant, non-intrusive notifications with animations
 /// Automatically dismisses after a set duration
-public struct VToastNotification: View {
+public struct VioToastNotification: View {
     
     public enum ToastType {
         case success
@@ -150,17 +150,17 @@ public class ToastManager: ObservableObject {
     
     public struct ToastData {
         let message: String
-        let type: VToastNotification.ToastType
+        let type: VioToastNotification.ToastType
         let duration: TimeInterval
         
-        public init(message: String, type: VToastNotification.ToastType = .success, duration: TimeInterval = 3.0) {
+        public init(message: String, type: VioToastNotification.ToastType = .success, duration: TimeInterval = 3.0) {
             self.message = message
             self.type = type
             self.duration = duration
         }
     }
     
-    public func show(_ message: String, type: VToastNotification.ToastType = .success, duration: TimeInterval = 3.0) {
+    public func show(_ message: String, type: VioToastNotification.ToastType = .success, duration: TimeInterval = 3.0) {
         currentToast = ToastData(message: message, type: type, duration: duration)
         isPresented = true
     }
@@ -194,7 +194,7 @@ public struct VToastOverlay: View {
     
     public var body: some View {
         if let toast = toastManager.currentToast {
-            VToastNotification(
+            VioToastNotification(
                 message: toast.message,
                 type: toast.type,
                 duration: toast.duration,
@@ -218,7 +218,7 @@ public struct VToastOverlay: View {
             Spacer()
         }
         
-        VToastNotification(
+        VioToastNotification(
             message: "Product added to cart successfully!",
             type: .success,
             isPresented: .constant(true)
@@ -237,7 +237,7 @@ public struct VToastOverlay: View {
             Spacer()
         }
         
-        VToastNotification(
+        VioToastNotification(
             message: "Failed to add product to cart. Please try again.",
             type: .error,
             isPresented: .constant(true)
@@ -251,19 +251,19 @@ public struct VToastOverlay: View {
             .font(.title)
         
         VStack(spacing: VioSpacing.md) {
-            VButton(title: "Show Success Toast", style: .primary) {
+            VioButton(title: "Show Success Toast", style: .primary) {
                 ToastManager.shared.showSuccess("Product added to cart!")
             }
             
-            VButton(title: "Show Error Toast", style: .destructive) {
+            VioButton(title: "Show Error Toast", style: .destructive) {
                 ToastManager.shared.showError("Something went wrong!")
             }
             
-            VButton(title: "Show Info Toast", style: .secondary) {
+            VioButton(title: "Show Info Toast", style: .secondary) {
                 ToastManager.shared.showInfo("Cart updated successfully")
             }
             
-            VButton(title: "Show Warning Toast", style: .tertiary) {
+            VioButton(title: "Show Warning Toast", style: .tertiary) {
                 ToastManager.shared.showWarning("Low stock remaining")
             }
         }

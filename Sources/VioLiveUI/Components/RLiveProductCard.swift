@@ -54,7 +54,7 @@ public struct RLiveProductCard: View {
             showProductDetail = true
         }
         .sheet(isPresented: $showProductDetail) {
-            VProductDetailOverlay(
+            VioProductDetailOverlay(
                 product: productForDetail,
                 onAddToCart: { product in
                     // Handle add to cart from detail overlay
@@ -81,7 +81,7 @@ public struct RLiveProductCard: View {
             Rectangle()
                 .fill(adaptiveColors.surfaceSecondary)
                 .overlay(
-                    VCustomLoader(style: .rotate, size: 20, speed: 1.5)
+                    VioCustomLoader(style: .rotate, size: 20, speed: 1.5)
                 )
         }
         .frame(width: 60, height: 60)
@@ -168,7 +168,7 @@ public struct RLiveProductCard: View {
         }
     }
     
-    // Actions removed - now handled by VProductDetailOverlay
+    // Actions removed - now handled by VioProductDetailOverlay
 }
 
 // MARK: - Preview

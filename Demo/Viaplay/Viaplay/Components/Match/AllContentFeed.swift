@@ -434,6 +434,17 @@ struct AllContentFeed: View {
                             removal: .opacity
                         ))
                         
+                    case "halftime-stats":
+                        // Render halftime stats (same as StatPreviewCard)
+                        StatPreviewCard(
+                            statistics: statistics,
+                            onViewAll: { onSelectTab(.statistics) }
+                        )
+                        .transition(.asymmetric(
+                            insertion: .scale(scale: 0.95).combined(with: .opacity),
+                            removal: .opacity
+                        ))
+                        
                     case "final-stats":
                         // Render final stats
                         FinalStatsCard(

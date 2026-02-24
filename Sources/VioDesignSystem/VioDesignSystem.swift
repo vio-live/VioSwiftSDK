@@ -19,8 +19,8 @@ public struct VioDesignSystem {
 // MARK: - Public Exports
 
 // Export base components
-public typealias VioButton = VButton
-public typealias VioToastNotification = VToastNotification
+// VioButton is the primary type
+// VioToastNotification is the primary type
 public typealias VioToastOverlay = VToastOverlay
 public typealias VioToastManager = ToastManager
 public typealias VioCustomLoader = VCustomLoader

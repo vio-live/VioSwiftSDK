@@ -38,20 +38,7 @@ public struct VioUI {
 // Export cart management
 public typealias VioCartManager = CartManager
 
-// Export UI components
-public typealias VioProductCard = VProductCard
-public typealias VioProductSlider = VProductSlider
-public typealias VioCheckoutOverlay = VCheckoutOverlay
-public typealias VioProductDetailOverlay = VProductDetailOverlay
-
-// Export auto-configured campaign components
-public typealias VioProductCarousel = VProductCarousel
-public typealias VioProductBanner = VProductBanner
-public typealias VioProductStore = VProductStore
-
-// Export UX enhancement components
-public typealias VioFloatingCartIndicator = VFloatingCartIndicator
-
-// Export offer banner components
-public typealias VioOfferBanner = VOfferBanner
-public typealias VioOfferBannerContainer = VOfferBannerContainer
+// UI components - all use Vio* naming
+// VioProductCard, VioProductSlider, VioCheckoutOverlay, VioProductDetailOverlay
+// VioProductCarousel, VioProductBanner, VioProductStore
+// VioFloatingCartIndicator, VioOfferBanner, VioOfferBannerContainer

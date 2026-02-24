@@ -4,8 +4,8 @@ import VioDesignSystem
 
 /// Auto-configured Product Store component
 /// Automatically loads configuration from active campaign
-/// Usage: Just drag VProductStore() into your view - no parameters needed!
-public struct VProductStore: View {
+/// Usage: Just drag VioProductStore() into your view - no parameters needed!
+public struct VioProductStore: View {
     
     // MARK: - Cached Config Values
     
@@ -54,7 +54,7 @@ public struct VProductStore: View {
     private let sponsorPosition: String
     
     @ObservedObject private var campaignManager = CampaignManager.shared
-    @StateObject private var viewModel = VProductStoreViewModel()
+    @StateObject private var viewModel = VioProductStoreViewModel()
     
     // Cache parsed config values - only recalculated when config changes
     @State private var cachedConfig: CachedConfig?
@@ -264,7 +264,7 @@ public struct VProductStore: View {
                 Spacer()
             }
             
-            RSponsorBadge(logoUrl: logoUrl)
+            VioSponsorBadge(logoUrl: logoUrl)
                 .padding(.horizontal, VioSpacing.xs)
                 .padding(.vertical, VioSpacing.xs)
             
@@ -280,7 +280,7 @@ public struct VProductStore: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: VioSpacing.md) {
                 ForEach(products) { product in
-                    VProductCard(product: product)
+                    VioProductCard(product: product)
                 }
             }
             .padding(.horizontal, VioSpacing.md)
@@ -292,7 +292,7 @@ public struct VProductStore: View {
         ScrollView {
             LazyVStack(spacing: VioSpacing.md) {
                 ForEach(products) { product in
-                    VProductCard(product: product)
+                    VioProductCard(product: product)
                 }
             }
             .padding(.horizontal, VioSpacing.md)
@@ -302,7 +302,7 @@ public struct VProductStore: View {
     
     private var loadingView: some View {
         VStack(spacing: VioSpacing.md) {
-            VCustomLoader(style: .rotate, size: 40)
+            VioCustomLoader(style: .rotate, size: 40)
             Text("Loading products...")
                 .font(VioTypography.caption1)
                 .foregroundColor(adaptiveColors.textSecondary)
@@ -404,7 +404,7 @@ public struct VProductStore: View {
 // MARK: - ViewModel
 
 @MainActor
-class VProductStoreViewModel: ObservableObject {
+class VioProductStoreViewModel: ObservableObject {
     
     @Published var products: [Product] = []
     @Published var isLoading: Bool = false
@@ -424,7 +424,7 @@ class VProductStoreViewModel: ObservableObject {
         errorMessage = nil
         isMarketUnavailable = false
         
-        VioLogger.debug("Loading products - Mode: \(mode)", component: "VProductStore")
+        VioLogger.debug("Loading products - Mode: \(mode)", component: "VioProductStore")
         
         do {
             // Product IDs are already converted to Int (cached)
@@ -434,15 +434,15 @@ class VProductStoreViewModel: ObservableObject {
             // Determine which IDs to use (if any)
             let idsToUse: [Int]?
             if shouldUseFiltered {
-                VioLogger.debug("Filtered mode - Product IDs: \(productIds ?? [])", component: "VProductStore")
+                VioLogger.debug("Filtered mode - Product IDs: \(productIds ?? [])", component: "VioProductStore")
                 idsToUse = productIds
             } else if mode == "filtered" && !hasValidIds {
                 // Filtered mode but no IDs - fallback to all products
-                VioLogger.warning("Filtered mode requires product IDs but none provided - falling back to all products", component: "VProductStore")
+                VioLogger.warning("Filtered mode requires product IDs but none provided - falling back to all products", component: "VioProductStore")
                 idsToUse = nil
             } else {
                 // All mode - load all products
-                VioLogger.debug("All mode - Loading all products from channel", component: "VProductStore")
+                VioLogger.debug("All mode - Loading all products from channel", component: "VioProductStore")
                 idsToUse = nil
             }
             
@@ -455,7 +455,7 @@ class VProductStoreViewModel: ObservableObject {
             
             // Fallback: If filtered mode returned 0 products, try loading all products instead
             if products.isEmpty && mode == "filtered" && hasValidIds {
-                VioLogger.warning("No products found for filtered IDs: \(productIds ?? []) - falling back to all products", component: "VProductStore")
+                VioLogger.warning("No products found for filtered IDs: \(productIds ?? []) - falling back to all products", component: "VioProductStore")
                 
                 // Retry with all products (no productIds filter)
                 let allProducts: [Int]? = nil
@@ -476,22 +476,22 @@ class VProductStoreViewModel: ObservableObject {
             
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = message
-            VioLogger.error("Invalid configuration: \(message)", component: "VProductStore")
+            VioLogger.error("Invalid configuration: \(message)", component: "VioProductStore")
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
                 isMarketUnavailable = true
                 errorMessage = nil
-                VioLogger.warning("Market not available", component: "VProductStore")
+                VioLogger.warning("Market not available", component: "VioProductStore")
             } else {
                 errorMessage = error.message
-                VioLogger.error("Failed to load products: \(error.message)", component: "VProductStore")
+                VioLogger.error("Failed to load products: \(error.message)", component: "VioProductStore")
             }
         } catch ProductServiceError.networkError(let error) {
             errorMessage = error.localizedDescription
-            VioLogger.error("Network error: \(error.localizedDescription)", component: "VProductStore")
+            VioLogger.error("Network error: \(error.localizedDescription)", component: "VioProductStore")
         } catch {
             errorMessage = error.localizedDescription
-            VioLogger.error("Failed to load products: \(error.localizedDescription)", component: "VProductStore")
+            VioLogger.error("Failed to load products: \(error.localizedDescription)", component: "VioProductStore")
         }
         
         isLoading = false

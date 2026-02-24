@@ -13,16 +13,16 @@ import UIKit
 /// **Usage:**
 /// ```swift
 /// // Basic usage - uses first product_spotlight component from backend
-/// VProductSpotlight()
+/// VioProductSpotlight()
 ///
 /// // Specific component ID - uses a specific product_spotlight component
-/// VProductSpotlight(componentId: "product-spotlight-1")
-/// VProductSpotlight(componentId: "product-spotlight-2")
+/// VioProductSpotlight(componentId: "product-spotlight-1")
+/// VioProductSpotlight(componentId: "product-spotlight-2")
 /// ```
 ///
 /// **Parameters:**
 /// - `componentId: String?` - Optional component ID to identify a specific component. If `nil`, uses the first matching component.
-/// - `variant: VProductCard.Variant?` - Optional card variant override. Options: `.grid`, `.list`, `.hero`, `.minimal`. If `nil`, uses `.hero` (default).
+/// - `variant: VioProductCard.Variant?` - Optional card variant override. Options: `.grid`, `.list`, `.hero`, `.minimal`. If `nil`, uses `.hero` (default).
 /// - `showAddToCartButton: Bool` - Whether to show the "Add to Cart" button in hero variant. Default: `true`. Button only shows if product has no variants.
 ///
 /// **Backend Configuration (from API):**
@@ -49,7 +49,7 @@ import UIKit
 /// - ✅ Multiple card variants (hero, grid, list, minimal)
 /// - ✅ Highlight badge with custom text
 /// - ✅ Clickable card opens product detail overlay
-public struct VProductSpotlight: View {
+public struct VioProductSpotlight: View {
     
     // MARK: - Properties
     
@@ -59,7 +59,7 @@ public struct VProductSpotlight: View {
     
     /// Optional card variant override for demo/testing
     /// If nil, uses .hero (default)
-    private let variant: VProductCard.Variant?
+    private let variant: VioProductCard.Variant?
     
     /// Whether to show the "Add to Cart" button in hero variant
     /// Default: true. Button only shows if product has no variants.
@@ -73,7 +73,7 @@ public struct VProductSpotlight: View {
     private let sponsorPosition: String
     
     @ObservedObject private var campaignManager = CampaignManager.shared
-    @StateObject private var viewModel = VProductSpotlightViewModel()
+    @StateObject private var viewModel = VioProductSpotlightViewModel()
     
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
     @EnvironmentObject private var cartManager: CartManager
@@ -92,7 +92,7 @@ public struct VProductSpotlight: View {
     
     // MARK: - Initializer
     
-    public init(componentId: String? = nil, variant: VProductCard.Variant? = nil, showAddToCartButton: Bool = true, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+    public init(componentId: String? = nil, variant: VioProductCard.Variant? = nil, showAddToCartButton: Bool = true, showSponsor: Bool = false, sponsorPosition: String? = nil) {
         self.componentId = componentId
         self.variant = variant
         self.showAddToCartButton = showAddToCartButton
@@ -280,13 +280,13 @@ public struct VProductSpotlight: View {
                         .padding(.horizontal, VioSpacing.md)
                 }
                 
-                // Use custom hero layout if hero variant, otherwise use VProductCard
+                // Use custom hero layout if hero variant, otherwise use VioProductCard
                 if variant == nil || variant == .hero {
                     customHeroLayout(product: product)
                         .padding(.horizontal, VioSpacing.md)
                 } else {
-                    // For other variants, use VProductCard directly
-                    VProductCard(
+                    // For other variants, use VioProductCard directly
+                    VioProductCard(
                         product: product,
                         variant: variant!,
                         showBrand: VioConfiguration.shared.uiConfiguration.showProductBrands,
@@ -311,7 +311,7 @@ public struct VProductSpotlight: View {
                 Spacer()
             }
             
-            RSponsorBadge(logoUrl: logoUrl)
+            VioSponsorBadge(logoUrl: logoUrl)
                 .padding(.horizontal, VioSpacing.xs)
                 .padding(.vertical, VioSpacing.xs)
             
@@ -403,7 +403,7 @@ public struct VProductSpotlight: View {
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(item: $showingProductDetail) { product in
-            VProductDetailOverlay(
+            VioProductDetailOverlay(
                 product: product,
                 onDismiss: {
                     showingProductDetail = nil
@@ -633,9 +633,9 @@ public struct VProductSpotlight: View {
 
 // MARK: - View Model
 
-/// ViewModel for VProductSpotlight
+/// ViewModel for VioProductSpotlight
 @MainActor
-private class VProductSpotlightViewModel: ObservableObject {
+private class VioProductSpotlightViewModel: ObservableObject {
     @Published var product: Product?
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
@@ -664,22 +664,22 @@ private class VProductSpotlightViewModel: ObservableObject {
             
         } catch ProductServiceError.productNotFound(let id) {
             errorMessage = "Product not found"
-            VioLogger.warning("Product not found for ID: \(id) - Currency: \(currency), Country: \(country)", component: "VProductSpotlight")
+            VioLogger.warning("Product not found for ID: \(id) - Currency: \(currency), Country: \(country)", component: "VioProductSpotlight")
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = "Invalid configuration"
-            VioLogger.error("Invalid configuration: \(message)", component: "VProductSpotlight")
+            VioLogger.error("Invalid configuration: \(message)", component: "VioProductSpotlight")
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
                 isMarketUnavailable = true
                 errorMessage = nil
-                VioLogger.warning("Market not available", component: "VProductSpotlight")
+                VioLogger.warning("Market not available", component: "VioProductSpotlight")
             } else {
                 errorMessage = error.message
-                VioLogger.error("Error loading product: \(error.message)", component: "VProductSpotlight")
+                VioLogger.error("Error loading product: \(error.message)", component: "VioProductSpotlight")
             }
         } catch {
             errorMessage = "Failed to load product"
-            VioLogger.error("Unexpected error: \(error.localizedDescription)", component: "VProductSpotlight")
+            VioLogger.error("Unexpected error: \(error.localizedDescription)", component: "VioProductSpotlight")
         }
         
         isLoading = false

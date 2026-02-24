@@ -40,6 +40,7 @@ public class LiveMatchViewModel: ObservableObject {
     @Published public var currentAwayScore = 0
 
     public let timeline: UnifiedTimelineManager
+    private var timelineCancellable: AnyCancellable?
 
     public let chatManager: ChatManager
     public let matchSimulation: MatchSimulationManager
@@ -68,25 +69,40 @@ public class LiveMatchViewModel: ObservableObject {
         self.useTimelineSync = useTimelineSync
 
         self.timeline = UnifiedTimelineManager()
-
         self.chatManager = ChatManager(timeline: timeline)
         self.matchSimulation = MatchSimulationManager(timeline: timeline)
         self.playerViewModel = VideoPlayerViewModel()
+
+        // Forward timeline changes so UI updates when currentVideoTime/visibleEvents change
+        self.timelineCancellable = timeline.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
     }
 
     public func onAppear() {
         playerViewModel.setupPlayer()
 
         if useTimelineSync {
-            timeline.liveVideoTime = -900
-            timeline.currentVideoTime = -900
-
             loadTimelineData()
+
+            // Barcelona-PSG: start at 45' so halftime events (competitions, products, stats) are visible immediately
+            if match.title.contains("Barcelona") && match.title.contains("PSG") {
+                let halftimeStart: TimeInterval = 2700  // 45'
+                timeline.liveVideoTime = halftimeStart
+                timeline.currentVideoTime = halftimeStart
+                selectedMinute = 45
+            } else {
+                timeline.liveVideoTime = -900
+                timeline.currentVideoTime = -900
+            }
 
             updateScoresFromTimeline()
 
             chatManager.startSimulation(withTimeline: true)
             matchSimulation.startSimulation()
+            startTimelinePlayback()
         } else {
             chatManager.startSimulation(withTimeline: false)
             matchSimulation.startSimulation()

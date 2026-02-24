@@ -5,10 +5,10 @@ final class VioUITests: XCTestCase {
     
     func testRProductCardVariants() throws {
         // Test that all variants are defined
-        let gridVariant = VProductCard.Variant.grid
-        let listVariant = VProductCard.Variant.list
-        let heroVariant = VProductCard.Variant.hero
-        let minimalVariant = VProductCard.Variant.minimal
+        let gridVariant = VioProductCard.Variant.grid
+        let listVariant = VioProductCard.Variant.list
+        let heroVariant = VioProductCard.Variant.hero
+        let minimalVariant = VioProductCard.Variant.minimal
         
         // These should not crash
         XCTAssertNotNil(gridVariant)

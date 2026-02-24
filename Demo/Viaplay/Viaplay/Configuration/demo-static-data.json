@@ -105,7 +105,7 @@
     "castingContests": [
       {
         "id": "casting-contest-quiz",
-        "videoTimestamp": 2720,
+        "videoTimestamp": 2700,
         "title": "Elkjøp Konkurranse",
         "description": "Delta og vinn et gavekort på 5000kr ved å svare på et lite quiz",
         "prize": "Gavekort på 5000kr",
@@ -125,7 +125,7 @@
     "castingProducts": [
       {
         "id": "casting-product-combo",
-        "videoTimestamp": 2770,
+        "videoTimestamp": 2700,
         "productId": "408895",
         "productIds": [
           "408896"

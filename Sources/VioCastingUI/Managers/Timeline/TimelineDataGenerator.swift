@@ -182,11 +182,44 @@ public struct TimelineDataGenerator {
             metadata: ["type": "halftime"]
         )))
         
-        // MARK: - Casting Events (during halftime break) - from DemoDataManager config
+        // Halftime stats (always shown) - 2700 so visible when scrubbing to 45'
+        events.append(AnyTimelineEvent(AnnouncementEvent(
+            id: "halftime-stats",
+            videoTimestamp: 2700,
+            title: "Statistikk første omgang",
+            message: "Se tallene fra første omgang",
+            imageUrl: nil,
+            actionUrl: nil,
+            actionText: "Se statistikk",
+            metadata: ["type": "halftime-stats", "phase": "halftime"]
+        )))
+        
+        // MARK: - Casting Events (during halftime break) - DemoDataManager + fallback
         
         let dm = DemoDataManager.shared
-        let contests = dm.timelineCastingContests
-        let products = dm.timelineCastingProducts
+        var contests = dm.timelineCastingContests
+        var products = dm.timelineCastingProducts
+        
+        // Fallback: always add demo halftime events if config is empty
+        // All at 2700 so they show when user scrubs to 45' (currentVideoTime = 2700)
+        if contests.isEmpty {
+            let item1 = DemoDataConfiguration.TimelineEventsConfiguration.CastingContestItem(
+                id: "casting-contest-quiz", videoTimestamp: 2700, title: "Elkjøp Konkurranse",
+                description: "Delta og vinn et gavekort på 5000kr ved å svare på et lite quiz",
+                prize: "Gavekort på 5000kr", contestType: "quiz", imageAsset: "contest_prize_giftcard")
+            let item2 = DemoDataConfiguration.TimelineEventsConfiguration.CastingContestItem(
+                id: "casting-contest-giveaway", videoTimestamp: 2700, title: "Elkjøp Konkurranse",
+                description: "Delta og vinn to billetter til Champions League",
+                prize: "To billetter til Champions League", contestType: "giveaway", imageAsset: "contest_prize_tickets")
+            contests = [item1, item2]
+        }
+        if products.isEmpty {
+            let p = DemoDataConfiguration.TimelineEventsConfiguration.CastingProductItem(
+                id: "casting-product-combo", videoTimestamp: 2700, productId: "408895",
+                productIds: ["408896"], title: "Spesialtilbud på TV og Lyd",
+                description: "Ikke gå glipp av denne muligheten - 25% rabatt kun under kampen")
+            products = [p]
+        }
         
         // Casting Contest 1
         if contests.count > 0 {
@@ -207,7 +240,7 @@ public struct TimelineDataGenerator {
         // Chat between Casting events (uses chatUsernames[1] from config)
         if let chatUser = dm.chatUsername(at: 1) {
             events.append(AnyTimelineEvent(ChatMessageEvent(
-                videoTimestamp: 2725,
+                videoTimestamp: 2700,
                 username: chatUser.name,
                 text: "Dette er en fantastisk mulighet! 🎁",
                 usernameColor: Color(hex: chatUser.color),
@@ -219,7 +252,7 @@ public struct TimelineDataGenerator {
         if let social = dm.socialAccount(at: 0) {
             events.append(AnyTimelineEvent(TweetEvent(
                 id: dm.tweetHalftime1EventId,
-                videoTimestamp: 2730,
+                videoTimestamp: 2700,
                 authorName: social.name,
                 authorHandle: social.handle,
                 authorAvatar: nil,
@@ -250,7 +283,7 @@ public struct TimelineDataGenerator {
         // Chat between Casting events (uses chatUsernames[2])
         if let chatUser = dm.chatUsername(at: 2) {
             events.append(AnyTimelineEvent(ChatMessageEvent(
-                videoTimestamp: 2755,
+                videoTimestamp: 2700,
                 username: chatUser.name,
                 text: "Billetter til Champions League?! Jeg må delta! 🎫",
                 usernameColor: Color(hex: chatUser.color),
@@ -262,7 +295,7 @@ public struct TimelineDataGenerator {
         if let social = dm.socialAccount(at: 1) {
             events.append(AnyTimelineEvent(TweetEvent(
                 id: dm.tweetHalftime2EventId,
-                videoTimestamp: 2760,
+                videoTimestamp: 2700,
                 authorName: social.name,
                 authorHandle: social.handle,
                 authorAvatar: nil,
@@ -296,7 +329,7 @@ public struct TimelineDataGenerator {
         // Chat after Casting product (uses chatUsernames[3])
         if let chatUser = dm.chatUsername(at: 3) {
             events.append(AnyTimelineEvent(ChatMessageEvent(
-                videoTimestamp: 2775,
+                videoTimestamp: 2700,
                 username: chatUser.name,
                 text: "25% rabatt?! Dette må jeg sjekke ut! 📺",
                 usernameColor: Color(hex: chatUser.color),

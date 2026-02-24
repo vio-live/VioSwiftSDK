@@ -69,7 +69,7 @@ struct ProductsGridView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: TV2Theme.Spacing.md) {
                 ForEach(products) { product in
-                    VProductCard(
+                    VioProductCard(
                         product: product,
                         onAddToCart: {
                             Task {

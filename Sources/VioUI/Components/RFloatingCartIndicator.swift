@@ -6,7 +6,7 @@ import VioDesignSystem
 /// 
 /// Displays cart item count and total price, provides quick access to checkout
 /// Uses elegant design with animations and haptic feedback
-public struct VFloatingCartIndicator: View {
+public struct VioFloatingCartIndicator: View {
     
     // MARK: - Position Options
     public enum Position {
@@ -353,7 +353,7 @@ public struct VFloatingCartIndicator: View {
 }
 
 // MARK: - Position Extensions
-extension VFloatingCartIndicator.Position {
+extension VioFloatingCartIndicator.Position {
     var isTop: Bool {
         switch self {
         case .topLeft, .topRight, .topCenter:
@@ -409,7 +409,7 @@ extension VFloatingCartIndicator.Position {
 }
 
 // MARK: - DisplayMode Extensions
-extension VFloatingCartIndicator.DisplayMode {
+extension VioFloatingCartIndicator.DisplayMode {
     /// Map from configuration enum to component enum
     static func from(_ configMode: FloatingCartDisplayMode) -> Self {
         switch configMode {
@@ -422,7 +422,7 @@ extension VFloatingCartIndicator.DisplayMode {
 }
 
 // MARK: - Size Extensions
-extension VFloatingCartIndicator.Size {
+extension VioFloatingCartIndicator.Size {
     /// Map from configuration enum to component enum
     static func from(_ configSize: FloatingCartSize) -> Self {
         switch configSize {
@@ -439,7 +439,7 @@ import VioTesting
 
 #Preview("Full Mode - Bottom Right") {
     PreviewContainer {
-        VFloatingCartIndicator(
+        VioFloatingCartIndicator(
             position: .bottomRight,
             displayMode: .full,
             size: .medium
@@ -449,7 +449,7 @@ import VioTesting
 
 #Preview("Compact Mode - Top Left") {
     PreviewContainer {
-        VFloatingCartIndicator(
+        VioFloatingCartIndicator(
             position: .topLeft,
             displayMode: .compact,
             size: .medium
@@ -459,7 +459,7 @@ import VioTesting
 
 #Preview("Minimal Mode - Center Right") {
     PreviewContainer {
-        VFloatingCartIndicator(
+        VioFloatingCartIndicator(
             position: .centerRight,
             displayMode: .minimal,
             size: .small
@@ -469,7 +469,7 @@ import VioTesting
 
 #Preview("Icon Only - Bottom Center") {
     PreviewContainer {
-        VFloatingCartIndicator(
+        VioFloatingCartIndicator(
             position: .bottomCenter,
             displayMode: .iconOnly,
             size: .large
@@ -490,7 +490,7 @@ import VioTesting
                 VStack {
                     Text("Small")
                         .font(.caption)
-                    VFloatingCartIndicator(
+                    VioFloatingCartIndicator(
                         position: .bottomCenter,
                         displayMode: .full,
                         size: .small
@@ -501,7 +501,7 @@ import VioTesting
                 VStack {
                     Text("Medium")
                         .font(.caption)
-                    VFloatingCartIndicator(
+                    VioFloatingCartIndicator(
                         position: .bottomCenter,
                         displayMode: .full,
                         size: .medium
@@ -512,7 +512,7 @@ import VioTesting
                 VStack {
                     Text("Large")
                         .font(.caption)
-                    VFloatingCartIndicator(
+                    VioFloatingCartIndicator(
                         position: .bottomCenter,
                         displayMode: .full,
                         size: .large

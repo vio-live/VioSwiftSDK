@@ -16,8 +16,8 @@ import SwiftUI
 /// )
 /// 
 /// // Use anywhere in the app
-/// VProductCard(product: product) // Uses global config
-/// VCheckoutOverlay() // Uses global cart position and colors
+/// VioProductCard(product: product) // Uses global config
+/// VioCheckoutOverlay() // Uses global cart position and colors
 /// ```
 public class VioConfiguration: ObservableObject {
     

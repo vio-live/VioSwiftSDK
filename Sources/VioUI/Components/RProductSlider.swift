@@ -10,7 +10,7 @@ import VioTesting
 ///
 /// A horizontal scrolling component for displaying a collection of products.
 /// Perfect for featured products, recommendations, or category showcases.
-public struct VProductSlider: View {
+public struct VioProductSlider: View {
     
     // MARK: - Layout Style
     public enum Layout {
@@ -21,7 +21,7 @@ public struct VProductSlider: View {
         case showcase   // Extra large premium cards for special promotions (360pt)
         case micro      // Tiny cards for dense recommendations (80pt)
         
-        var cardVariant: VProductCard.Variant {
+        var cardVariant: VioProductCard.Variant {
             switch self {
             case .compact: return .minimal
             case .cards: return .grid
@@ -92,7 +92,7 @@ public struct VProductSlider: View {
     private let sponsorPosition: String
     
     // ViewModel for automatic product loading
-    @StateObject private var viewModel = VProductSliderViewModel()
+    @StateObject private var viewModel = VioProductSliderViewModel()
     
     // Observe CampaignManager for reactive updates
     @ObservedObject private var campaignManager = CampaignManager.shared
@@ -188,7 +188,7 @@ public struct VProductSlider: View {
     }
     
     /// Should show component
-    /// Follows the same pattern as VProductStore and VProductCarousel
+    /// Follows the same pattern as VioProductStore and VioProductCarousel
     private var shouldShow: Bool {
         // Check SDK availability
         guard VioConfiguration.shared.shouldUseSDK else {
@@ -338,7 +338,7 @@ public struct VProductSlider: View {
                 Spacer()
             }
             
-            RSponsorBadge(logoUrl: logoUrl)
+            VioSponsorBadge(logoUrl: logoUrl)
                 .padding(.horizontal, VioSpacing.xs)
                 .padding(.vertical, VioSpacing.xs)
             
@@ -352,7 +352,7 @@ public struct VProductSlider: View {
     
     private var loadingView: some View {
         VStack(spacing: VioSpacing.md) {
-            VCustomLoader(style: .rotate, size: 40)
+            VioCustomLoader(style: .rotate, size: 40)
             Text(RLocalizedString(VioTranslationKey.loading.rawValue) + " products...")
                 .font(VioTypography.caption1)
                 .foregroundColor(adaptiveColors.textSecondary)
@@ -467,7 +467,7 @@ public struct VProductSlider: View {
         Group {
             if let cardWidth = layout.cardWidth {
                 // Fixed width cards
-                VProductCard(
+                VioProductCard(
                     product: product,
                     variant: layout.cardVariant,
                     showBrand: layout.showsBrand,
@@ -484,7 +484,7 @@ public struct VProductSlider: View {
                 )
             } else {
                 // Flexible width cards
-                VProductCard(
+                VioProductCard(
                     product: product,
                     variant: layout.cardVariant,
                     showBrand: layout.showsBrand,
@@ -512,7 +512,7 @@ public struct VProductSlider: View {
 }
 
 // MARK: - Convenience Initializers
-extension VProductSlider {
+extension VioProductSlider {
     
     /// Featured products slider with hero layout
     public static func featured(
@@ -522,8 +522,8 @@ extension VProductSlider {
         onProductTap: ((Product) -> Void)? = nil,
         onAddToCart: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .featured,
@@ -542,8 +542,8 @@ extension VProductSlider {
         maxItems: Int = 8,
         onProductTap: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .compact,
@@ -562,8 +562,8 @@ extension VProductSlider {
         onProductTap: ((Product) -> Void)? = nil,
         onAddToCart: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .cards,
@@ -583,8 +583,8 @@ extension VProductSlider {
         onProductTap: ((Product) -> Void)? = nil,
         onAddToCart: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .wide,
@@ -604,8 +604,8 @@ extension VProductSlider {
         onProductTap: ((Product) -> Void)? = nil,
         onAddToCart: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .showcase,
@@ -624,8 +624,8 @@ extension VProductSlider {
         maxItems: Int = 12,
         onProductTap: ((Product) -> Void)? = nil,
         onSeeAllTap: (() -> Void)? = nil
-    ) -> VProductSlider {
-        return VProductSlider(
+    ) -> VioProductSlider {
+        return VioProductSlider(
             title: title,
             products: products,
             layout: .micro,
@@ -641,7 +641,7 @@ extension VProductSlider {
 #if DEBUG
 #Preview("Showcase Layout") {
     ScrollView {
-        VProductSlider.showcase(
+        VioProductSlider.showcase(
             title: "Premium Collection",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(3)),
             onProductTap: { product in
@@ -659,7 +659,7 @@ extension VProductSlider {
 
 #Preview("Wide Layout") {
     ScrollView {
-        VProductSlider.detailed(
+        VioProductSlider.detailed(
             title: "Detailed Browse",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(4)),
             onProductTap: { product in
@@ -677,7 +677,7 @@ extension VProductSlider {
 
 #Preview("Featured Layout") {
     ScrollView {
-        VProductSlider.featured(
+        VioProductSlider.featured(
             title: "Featured Products",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(5)),
             onProductTap: { product in
@@ -695,7 +695,7 @@ extension VProductSlider {
 
 #Preview("Cards Layout") {
     ScrollView {
-        VProductSlider.category(
+        VioProductSlider.category(
             title: "Electronics",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(6)),
             onProductTap: { product in
@@ -713,7 +713,7 @@ extension VProductSlider {
 
 #Preview("Compact Layout") {
     ScrollView {
-        VProductSlider.recommendations(
+        VioProductSlider.recommendations(
             title: "You Might Like",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(8)),
             onProductTap: { product in
@@ -728,7 +728,7 @@ extension VProductSlider {
 
 #Preview("Micro Layout") {
     ScrollView {
-        VProductSlider.micro(
+        VioProductSlider.micro(
             title: "Related Items",
             products: Array(MockDataProvider.shared.sampleProducts.prefix(12)),
             onProductTap: { product in
@@ -745,7 +745,7 @@ extension VProductSlider {
     ScrollView {
         VStack(spacing: VioSpacing.xl) {
             // Showcase
-            VProductSlider.showcase(
+            VioProductSlider.showcase(
                 title: "Showcase (360pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(2)),
                 onProductTap: { _ in },
@@ -753,7 +753,7 @@ extension VProductSlider {
             )
             
             // Wide
-            VProductSlider.detailed(
+            VioProductSlider.detailed(
                 title: "Wide (320pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(3)),
                 onProductTap: { _ in },
@@ -761,7 +761,7 @@ extension VProductSlider {
             )
             
             // Featured
-            VProductSlider.featured(
+            VioProductSlider.featured(
                 title: "Featured (280pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(4)),
                 onProductTap: { _ in },
@@ -769,7 +769,7 @@ extension VProductSlider {
             )
             
             // Cards
-            VProductSlider.category(
+            VioProductSlider.category(
                 title: "Cards (180pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(5)),
                 onProductTap: { _ in },
@@ -777,14 +777,14 @@ extension VProductSlider {
             )
             
             // Compact
-            VProductSlider.recommendations(
+            VioProductSlider.recommendations(
                 title: "Compact (120pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(6)),
                 onProductTap: { _ in }
             )
             
             // Micro
-            VProductSlider.micro(
+            VioProductSlider.micro(
                 title: "Micro (80pt)",
                 products: Array(MockDataProvider.shared.sampleProducts.prefix(8)),
                 onProductTap: { _ in }

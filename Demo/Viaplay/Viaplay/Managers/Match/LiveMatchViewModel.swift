@@ -27,6 +27,7 @@ class LiveMatchViewModel: ObservableObject {
     // MARK: - Timeline (NEW - Central source of truth)
     
     let timeline: UnifiedTimelineManager
+    private var timelineCancellable: AnyCancellable?
     
     // MARK: - Managers
     
@@ -65,6 +66,13 @@ class LiveMatchViewModel: ObservableObject {
         // Create unified timeline FIRST
         self.timeline = UnifiedTimelineManager()
         
+        // Forward timeline changes so UI updates when currentVideoTime/visibleEvents change
+        self.timelineCancellable = timeline.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+        
         // Initialize managers with timeline
         self.chatManager = ChatManager(timeline: timeline)
         self.matchSimulation = MatchSimulationManager(timeline: timeline)
@@ -91,6 +99,7 @@ class LiveMatchViewModel: ObservableObject {
             
             chatManager.startSimulation(withTimeline: true)
             matchSimulation.startSimulation()
+            startTimelinePlayback()
         } else {
             // Old mode: random simulation
             chatManager.startSimulation(withTimeline: false)

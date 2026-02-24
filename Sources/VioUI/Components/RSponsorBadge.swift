@@ -16,7 +16,7 @@ import SwiftUI
 /// - Small compact size (60x30 max for logo, 8pt font for text)
 /// - Text "Sponset av" displayed above logo
 /// - Minimal padding for compact display
-public struct RSponsorBadge: View {
+public struct VioSponsorBadge: View {
     let logoUrl: String
     
     public init(logoUrl: String) {

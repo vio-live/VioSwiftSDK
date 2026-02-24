@@ -21,58 +21,58 @@ final class ComponentTests: XCTestCase {
         )
     }
     
-    // MARK: - VProductBanner Tests
+    // MARK: - VioProductBanner Tests
     
     func testRProductBannerInitialization() {
-        let banner = VProductBanner()
+        let banner = VioProductBanner()
         XCTAssertNotNil(banner)
     }
     
     func testRProductBannerWithComponentId() {
-        let banner = VProductBanner(componentId: "test-banner")
+        let banner = VioProductBanner(componentId: "test-banner")
         XCTAssertNotNil(banner)
     }
     
-    // MARK: - VProductCarousel Tests
+    // MARK: - VioProductCarousel Tests
     
     func testRProductCarouselInitialization() {
-        let carousel = VProductCarousel()
+        let carousel = VioProductCarousel()
         XCTAssertNotNil(carousel)
     }
     
     func testRProductCarouselWithLayout() {
-        let carouselFull = VProductCarousel(layout: "full")
+        let carouselFull = VioProductCarousel(layout: "full")
         XCTAssertNotNil(carouselFull)
         
-        let carouselCompact = VProductCarousel(layout: "compact")
+        let carouselCompact = VioProductCarousel(layout: "compact")
         XCTAssertNotNil(carouselCompact)
         
-        let carouselHorizontal = VProductCarousel(layout: "horizontal")
+        let carouselHorizontal = VioProductCarousel(layout: "horizontal")
         XCTAssertNotNil(carouselHorizontal)
     }
     
     func testRProductCarouselWithComponentId() {
-        let carousel = VProductCarousel(componentId: "test-carousel")
+        let carousel = VioProductCarousel(componentId: "test-carousel")
         XCTAssertNotNil(carousel)
     }
     
-    // MARK: - VProductStore Tests
+    // MARK: - VioProductStore Tests
     
     func testRProductStoreInitialization() {
-        let store = VProductStore()
+        let store = VioProductStore()
         XCTAssertNotNil(store)
     }
     
     func testRProductStoreWithMode() {
-        let storeAll = VProductStore(mode: "all")
+        let storeAll = VioProductStore(mode: "all")
         XCTAssertNotNil(storeAll)
         
-        let storeFiltered = VProductStore(mode: "filtered")
+        let storeFiltered = VioProductStore(mode: "filtered")
         XCTAssertNotNil(storeFiltered)
     }
     
     func testRProductStoreWithComponentId() {
-        let store = VProductStore(componentId: "test-store")
+        let store = VioProductStore(componentId: "test-store")
         XCTAssertNotNil(store)
     }
     
@@ -155,7 +155,7 @@ final class ComponentTests: XCTestCase {
 final class ViewModelTests: XCTestCase {
     
     func testRProductCarouselViewModelInitialState() {
-        let viewModel = VProductCarouselViewModel()
+        let viewModel = VioProductCarouselViewModel()
         XCTAssertEqual(viewModel.products.count, 0)
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)
@@ -164,7 +164,7 @@ final class ViewModelTests: XCTestCase {
     }
     
     func testRProductStoreViewModelInitialState() {
-        let viewModel = VProductStoreViewModel()
+        let viewModel = VioProductStoreViewModel()
         XCTAssertEqual(viewModel.products.count, 0)
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNil(viewModel.errorMessage)

@@ -18,17 +18,17 @@ import VioTesting
 /// **Usage:**
 /// ```swift
 /// // Basic usage (grid layout)
-/// VProductCard(product: product)
+/// VioProductCard(product: product)
 ///
 /// // Different variants
-/// VProductCard(product: product, variant: .list)
-/// VProductCard(product: product, variant: .hero)
-/// VProductCard(product: product, variant: .minimal)
+/// VioProductCard(product: product, variant: .list)
+/// VioProductCard(product: product, variant: .hero)
+/// VioProductCard(product: product, variant: .minimal)
 /// 
 /// // With customization
-/// VProductCard(product: product, variant: .grid, showBrand: false)
+/// VioProductCard(product: product, variant: .grid, showBrand: false)
 /// ```
-public struct VProductCard: View {
+public struct VioProductCard: View {
     
     // MARK: - Variant Types
     public enum Variant {
@@ -228,7 +228,7 @@ public struct VProductCard: View {
                 HStack {
                     priceView
                     Spacer()
-                    VButton(
+                    VioButton(
                         title: showCheckmark ? RLocalizedString(VioTranslationKey.success.rawValue) : RLocalizedString(VioTranslationKey.addToCart.rawValue),
                         style: .primary,
                         size: .large,
@@ -393,11 +393,11 @@ public struct VProductCard: View {
                 .fontWeight(.semibold)
                 .foregroundColor(adaptiveColors.priceColor)
                 .onAppear {
-                    print("💰 [VProductCard] Showing product: \(product.title)")
-                    print("💰 [VProductCard] Price amount: \(product.price.amount)")
-                    print("💰 [VProductCard] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                    print("💰 [VProductCard] Display amount: \(product.price.displayAmount)")
-                    print("💰 [VProductCard] Currency: \(product.price.currency_code)")
+                    print("💰 [VioProductCard] Showing product: \(product.title)")
+                    print("💰 [VioProductCard] Price amount: \(product.price.amount)")
+                    print("💰 [VioProductCard] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
+                    print("💰 [VioProductCard] Display amount: \(product.price.displayAmount)")
+                    print("💰 [VioProductCard] Currency: \(product.price.currency_code)")
                 }
             
             if let compareAtAmount = product.price.displayCompareAtAmount {
@@ -431,7 +431,7 @@ public struct VProductCard: View {
                 // No button in minimal variant
                 EmptyView()
             } else if isInStock {
-                VButton(
+                VioButton(
                     title: showCheckmark ? (variant == .list ? "✓" : variant == .grid ? "" : RLocalizedString(VioTranslationKey.success.rawValue)) : (variant == .list ? RLocalizedString(VioTranslationKey.addToCart.rawValue) : variant == .grid ? "" : RLocalizedString(VioTranslationKey.addToCart.rawValue)),
                     style: .primary,
                     size: variant == .list ? .small : variant == .grid ? .small : .medium,
@@ -550,7 +550,7 @@ public struct VProductCard: View {
 #if DEBUG
 #Preview("Grid Variant") {
     VStack(spacing: VioSpacing.lg) {
-        VProductCard(
+        VioProductCard(
             product: MockDataProvider.shared.sampleProducts[0],
             variant: .grid,
             onTap: { print("Product tapped") },
@@ -564,7 +564,7 @@ public struct VProductCard: View {
 #Preview("List Variant") {
     VStack(spacing: VioSpacing.md) {
         ForEach(MockDataProvider.shared.sampleProducts.prefix(3)) { product in
-            VProductCard(
+            VioProductCard(
                 product: product,
                 variant: .list,
                 onTap: { print("Product \(product.title) tapped") },
@@ -577,7 +577,7 @@ public struct VProductCard: View {
 }
 
 #Preview("Hero Variant") {
-    VProductCard(
+    VioProductCard(
         product: MockDataProvider.shared.sampleProducts[0],
         variant: .hero,
         showDescription: true,
@@ -592,7 +592,7 @@ public struct VProductCard: View {
     ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: VioSpacing.sm) {
             ForEach(MockDataProvider.shared.sampleProducts) { product in
-                VProductCard(
+                VioProductCard(
                     product: product,
                     variant: .minimal,
                     onTap: { print("Minimal product \(product.title) tapped") }
@@ -614,7 +614,7 @@ public struct VProductCard: View {
                 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: VioSpacing.md) {
                     ForEach(MockDataProvider.shared.sampleProducts.prefix(2)) { product in
-                        VProductCard(product: product, variant: .grid)
+                        VioProductCard(product: product, variant: .grid)
                     }
                 }
                 .padding(.horizontal)
@@ -627,7 +627,7 @@ public struct VProductCard: View {
                 
                 VStack(spacing: VioSpacing.sm) {
                     ForEach(MockDataProvider.shared.sampleProducts.prefix(2)) { product in
-                        VProductCard(product: product, variant: .list)
+                        VioProductCard(product: product, variant: .list)
                     }
                 }
                 .padding(.horizontal)
@@ -638,7 +638,7 @@ public struct VProductCard: View {
                     .font(VioTypography.headline)
                     .padding(.horizontal)
                 
-                VProductCard(
+                VioProductCard(
                     product: MockDataProvider.shared.sampleProducts[0],
                     variant: .hero,
                     showDescription: true
@@ -654,7 +654,7 @@ public struct VProductCard: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: VioSpacing.sm) {
                         ForEach(MockDataProvider.shared.sampleProducts) { product in
-                            VProductCard(product: product, variant: .minimal)
+                            VioProductCard(product: product, variant: .minimal)
                         }
                     }
                     .padding(.horizontal)
