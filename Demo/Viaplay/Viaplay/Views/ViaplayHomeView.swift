@@ -15,8 +15,7 @@ struct ViaplayHomeView: View {
     @Binding var showSportView: Bool
     @State private var scrollOffset: CGFloat = 0
     let heroContent = HeroContent.mock
-    let continueWatchingItems = ContinueWatchingItem.mockItems
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .top) {

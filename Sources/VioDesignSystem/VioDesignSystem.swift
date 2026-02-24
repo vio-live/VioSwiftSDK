@@ -29,3 +29,4 @@ public typealias VioCustomLoader = VCustomLoader
 public typealias VioCachedAsyncImage = CachedAsyncImage
 public typealias VioImageLoader = ImageLoader
 public typealias VioCampaignSponsorBadge = CampaignSponsorBadge
+public typealias VioCacheHelper = CacheHelper

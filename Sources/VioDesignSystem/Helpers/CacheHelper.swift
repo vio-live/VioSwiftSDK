@@ -1,6 +1,6 @@
 //
 //  CacheHelper.swift
-//  Viaplay
+//  VioDesignSystem
 //
 //  Helper to clear image cache when campaign configuration changes
 //
@@ -9,19 +9,19 @@ import Foundation
 import VioCore
 
 /// Helper to manage cache clearing for both campaign data and images
-struct CacheHelper {
+public struct CacheHelper {
     /// Flag to prevent duplicate listener registration
     private static var listenersSetup = false
-    
+
     /// Validate if URL string is valid for image loading (http/https scheme)
     private static func isValidImageURL(_ urlString: String) -> Bool {
         guard let url = URL(string: urlString) else { return false }
         guard let scheme = url.scheme?.lowercased() else { return false }
         return scheme == "http" || scheme == "https"
     }
-    
+
     /// Setup listener for cache clearing notifications
-    static func setupCacheClearingListener() {
+    public static func setupCacheClearingListener() {
         // Prevent duplicate listener registration
         guard !listenersSetup else {
             VioLogger.debug("Cache clearing listeners already setup, skipping", component: "CacheHelper")
@@ -38,7 +38,7 @@ struct CacheHelper {
             ImageLoader.clearCache()
             VioLogger.info("Image cache cleared due to configuration change", component: "CacheHelper")
         }
-        
+
         // Listen for specific logo changes
         NotificationCenter.default.addObserver(
             forName: Notification.Name("VioCampaignLogoChanged"),
@@ -55,7 +55,7 @@ struct CacheHelper {
                 ImageLoader.clearCache(for: oldLogoUrl)
                 VioLogger.debug("Cleared cache for logo: \(oldLogoUrlString)", component: "CacheHelper")
             }
-            
+
             // Pre-load new logo if provided
             if let userInfo = notification.userInfo,
                let newLogoUrlString = userInfo["newLogoUrl"] as? String,
@@ -78,15 +78,15 @@ struct CacheHelper {
             }
         }
     }
-    
+
     /// Clear both campaign cache and image cache when configuration changes
-    static func clearAllCaches() {
+    public static func clearAllCaches() {
         // Clear campaign cache (from SDK)
         CacheManager.shared.clearCache()
-        
-        // Clear image cache (from demo) - will also be cleared by notification listener
+
+        // Clear image cache
         ImageLoader.clearCache()
-        
+
         VioLogger.info("Cleared both campaign cache and image cache", component: "CacheHelper")
     }
 }

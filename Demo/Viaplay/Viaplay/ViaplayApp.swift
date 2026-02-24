@@ -9,6 +9,8 @@ import SwiftUI
 import CoreData
 import VioCore
 import VioUI
+import VioDesignSystem
+import VioCastingUI
 import VioEngagementSystem
 
 @main
