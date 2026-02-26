@@ -85,6 +85,36 @@ public struct BroadcastContext: Codable, Equatable {
     }
 }
 
+// MARK: - Broadcast Validation (contentId flow)
+
+/// Result of validating a contentId against the backend.
+/// Returned by GET /v1/sdk/broadcast?contentId=&country=
+/// Polls and contests are loaded separately via EngagementManager.loadEngagement when hasEngagement is true.
+public struct BroadcastValidationResult: Codable, Equatable {
+    public let hasEngagement: Bool
+    public let broadcastId: String?
+    public let broadcastName: String?
+    public let status: String?
+    public let campaignId: Int?
+    public let websocketChannel: String?
+
+    public init(
+        hasEngagement: Bool,
+        broadcastId: String? = nil,
+        broadcastName: String? = nil,
+        status: String? = nil,
+        campaignId: Int? = nil,
+        websocketChannel: String? = nil
+    ) {
+        self.hasEngagement = hasEngagement
+        self.broadcastId = broadcastId
+        self.broadcastName = broadcastName
+        self.status = status
+        self.campaignId = campaignId
+        self.websocketChannel = websocketChannel
+    }
+}
+
 /// Deprecated: Use BroadcastContext instead
 @available(*, deprecated, renamed: "BroadcastContext")
 public typealias MatchContext = BroadcastContext

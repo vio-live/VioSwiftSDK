@@ -76,12 +76,12 @@ public class VioLocalization {
 // MARK: - Convenience Extensions
 
 /// Convenience function to get localized string
-public func RLocalizedString(_ key: String, defaultValue: String? = nil) -> String {
+public func VLocalizedString(_ key: String, defaultValue: String? = nil) -> String {
     return VioLocalization.shared.string(for: key, defaultValue: defaultValue)
 }
 
 /// Convenience function to get localized string with arguments
-public func RLocalizedString(_ key: String, _ arguments: CVarArg..., defaultValue: String? = nil) -> String {
+public func VLocalizedString(_ key: String, _ arguments: CVarArg..., defaultValue: String? = nil) -> String {
     return VioLocalization.shared.string(for: key, arguments: arguments, defaultValue: defaultValue)
 }
 

@@ -5,7 +5,7 @@ import VioDesignSystem
 import VioUI
 
 /// Reusable Live Products component for LiveShow overlays
-public struct RLiveProductsComponent: View {
+public struct VLiveProductsComponent: View {
     
     // MARK: - Properties
     @ObservedObject private var liveShowManager = LiveShowManager.shared
@@ -223,7 +223,7 @@ public struct DemoProductData {
         
         VStack {
             Spacer()
-            RLiveProductsComponent()
+            VLiveProductsComponent()
                 .environmentObject(CartManager())
         }
     }

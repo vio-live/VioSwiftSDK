@@ -118,7 +118,7 @@ public class ConfigurationLoader {
         let config = try JSONDecoder().decode(JSONConfiguration.self, from: data)
         
         // Use provided userCountryCode or check environment variable
-        let userCountry = userCountryCode ?? ProcessInfo.processInfo.environment["REACHU_USER_COUNTRY"]
+        let userCountry = userCountryCode ?? ProcessInfo.processInfo.environment["VIO_USER_COUNTRY"]
         
         applyConfiguration(config, bundle: bundle, userCountryCode: userCountry)
         VioLogger.success("Configuration loaded successfully: \(config.theme?.name ?? "Default")", component: "Config")
@@ -159,8 +159,8 @@ public class ConfigurationLoader {
     /// Load configuration from environment variables
     /// Useful for CI/CD and different deployment environments
     public static func loadFromEnvironment() {
-        let apiKey = ProcessInfo.processInfo.environment["REACHU_API_KEY"] ?? ""
-        let environmentString = ProcessInfo.processInfo.environment["REACHU_ENVIRONMENT"] ?? "production"
+        let apiKey = ProcessInfo.processInfo.environment["VIO_API_KEY"] ?? ""
+        let environmentString = ProcessInfo.processInfo.environment["VIO_ENVIRONMENT"] ?? "production"
         let environment = VioEnvironment(rawValue: environmentString) ?? .production
         
         if !apiKey.isEmpty {
@@ -549,6 +549,7 @@ public class ConfigurationLoader {
             webSocketBaseURL: config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL,
             restAPIBaseURL: config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL,
             campaignAdminApiKey: config.campaignAdminApiKey ?? CampaignConfiguration.default.campaignAdminApiKey,
+            campaignApiKey: config.campaignApiKey ?? CampaignConfiguration.default.campaignApiKey,
             autoDiscover: config.autoDiscover ?? CampaignConfiguration.default.autoDiscover,
             channelId: config.channelId
         )
@@ -962,6 +963,7 @@ private struct JSONCampaignConfiguration: Codable {
     let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-dev.vio.live")
     let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://api.vio.live")
     let campaignAdminApiKey: String?  // API key for campaign admin endpoints (different from SDK API key) - Only needed if autoDiscover is false
+    let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
     let channelId: Int?  // Optional channel ID to filter campaigns during auto-discovery
 }

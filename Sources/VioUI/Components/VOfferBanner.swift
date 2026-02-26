@@ -7,7 +7,7 @@ import UIKit
 #endif
 
 /// Dynamic Offer Banner component that receives configuration from backend
-public struct VioOfferBanner: View {
+public struct VOfferBanner: View {
     let config: OfferBannerConfig
     
     // Optional parameters to override config values
@@ -17,7 +17,7 @@ public struct VioOfferBanner: View {
     let customSubtitleFontSize: CGFloat?
     let customBadgeFontSize: CGFloat?
     let customButtonFontSize: CGFloat?
-    let onNavigateToStore: (() -> Void)? // Callback to navigate to VioProductStore
+    let onNavigateToStore: (() -> Void)? // Callback to navigate to VProductStore
     
     @State private var timeRemaining: DateComponents?
     @State private var timer: Timer?
@@ -573,7 +573,7 @@ struct TimeUnit: View {
 /// Dynamic Offer Banner component that automatically loads configuration from backend
 /// This component connects to ComponentManager and displays the active banner
 /// It handles loading states, errors, and real-time updates via WebSocket
-public struct VioOfferBannerDynamic: View {
+public struct VOfferBannerDynamic: View {
     @ObservedObject private var componentManager = ComponentManager.shared
     @ObservedObject private var campaignManager = CampaignManager.shared
     @State private var isLoading = true
@@ -595,7 +595,7 @@ public struct VioOfferBannerDynamic: View {
     }
     
     /// Should show component
-    /// Follows the same pattern as VioProductStore, VioProductCarousel, etc.
+    /// Follows the same pattern as VProductStore, VProductCarousel, etc.
     private var shouldShow: Bool {
         // Check SDK availability
         guard VioConfiguration.shared.shouldUseSDK else {
@@ -642,7 +642,7 @@ public struct VioOfferBannerDynamic: View {
                     
                     // Content - show when banner is available and skeleton should be hidden
                     if let bannerConfig = componentManager.activeBanner {
-                        VioOfferBanner(
+                        VOfferBanner(
                             config: bannerConfig,
                             onNavigateToStore: onNavigateToStore
                         )
@@ -859,7 +859,7 @@ public struct VioOfferBannerDynamic: View {
             hasError = true
             errorMessage = error.localizedDescription
             isLoading = false
-            VioLogger.error("Failed to connect to banner backend: \(error)", component: "VioOfferBannerDynamic")
+            VioLogger.error("Failed to connect to banner backend: \(error)", component: "VOfferBannerDynamic")
         }
     }
 }
@@ -900,13 +900,13 @@ private struct ShimmerModifier: ViewModifier {
     }
 }
 
-/// Container view that manages the offer banner lifecycle (legacy name - use VioOfferBannerDynamic)
-@available(*, deprecated, renamed: "VioOfferBannerDynamic", message: "Use VioOfferBannerDynamic instead")
-public struct VioOfferBannerContainer: View {
+/// Container view that manages the offer banner lifecycle (legacy name - use VOfferBannerDynamic)
+@available(*, deprecated, renamed: "VOfferBannerDynamic", message: "Use VOfferBannerDynamic instead")
+public struct VOfferBannerContainer: View {
     public init() {}
     
     public var body: some View {
-        VioOfferBannerDynamic()
+        VOfferBannerDynamic()
     }
 }
 
@@ -1035,9 +1035,9 @@ extension Color {
 
 #if DEBUG
 /// Preview for development
-struct VioOfferBanner_Previews: PreviewProvider {
+struct VOfferBanner_Previews: PreviewProvider {
     static var previews: some View {
-        VioOfferBanner(config: OfferBannerConfig(
+        VOfferBanner(config: OfferBannerConfig(
             logoUrl: "https://example.com/logo.png",
             title: "Ukens tilbud",
             subtitle: "Se denne ukes beste tilbud",

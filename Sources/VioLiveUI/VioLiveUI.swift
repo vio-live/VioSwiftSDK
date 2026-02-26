@@ -28,7 +28,7 @@ extension View {
     /// Use this to enable global live stream functionality
     public func liveStreamOverlay() -> some View {
         self.overlay(
-            RLiveStreamOverlay()
+            VLiveStreamOverlay()
         )
     }
     
@@ -37,7 +37,7 @@ extension View {
         position: MiniPlayerPosition = .topRight
     ) -> some View {
         self.overlay(
-            RLiveShowFloatingIndicator(position: position) {
+            VLiveShowFloatingIndicator(position: position) {
                 // Show featured stream action will be handled by the app
             }
         )

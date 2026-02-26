@@ -81,7 +81,7 @@ struct LiveStreamGlobalOverlay: View {
             // Full screen LiveShow overlay
             // TODO: Re-enable when VioLiveUI and VioLiveShow modules are properly configured
             // if liveShowManager.isLiveShowVisible {
-            //     RLiveShowFullScreenOverlay()
+            //     VLiveShowFullScreenOverlay()
             //         .environmentObject(cartManager)
             // }
         }

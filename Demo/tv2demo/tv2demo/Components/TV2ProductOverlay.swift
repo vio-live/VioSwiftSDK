@@ -88,7 +88,7 @@ struct TV2ProductOverlay: View {
         .sheet(isPresented: $showProductDetail) {
             if let apiProduct = viewModel.product {
                 // Convertir ProductDto a Product para el overlay
-                VioProductDetailOverlay(
+                VProductDetailOverlay(
                     product: convertDtoToProduct(apiProduct),
                     onDismiss: {
                         showProductDetail = false

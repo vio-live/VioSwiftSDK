@@ -25,11 +25,11 @@ struct OfferBannerDemo: View {
             
             // Dynamic banner container (now uses config automatically)
             if let bannerConfig = componentManager.activeBanner {
-                VioOfferBanner(config: bannerConfig)
+                VOfferBanner(config: bannerConfig)
                     .padding(.horizontal)
             } else if showDemo {
                 // Demo banner with hardcoded config
-                VioOfferBanner(config: demoConfig)
+                VOfferBanner(config: demoConfig)
                     .padding(.horizontal)
             } else {
                 Text("No active banner")
@@ -79,7 +79,7 @@ struct OfferBannerContainerDemo: View {
             
             // This automatically handles connection and lifecycle
             // No need to pass campaignId manually anymore
-            VioOfferBannerContainer()
+            VOfferBannerContainer()
                 .padding(.horizontal)
             
             Spacer()
@@ -100,7 +100,7 @@ struct OfferBannerComparisonDemo: View {
                     .font(.headline)
                     .foregroundColor(.green)
                 
-                Text("VioOfferBannerContainer()")
+                Text("VOfferBannerContainer()")
                     .font(.system(.body, design: .monospaced))
                     .padding()
                     .background(Color.green.opacity(0.1))
@@ -118,7 +118,7 @@ struct OfferBannerComparisonDemo: View {
                     .font(.headline)
                     .foregroundColor(.orange)
                 
-                Text("VioOfferBannerContainer(campaignId: 3)")
+                Text("VOfferBannerContainer(campaignId: 3)")
                     .font(.system(.body, design: .monospaced))
                     .padding()
                     .background(Color.orange.opacity(0.1))

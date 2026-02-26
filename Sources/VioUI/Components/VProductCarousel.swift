@@ -12,12 +12,12 @@ import UIKit
 /// **Usage:**
 /// ```swift
 /// // Basic usage - uses layout from backend config
-/// VioProductCarousel()
+/// VProductCarousel()
 ///
 /// // Override layout for testing/comparison
-/// VioProductCarousel(layout: "full")      // Large vertical cards (full width)
-/// VioProductCarousel(layout: "compact")   // Small vertical cards (2 cards visible)
-/// VioProductCarousel(layout: "horizontal") // Horizontal cards (image left, info right)
+/// VProductCarousel(layout: "full")      // Large vertical cards (full width)
+/// VProductCarousel(layout: "compact")   // Small vertical cards (2 cards visible)
+/// VProductCarousel(layout: "horizontal") // Horizontal cards (image left, info right)
 /// ```
 ///
 /// **Parameters:**
@@ -57,7 +57,7 @@ import UIKit
 /// - ✅ Automatic fallback to all products if no IDs provided
 /// - ✅ Responsive card sizing
 /// - ✅ Uses design system tokens (colors, spacing, shadows, border radius)
-public struct VioProductCarousel: View {
+public struct VProductCarousel: View {
     
     // MARK: - Cached Config Values
     
@@ -93,7 +93,7 @@ public struct VioProductCarousel: View {
     // MARK: - Properties
     
     @ObservedObject private var campaignManager = CampaignManager.shared
-    @StateObject private var viewModel = VioProductCarouselViewModel()
+    @StateObject private var viewModel = VProductCarouselViewModel()
     @State private var autoScrollTimer: Timer?
     @State private var showingProductDetail: Product? // For product detail overlay
     @State private var scrollOffset: CGFloat = 0 // For tracking scroll position
@@ -339,7 +339,7 @@ public struct VioProductCarousel: View {
                 Spacer()
             }
             
-            VioSponsorBadge(logoUrl: logoUrl)
+            VSponsorBadge(logoUrl: logoUrl)
                 .padding(.horizontal, VioSpacing.xs)
                 .padding(.vertical, VioSpacing.xs)
             
@@ -382,7 +382,7 @@ public struct VioProductCarousel: View {
                 stopAutoScroll()
             }
             .sheet(item: $showingProductDetail) { product in
-                VioProductDetailOverlay(
+                VProductDetailOverlay(
                     product: product,
                     onDismiss: {
                         showingProductDetail = nil
@@ -618,7 +618,7 @@ public struct VioProductCarousel: View {
             return AnyView(fullLayoutProductCardView(product: product))
         } else {
             // For compact and horizontal layouts, use grid variant without extra padding
-            return AnyView(VioProductCard(product: product, variant: .grid, imageBackgroundColor: imageBackgroundColor))
+            return AnyView(VProductCard(product: product, variant: .grid, imageBackgroundColor: imageBackgroundColor))
         }
     }
     
@@ -670,7 +670,7 @@ public struct VioProductCarousel: View {
                             url: url,
                             placeholder: AnyView(Rectangle()
                                 .fill(adaptiveColors.surfaceSecondary)
-                                .overlay { VioCustomLoader(style: .rotate, size: 30) }),
+                                .overlay { VCustomLoader(style: .rotate, size: 30) }),
                             errorView: AnyView(Rectangle()
                                 .fill(adaptiveColors.surfaceSecondary)
                                 .overlay {
@@ -734,8 +734,8 @@ public struct VioProductCarousel: View {
                                 // Handle add to cart - prevent tap propagation to card
                                 // TODO: Add actual cart functionality if needed
                             }) {
-                                VioButton(
-                                    title: RLocalizedString(VioTranslationKey.addToCart.rawValue),
+                                VButton(
+                                    title: VLocalizedString(VioTranslationKey.addToCart.rawValue),
                                     style: .primary,
                                     size: .medium,
                                     isLoading: false
@@ -790,7 +790,7 @@ public struct VioProductCarousel: View {
                             placeholder: AnyView(RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                                 .fill(adaptiveColors.surfaceSecondary)
                                 .frame(width: 90, height: 90)
-                                .overlay { VioCustomLoader(style: .rotate, size: 24) }),
+                                .overlay { VCustomLoader(style: .rotate, size: 24) }),
                             errorView: AnyView(RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                                 .fill(adaptiveColors.surfaceSecondary)
                                 .frame(width: 90, height: 90)
@@ -858,7 +858,7 @@ public struct VioProductCarousel: View {
     
     private var loadingView: some View {
         VStack(spacing: VioSpacing.md) {
-            VioCustomLoader(style: .rotate, size: 40)
+            VCustomLoader(style: .rotate, size: 40)
             Text("Loading products...")
                 .font(VioTypography.caption1)
                 .foregroundColor(adaptiveColors.textSecondary)
@@ -1028,9 +1028,9 @@ public struct VioProductCarousel: View {
     }
     
     private func skeletonCardViewCompact() -> some View {
-        // Use exact same structure as VioProductCard.grid but with placeholders
+        // Use exact same structure as VProductCard.grid but with placeholders
         VStack(alignment: .leading, spacing: VioSpacing.sm) {
-            // Image skeleton - matches VioProductCard.grid image height (160)
+            // Image skeleton - matches VProductCard.grid image height (160)
             ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: VioBorderRadius.large)
                     .fill(adaptiveColors.surfaceSecondary)
@@ -1038,9 +1038,9 @@ public struct VioProductCarousel: View {
                     .shimmerEffect()
             }
             
-            // Product Info skeleton - matches VioProductCard.grid structure exactly
+            // Product Info skeleton - matches VProductCard.grid structure exactly
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                // Brand skeleton (optional, matches VioProductCard structure)
+                // Brand skeleton (optional, matches VProductCard structure)
                 RoundedRectangle(cornerRadius: VioBorderRadius.small)
                     .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
                     .frame(width: 50, height: 12)
@@ -1273,7 +1273,7 @@ public struct VioProductCarousel: View {
 // MARK: - ViewModel
 
 @MainActor
-class VioProductCarouselViewModel: ObservableObject {
+class VProductCarouselViewModel: ObservableObject {
     
     @Published var products: [Product] = []
     @Published var isLoading: Bool = false

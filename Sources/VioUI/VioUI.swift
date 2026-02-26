@@ -39,6 +39,6 @@ public struct VioUI {
 public typealias VioCartManager = CartManager
 
 // UI components - all use Vio* naming
-// VioProductCard, VioProductSlider, VioCheckoutOverlay, VioProductDetailOverlay
-// VioProductCarousel, VioProductBanner, VioProductStore
-// VioFloatingCartIndicator, VioOfferBanner, VioOfferBannerContainer
+// VProductCard, VProductSlider, VCheckoutOverlay, VProductDetailOverlay
+// VProductCarousel, VProductBanner, VProductStore
+// VFloatingCartIndicator, VOfferBanner, VOfferBannerContainer

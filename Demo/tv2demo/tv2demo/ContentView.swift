@@ -70,7 +70,7 @@ struct LiveStreamGlobalOverlay: View {
         ZStack {
             // Full screen LiveShow overlay
             if liveShowManager.isLiveShowVisible {
-                RLiveShowFullScreenOverlay()
+                VLiveShowFullScreenOverlay()
                     .environmentObject(cartManager)
             }
         }

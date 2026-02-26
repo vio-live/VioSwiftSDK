@@ -122,13 +122,13 @@ struct YourApp: App {
                 .environmentObject(checkoutDraft)
                 // Show checkout overlay when user taps checkout button
                 .sheet(isPresented: $cartManager.isCheckoutPresented) {
-                    RCheckoutOverlay()
+                    VCheckoutOverlay()
                         .environmentObject(cartManager)
                         .environmentObject(checkoutDraft)
                 }
                 // Global floating cart indicator (optional)
                 .overlay {
-                    RFloatingCartIndicator()
+                    VFloatingCartIndicator()
                         .environmentObject(cartManager)
                 }
         }
@@ -171,14 +171,14 @@ Import only what you need:
 
 ## 🎨 UI Components
 
-### RProductCard
+### VProductCard
 Flexible product card with 4 variants:
 - **Grid**: Medium cards for main catalogs
 - **List**: Compact cards for search results  
 - **Hero**: Large cards for featured products
 - **Minimal**: Small cards for recommendations
 
-### RProductSlider
+### VProductSlider
 Horizontal scrolling component with 6 layouts:
 - **Featured**: Hero cards for promotions (280pt)
 - **Cards**: Grid cards for categories (180pt)
@@ -189,19 +189,19 @@ Horizontal scrolling component with 6 layouts:
 
 ## 🎬 LiveShow Components
 
-### RLiveStreamOverlay
+### VLiveStreamOverlay
 Global livestream system with 3 layout options:
 - **Full Screen**: TikTok/Instagram-style immersive experience
 - **Bottom Sheet**: Compact overlay with expandable controls
 - **Modal**: Traditional video player with organized tabs
 
-### RLiveMiniPlayer
+### VLiveMiniPlayer
 Draggable mini-player for multitasking:
 - **Draggable**: Position anywhere on screen
 - **Snap to edges**: Automatic edge snapping
 - **Expandable**: Tap to return to full experience
 
-### RLiveShowFloatingIndicator
+### VLiveShowFloatingIndicator
 Removable floating indicator for active streams:
 - **Auto-show**: Appears when streams are active
 - **Dismissable**: User can hide/show manually
@@ -221,7 +221,7 @@ struct ProductView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Featured products slider
-                RProductSlider.featured(
+                VProductSlider.featured(
                     title: "Featured Products",
                     products: Array(products.prefix(5)),
                     onProductTap: { product in
@@ -235,7 +235,7 @@ struct ProductView: View {
                     GridItem(.flexible())
                 ]) {
                     ForEach(products) { product in
-                        RProductCard(
+                        VProductCard(
                             product: product,
                             variant: .grid,
                             onAddToCart: { 
@@ -248,10 +248,10 @@ struct ProductView: View {
         }
         // Add global cart and checkout overlay
         .overlay {
-            RFloatingCartIndicator()
+            VFloatingCartIndicator()
         }
         .sheet(isPresented: $showCheckout) {
-            RCheckoutOverlay()
+            VCheckoutOverlay()
         }
     }
 }
@@ -268,7 +268,7 @@ struct MainAppView: View {
         YourMainContent()
             // Add global livestream overlay
             .overlay {
-                RLiveStreamOverlay()
+                VLiveStreamOverlay()
             }
     }
 }

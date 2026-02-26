@@ -69,8 +69,21 @@ public class EngagementManager: ObservableObject {
     // MARK: - Public Methods
     
     /// Load engagement data (polls and contests) for a specific broadcast context
-    public func loadEngagement(for context: BroadcastContext, limit: Int? = nil, offset: Int? = nil) async {
+    /// - Parameters:
+    ///   - context: Broadcast context for the engagement data
+    ///   - limit: Optional limit for pagination
+    ///   - offset: Optional offset for pagination
+    ///   - useBackend: When true, use BackendEngagementRepository for this call even if demoMode is enabled (contentId flow)
+    public func loadEngagement(for context: BroadcastContext, limit: Int? = nil, offset: Int? = nil, useBackend: Bool? = nil) async {
         VioLogger.debug("Loading engagement for broadcastId: \(context.broadcastId)", component: "EngagementManager")
+        
+        // When useBackend is true (contentId flow), temporarily use BackendEngagementRepository
+        let effectiveRepository: EngagementRepositoryProtocol
+        if useBackend == true {
+            effectiveRepository = BackendEngagementRepository()
+        } else {
+            effectiveRepository = repository
+        }
         
         // Set broadcast start time in VideoSyncManager if available in BroadcastContext
         if let startTimeString = context.startTime {
@@ -95,10 +108,10 @@ public class EngagementManager: ObservableObject {
         
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
-                await self.loadPolls(for: context, limit: limit, offset: offset)
+                await self.loadPolls(for: context, limit: limit, offset: offset, repository: effectiveRepository)
             }
             group.addTask {
-                await self.loadContests(for: context, limit: limit, offset: offset)
+                await self.loadContests(for: context, limit: limit, offset: offset, repository: effectiveRepository)
             }
         }
     }
@@ -195,8 +208,9 @@ public class EngagementManager: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func loadPolls(for context: BroadcastContext, limit: Int?, offset: Int?) async {
-        let polls = await repository.loadPolls(for: context, limit: limit, offset: offset)
+    private func loadPolls(for context: BroadcastContext, limit: Int?, offset: Int?, repository: EngagementRepositoryProtocol? = nil) async {
+        let repo = repository ?? self.repository
+        let polls = await repo.loadPolls(for: context, limit: limit, offset: offset)
         pollsByBroadcast[context.broadcastId] = polls
         
         // Set broadcastStartTime in VideoSyncManager from polls if available
@@ -208,8 +222,9 @@ public class EngagementManager: ObservableObject {
         VioLogger.debug("Loaded \(polls.count) polls for broadcastId: \(context.broadcastId)", component: "EngagementManager")
     }
     
-    private func loadContests(for context: BroadcastContext, limit: Int?, offset: Int?) async {
-        let contests = await repository.loadContests(for: context, limit: limit, offset: offset)
+    private func loadContests(for context: BroadcastContext, limit: Int?, offset: Int?, repository: EngagementRepositoryProtocol? = nil) async {
+        let repo = repository ?? self.repository
+        let contests = await repo.loadContests(for: context, limit: limit, offset: offset)
         contestsByBroadcast[context.broadcastId] = contests
         
         // Set broadcastStartTime in VideoSyncManager from contests if available

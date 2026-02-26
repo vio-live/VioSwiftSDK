@@ -13,7 +13,7 @@ import UIKit
 #endif
 
 /// Full-screen LiveShow overlay with video player, chat, shopping, and controls
-public struct RLiveShowFullScreenOverlay: View {
+public struct VLiveShowFullScreenOverlay: View {
     
     // MARK: - Properties
     @ObservedObject private var liveShowManager = LiveShowManager.shared
@@ -24,7 +24,7 @@ public struct RLiveShowFullScreenOverlay: View {
     @State private var player: AVPlayer?
     @State private var showControls = true
     @State private var controlsTimer: Timer?
-    // showShopping removed - now handled by RLiveBottomTabs
+    // showShopping removed - now handled by VLiveBottomTabs
     @State private var isLoading = true
     @State private var isPlaying = false
     @State private var isMuted = false // Start unmuted like Alan's approach
@@ -98,7 +98,7 @@ public struct RLiveShowFullScreenOverlay: View {
                 }
                 
                 // Chat component
-                RLiveChatComponent()
+                VLiveChatComponent()
                     .environmentObject(cartManager)
                 
                 // Featured products slider (at bottom edge)
@@ -153,7 +153,7 @@ public struct RLiveShowFullScreenOverlay: View {
             }
             
             // Flying likes component
-            RLiveLikesComponent()
+            VLiveLikesComponent()
         }
         .onAppear {
             print("🎬 [LiveShow] Overlay appeared - starting setup")
@@ -172,7 +172,7 @@ public struct RLiveShowFullScreenOverlay: View {
             cleanup()
         }
         .sheet(isPresented: $showProductsGrid) {
-            RLiveProductsGridOverlay(products: currentStream?.featuredProducts ?? [])
+            VLiveProductsGridOverlay(products: currentStream?.featuredProducts ?? [])
                 .environmentObject(cartManager)
         }
         .sheet(item: $selectedProductForDetail) { product in
@@ -1341,7 +1341,7 @@ public struct RLiveShowFullScreenOverlay: View {
         print("🛒 [LiveShow] Added to cart: \(liveProduct.title)")
     }
     
-    // sendChatMessage removed - now handled by RLiveChatComponent
+    // sendChatMessage removed - now handled by VLiveChatComponent
     
     private func shareStream(_ stream: LiveStream) {
         // Implement sharing functionality
@@ -1744,7 +1744,7 @@ struct AnimatedLiveBadge: View {
 // MARK: - Preview
 
 #Preview {
-    RLiveShowFullScreenOverlay()
+    VLiveShowFullScreenOverlay()
         .environmentObject(CartManager())
 }
 

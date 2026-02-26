@@ -3,7 +3,7 @@ import VioCore
 
 /// Custom loader component using Vio logo SVG
 /// Provides multiple animation styles for loading states
-public struct VioCustomLoader: View {
+public struct VCustomLoader: View {
     
     public enum LoaderStyle {
         case rotate
@@ -166,39 +166,39 @@ public struct VioCustomLoader: View {
 extension View {
     /// Apply custom Vio loader overlay
     public func vioLoader(
-        style: VioCustomLoader.LoaderStyle = .rotate,
+        style: VCustomLoader.LoaderStyle = .rotate,
         size: CGFloat = 48,
         color: Color? = nil,
         speed: Double = 1.0
     ) -> some View {
         self.overlay(
-            VioCustomLoader(style: style, size: size, color: color, speed: speed)
+            VCustomLoader(style: style, size: size, color: color, speed: speed)
         )
     }
 }
 
 // MARK: - Preview
 #if DEBUG
-struct VioCustomLoader_Previews: PreviewProvider {
+struct VCustomLoader_Previews: PreviewProvider {
     static var previews: some View {
         VStack(spacing: 40) {
             Text("Rotating")
-            VioCustomLoader(style: .rotate, size: 48)
+            VCustomLoader(style: .rotate, size: 48)
             
             Text("Pulsing")
-            VioCustomLoader(style: .pulse, size: 48)
+            VCustomLoader(style: .pulse, size: 48)
             
             Text("Bouncing")
-            VioCustomLoader(style: .bounce, size: 48)
+            VCustomLoader(style: .bounce, size: 48)
             
             Text("Fading")
-            VioCustomLoader(style: .fade, size: 48)
+            VCustomLoader(style: .fade, size: 48)
             
             Text("Custom Color")
-            VioCustomLoader(style: .rotate, size: 48, color: .blue)
+            VCustomLoader(style: .rotate, size: 48, color: .blue)
             
             Text("Small Size")
-            VioCustomLoader(style: .rotate, size: 24)
+            VCustomLoader(style: .rotate, size: 24)
         }
         .padding()
         .background(Color.gray.opacity(0.1))

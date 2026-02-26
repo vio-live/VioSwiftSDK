@@ -4,19 +4,32 @@
 //
 
 import SwiftUI
+import VioCore
 import VioDesignSystem
 
 /// Main live match view - refactored using small, reusable components
 public struct LiveMatchView: View {
     let match: Match
     let onDismiss: () -> Void
+    let sessionContext: VioSessionContext?
 
     @StateObject private var viewModel: LiveMatchViewModel
+    @StateObject private var defaultSessionContext: VioSessionContext
 
-    public init(match: Match, onDismiss: @escaping () -> Void) {
+    /// - Parameters:
+    ///   - match: Match model for the live event
+    ///   - onDismiss: Callback when user dismisses the view
+    ///   - sessionContext: Optional session context (userId, broadcastContext). If nil, a default is created from match for backward compatibility.
+    public init(match: Match, onDismiss: @escaping () -> Void, sessionContext: VioSessionContext? = nil) {
         self.match = match
         self.onDismiss = onDismiss
+        self.sessionContext = sessionContext
         self._viewModel = StateObject(wrappedValue: LiveMatchViewModel(match: match))
+        self._defaultSessionContext = StateObject(wrappedValue: VioSessionContext(broadcastContext: match.toBroadcastContext()))
+    }
+
+    private var effectiveSessionContext: VioSessionContext {
+        sessionContext ?? defaultSessionContext
     }
 
     public var body: some View {
@@ -68,6 +81,7 @@ public struct LiveMatchView: View {
             }
         }
         .navigationBarHidden(true)
+        .environmentObject(effectiveSessionContext)
         .onAppear {
             viewModel.onAppear()
         }

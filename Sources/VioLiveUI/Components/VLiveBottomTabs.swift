@@ -5,7 +5,7 @@ import VioDesignSystem
 import VioUI
 
 /// Bottom tabs component for LiveShow (Chat and Products)
-public struct RLiveBottomTabs: View {
+public struct VLiveBottomTabs: View {
     
     // MARK: - Tab Types
     public enum TabType: String, CaseIterable {
@@ -67,13 +67,13 @@ public struct RLiveBottomTabs: View {
     private var contentView: some View {
         switch selectedTab {
         case .chat:
-            RLiveChatComponent()
+            VLiveChatComponent()
                 .transition(.asymmetric(
                     insertion: .move(edge: .leading).combined(with: .opacity),
                     removal: .move(edge: .trailing).combined(with: .opacity)
                 ))
         case .products:
-            RLiveProductsComponent(products: products)
+            VLiveProductsComponent(products: products)
                 .transition(.asymmetric(
                     insertion: .move(edge: .trailing).combined(with: .opacity),
                     removal: .move(edge: .leading).combined(with: .opacity)
@@ -142,7 +142,7 @@ public struct RLiveBottomTabs: View {
         
         VStack {
             Spacer()
-            RLiveBottomTabs()
+            VLiveBottomTabs()
                 .environmentObject(CartManager())
         }
     }

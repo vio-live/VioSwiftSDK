@@ -9,8 +9,8 @@ import UIKit
 
 /// Auto-configured Product Banner component
 /// Automatically loads configuration from active campaign
-/// Usage: Just drag VioProductBanner() into your view - no parameters needed!
-public struct VioProductBanner: View {
+/// Usage: Just drag VProductBanner() into your view - no parameters needed!
+public struct VProductBanner: View {
     
     // MARK: - Cached Styling Values
     
@@ -505,7 +505,7 @@ public struct VioProductBanner: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: bannerHeight)
                             .overlay {
-                                VioCustomLoader(style: .rotate, size: 40)
+                                VCustomLoader(style: .rotate, size: 40)
                             }),
                     errorView: AnyView(Rectangle()
                         .fill(adaptiveColors.surfaceSecondary)
@@ -637,7 +637,7 @@ public struct VioProductBanner: View {
                 Spacer()
             }
             
-            RSponsorBadge(logoUrl: logoUrl)
+            VSponsorBadge(logoUrl: logoUrl)
                 .padding(.horizontal, VioSpacing.xs)
                 .padding(.vertical, VioSpacing.xs)
             

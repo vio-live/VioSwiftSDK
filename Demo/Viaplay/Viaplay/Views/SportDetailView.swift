@@ -304,10 +304,12 @@ struct SportDetailView: View {
         }
         .navigationBarHidden(true)
         .fullScreenCover(isPresented: $showVideoPlayer) {
-            VCastingVideoPlayer(match: createMatchFromDetail()) {
-                showVideoPlayer = false
-            }
-            .environmentObject(cartManager)
+            let match = createMatchFromDetail()
+            let sessionContext: VioSessionContext? = isRealMadridBarcelona
+                ? .forContentId(contentId: "real-madrid-barcelona-2025-01-24", country: "NO")
+                : nil
+            VCastingVideoPlayer(match: match, onDismiss: { showVideoPlayer = false }, sessionContext: sessionContext)
+                .environmentObject(cartManager)
         }
         .sheet(isPresented: $showCastDeviceSelection) {
             CastDeviceSelectionView { device in
@@ -316,13 +318,20 @@ struct SportDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showCastingView) {
-            VCastingActiveView(match: createMatchFromDetail())
+            let match = createMatchFromDetail()
+            let sessionContext: VioSessionContext? = isRealMadridBarcelona
+                ? .forContentId(contentId: "real-madrid-barcelona-2025-01-24", country: "NO")
+                : nil
+            VCastingActiveView(match: match, sessionContext: sessionContext)
                 .environmentObject(cartManager)
         }
         .fullScreenCover(isPresented: $showLiveMatchView) {
-            LiveMatchView(match: createMatchFromDetail()) {
-                showLiveMatchView = false
-            }
+            let match = createMatchFromDetail()
+            let sessionContext: VioSessionContext? = isRealMadridBarcelona
+                ? .forContentId(contentId: "real-madrid-barcelona-2025-01-24", country: "NO")
+                : nil
+            LiveMatchView(match: match, onDismiss: { showLiveMatchView = false }, sessionContext: sessionContext)
+                .environmentObject(cartManager)
         }
         .onChange(of: castingManager.isCasting) { isCasting in
             if !isCasting {
@@ -331,6 +340,11 @@ struct SportDetailView: View {
         }
     }
     
+    /// Real Madrid - Barcelona uses contentId flow; Barcelona-PSG uses demo data
+    private var isRealMadridBarcelona: Bool {
+        title.contains("Real Madrid") && title.contains("Barcelona")
+    }
+
     // Helper para crear un Match desde los datos del SportDetailView
     private func createMatchFromDetail() -> Match {
         // Barcelona - PSG: demo con data estática (Live akkurat nå)

@@ -2,8 +2,8 @@ import SwiftUI
 import VioCore
 import VioDesignSystem
 
-/// Configuration for RLiveShowOverlay appearance and behavior
-public struct RLiveShowConfiguration {
+/// Configuration for VLiveShowOverlay appearance and behavior
+public struct VLiveShowConfiguration {
     
     // MARK: - Layout Configuration
     public struct Layout {
@@ -167,16 +167,16 @@ public struct RLiveShowConfiguration {
     }
     
     // MARK: - Presets
-    public static let `default` = RLiveShowConfiguration()
+    public static let `default` = VLiveShowConfiguration()
     
-    public static let minimal = RLiveShowConfiguration(
+    public static let minimal = VLiveShowConfiguration(
         layout: .minimal,
         typography: .compact,
         spacing: .compact
     )
     
-    public static func adaptive(for colorScheme: SwiftUI.ColorScheme) -> RLiveShowConfiguration {
-        return RLiveShowConfiguration(
+    public static func adaptive(for colorScheme: SwiftUI.ColorScheme) -> VLiveShowConfiguration {
+        return VLiveShowConfiguration(
             colors: .adaptive(for: colorScheme)
         )
     }

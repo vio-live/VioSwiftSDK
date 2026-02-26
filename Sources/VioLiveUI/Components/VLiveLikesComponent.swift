@@ -7,7 +7,7 @@ import UIKit
 #endif
 
 /// Live likes component with flying heart animations
-public struct RLiveLikesComponent: View {
+public struct VLiveLikesComponent: View {
     
     // MARK: - Properties
     @ObservedObject private var likesManager: LiveLikesManager
@@ -189,6 +189,6 @@ public class LiveLikesManager: ObservableObject {
     ZStack {
         Color.black.ignoresSafeArea()
         
-        RLiveLikesComponent()
+        VLiveLikesComponent()
     }
 }

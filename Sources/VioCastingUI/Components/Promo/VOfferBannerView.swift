@@ -1,5 +1,5 @@
 //
-//  VioOfferBannerView.swift
+//  VOfferBannerView.swift
 //  Viaplay
 //
 //  Created by Angelo Sepulveda on 27/10/2025.
@@ -10,7 +10,7 @@ import VioCore
 
 /// Offer Banner View - Static version
 /// Banner promocional con imagen de fondo para ofertas especiales
-public struct VioOfferBannerView: View {
+public struct VOfferBannerView: View {
     let title: String
     let subtitle: String?
     
@@ -203,7 +203,7 @@ struct CountdownUnit: View {
         Color(hex: "1B1B25")
             .ignoresSafeArea()
         
-        VioOfferBannerView()
+        VOfferBannerView()
             .padding(.horizontal, 16)
     }
     .preferredColorScheme(.dark)

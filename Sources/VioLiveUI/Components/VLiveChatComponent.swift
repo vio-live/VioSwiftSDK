@@ -4,7 +4,7 @@ import VioLiveShow
 import VioDesignSystem
 
 /// Reusable Live Chat component for LiveShow overlays
-public struct RLiveChatComponent: View {
+public struct VLiveChatComponent: View {
     
     // MARK: - Properties
     @ObservedObject private var chatManager: LiveChatManager
@@ -388,7 +388,7 @@ public struct RLiveChatComponent: View {
         
         VStack {
             Spacer()
-            RLiveChatComponent()
+            VLiveChatComponent()
         }
     }
 }

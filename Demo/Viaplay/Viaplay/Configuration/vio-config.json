@@ -151,7 +151,9 @@
     "webSocketBaseURL": "https://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
     "campaignAdminApiKey": "xxl_api_key_507d4014243d8360",
-    "_comment": "autoDiscover: true = use auto-discovery endpoint (/v1/sdk/campaigns), false = use legacy single campaign mode (campaignId from liveShow.campaignId)",
+    "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
+    "_comment": "campaignApiKey: for GET /v1/sdk/broadcast and contentId flow (Viaplay app). campaignAdminApiKey: for legacy endpoints.",
+    "_comment2": "autoDiscover: true = use auto-discovery endpoint (/v1/sdk/campaigns), false = use legacy single campaign mode (campaignId from liveShow.campaignId)",
     "autoDiscover": true,
     "_comment2": "channelId: Optional channel ID for broadcast context. Can be null.",
     "channelId": null

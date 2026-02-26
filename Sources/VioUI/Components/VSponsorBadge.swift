@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// **Usage:**
 /// ```swift
-/// RSponsorBadge(logoUrl: "https://example.com/logo.png")
+/// VSponsorBadge(logoUrl: "https://example.com/logo.png")
 /// ```
 ///
 /// **Parameters:**
@@ -16,7 +16,7 @@ import SwiftUI
 /// - Small compact size (60x30 max for logo, 8pt font for text)
 /// - Text "Sponset av" displayed above logo
 /// - Minimal padding for compact display
-public struct VioSponsorBadge: View {
+public struct VSponsorBadge: View {
     let logoUrl: String
     
     public init(logoUrl: String) {
@@ -61,6 +61,6 @@ public struct VioSponsorBadge: View {
     ZStack {
         Color.gray.ignoresSafeArea()
         
-        RSponsorBadge(logoUrl: "https://via.placeholder.com/100x40")
+        VSponsorBadge(logoUrl: "https://via.placeholder.com/100x40")
     }
 }

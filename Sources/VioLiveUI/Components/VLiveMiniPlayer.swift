@@ -6,7 +6,7 @@ import VioUI
 import VioLiveShow
 
 /// Mini player for live streams - Draggable and expandable
-public struct RLiveMiniPlayer: View {
+public struct VLiveMiniPlayer: View {
     
     @ObservedObject private var liveShowManager = LiveShowManager.shared
     @Environment(\.colorScheme) private var colorScheme
@@ -283,7 +283,7 @@ public struct RLiveMiniPlayer: View {
 // MARK: - Live Show Floating Indicator
 
 /// Floating indicator for active live streams
-public struct RLiveShowFloatingIndicator: View {
+public struct VLiveShowFloatingIndicator: View {
     
     @ObservedObject private var liveShowManager = LiveShowManager.shared
     @Environment(\.colorScheme) private var colorScheme
@@ -421,7 +421,7 @@ public struct RLiveShowFloatingIndicator: View {
 // MARK: - Main Live Stream Overlay Container
 
 /// Main container that handles all live stream layouts
-public struct RLiveStreamOverlay: View {
+public struct VLiveStreamOverlay: View {
     
     @ObservedObject private var liveShowManager = LiveShowManager.shared
     
@@ -436,7 +436,7 @@ public struct RLiveStreamOverlay: View {
                 
                 switch liveShowManager.layout {
                 case .fullScreenOverlay:
-                    RLiveStreamFullScreenOverlay(stream: stream) {
+                    VLiveStreamFullScreenOverlay(stream: stream) {
                         liveShowManager.hideLiveStream()
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -449,14 +449,14 @@ public struct RLiveStreamOverlay: View {
                     
                     VStack {
                         Spacer()
-                        RLiveStreamBottomSheet(stream: stream) {
+                        VLiveStreamBottomSheet(stream: stream) {
                             liveShowManager.hideLiveStream()
                         }
                         .transition(.move(edge: .bottom))
                     }
                     
                 case .modal:
-                    RLiveStreamModal(stream: stream) {
+                    VLiveStreamModal(stream: stream) {
                         liveShowManager.hideLiveStream()
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -466,13 +466,13 @@ public struct RLiveStreamOverlay: View {
             // Mini player
             if liveShowManager.isMiniPlayerVisible,
                let stream = liveShowManager.currentStream {
-                RLiveMiniPlayer(stream: stream) {
+                VLiveMiniPlayer(stream: stream) {
                     liveShowManager.hideLiveStream()
                 }
             }
             
             // Floating indicator
-            RLiveShowFloatingIndicator(position: liveShowManager.miniPlayerPosition) {
+            VLiveShowFloatingIndicator(position: liveShowManager.miniPlayerPosition) {
                 // Show the featured live stream
                 if let featuredStream = liveShowManager.featuredLiveStream {
                     liveShowManager.showLiveStream(featuredStream, layout: .fullScreenOverlay)

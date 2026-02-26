@@ -2,10 +2,10 @@ import Foundation
 import VioCore
 import SwiftUI
 
-/// Internal ViewModel for VioProductSlider
+/// Internal ViewModel for VProductSlider
 /// Handles automatic product loading from the API
 @MainActor
-class VioProductSliderViewModel: ObservableObject {
+class VProductSliderViewModel: ObservableObject {
     
     // MARK: - Published Properties
     @Published var products: [Product] = []
@@ -32,7 +32,7 @@ class VioProductSliderViewModel: ObservableObject {
     ) async {
         // Check if SDK should be used before attempting operations
         guard VioConfiguration.shared.shouldUseSDK else {
-            VioLogger.warning("Skipping product load - SDK disabled (market not available)", component: "VioProductSlider")
+            VioLogger.warning("Skipping product load - SDK disabled (market not available)", component: "VProductSlider")
             isMarketUnavailable = true
             isLoading = false
             return
@@ -54,11 +54,11 @@ class VioProductSliderViewModel: ObservableObject {
         isMarketUnavailable = false
         
         if let catId = categoryId {
-            VioLogger.debug("Loading products for category: \(catId)", component: "VioProductSlider")
+            VioLogger.debug("Loading products for category: \(catId)", component: "VProductSlider")
         } else {
-            VioLogger.debug("Loading all products from channel", component: "VioProductSlider")
+            VioLogger.debug("Loading all products from channel", component: "VProductSlider")
         }
-        VioLogger.debug("Currency: \(currency), Country: \(country)", component: "VioProductSlider")
+        VioLogger.debug("Currency: \(currency), Country: \(country)", component: "VProductSlider")
         
         do {
             let loadedProducts: [Product]
@@ -87,20 +87,20 @@ class VioProductSliderViewModel: ObservableObject {
             if error.code == "NOT_FOUND" || error.status == 404 {
                 isMarketUnavailable = true
                 errorMessage = nil
-                VioLogger.warning("Market not available for \(currency)/\(country) - hiding component", component: "VioProductSlider")
+                VioLogger.warning("Market not available for \(currency)/\(country) - hiding component", component: "VProductSlider")
             } else {
                 errorMessage = error.message
-                VioLogger.error("Failed to load products: \(error.message)", component: "VioProductSlider")
+                VioLogger.error("Failed to load products: \(error.message)", component: "VProductSlider")
             }
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = message
-            VioLogger.error("Invalid configuration: \(message)", component: "VioProductSlider")
+            VioLogger.error("Invalid configuration: \(message)", component: "VProductSlider")
         } catch ProductServiceError.networkError(let error) {
             errorMessage = error.localizedDescription
-            VioLogger.error("Network error: \(error.localizedDescription)", component: "VioProductSlider")
+            VioLogger.error("Network error: \(error.localizedDescription)", component: "VProductSlider")
         } catch {
             errorMessage = error.localizedDescription
-            VioLogger.error("Failed to load products: \(error.localizedDescription)", component: "VioProductSlider")
+            VioLogger.error("Failed to load products: \(error.localizedDescription)", component: "VProductSlider")
         }
         
         isLoading = false

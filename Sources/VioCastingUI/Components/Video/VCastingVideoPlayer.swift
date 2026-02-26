@@ -12,6 +12,7 @@ import Combine
 import VioCore
 import VioUI
 import VioEngagementUI
+import VioEngagementSystem
 
 /// Viaplay Video Player with casting support
 /// Simulates a live streaming experience with AirPlay/Chromecast capability
@@ -20,7 +21,9 @@ public struct VCastingVideoPlayer: View {
     let onDismiss: () -> Void
     let onNavigateToNextCastingContest: (() -> Void)?
     let onNavigateToPreviousCastingContest: (() -> Void)?
-    
+    let sessionContext: VioSessionContext?
+    @StateObject private var defaultSessionContext: VioSessionContext
+
     @StateObject private var playerViewModel = VideoPlayerViewModel()
     @StateObject private var eventStreamer = EventStreamerManager()
     @StateObject private var campaignManager = CampaignManager.shared
@@ -41,13 +44,16 @@ public struct VCastingVideoPlayer: View {
         match: Match,
         onDismiss: @escaping () -> Void,
         onNavigateToNextCastingContest: (() -> Void)? = nil,
-        onNavigateToPreviousCastingContest: (() -> Void)? = nil
+        onNavigateToPreviousCastingContest: (() -> Void)? = nil,
+        sessionContext: VioSessionContext? = nil
     ) {
         self.match = match
         self.onDismiss = onDismiss
         self.onNavigateToNextCastingContest = onNavigateToNextCastingContest
         self.onNavigateToPreviousCastingContest = onNavigateToPreviousCastingContest
-        
+        self.sessionContext = sessionContext
+        self._defaultSessionContext = StateObject(wrappedValue: VioSessionContext(broadcastContext: match.toBroadcastContext()))
+
         // Initialize ProductFetchViewModel
         let config = VioConfiguration.shared
         let baseURL = URL(string: config.environment.graphQLURL)!
@@ -275,6 +281,7 @@ public struct VCastingVideoPlayer: View {
                 .environmentObject(cartManager)
         }
         .ignoresSafeArea() // Full screen
+        .environmentObject(effectiveSessionContext)
         .task {
             // Set broadcast context for auto-discovery and context-aware campaigns
             await setupBroadcastContext()
@@ -647,31 +654,72 @@ public struct VCastingVideoPlayer: View {
     }
     
     // MARK: - Broadcast Context Setup
-    
-    /// Sets up broadcast context for auto-discovery and context-aware campaigns
+
+    private var effectiveSessionContext: VioSessionContext {
+        sessionContext ?? defaultSessionContext
+    }
+
+    /// Sets up broadcast context for auto-discovery and context-aware campaigns.
+    /// Uses broadcastContext from VioSessionContext when provided (e.g. broadcastId from backend).
+    /// When contentId + country are set, validates via GET /v1/sdk/broadcast before showing engagement.
     private func setupBroadcastContext() async {
         let config = VioConfiguration.shared
         let autoDiscover = config.campaignConfiguration.autoDiscover
-        
-        // Create broadcast context from Match model
-        let broadcastContext = match.toBroadcastContext(
-            channelId: config.campaignConfiguration.channelId
-        )
-        
+
+        // ContentId flow: validate before discoverCampaigns/loadEngagement
+        if let contentId = effectiveSessionContext.contentId, let country = effectiveSessionContext.country {
+            let result = await BroadcastValidationService.validate(contentId: contentId, country: country)
+            print("🎯 [VCastingVideoPlayer] contentId validation: hasEngagement=\(result.hasEngagement)")
+
+            if !result.hasEngagement {
+                print("🎯 [VCastingVideoPlayer] No engagement for contentId=\(contentId), skipping discoverCampaigns and loadEngagement")
+                return
+            }
+
+            guard let broadcastId = result.broadcastId else {
+                print("🎯 [VCastingVideoPlayer] hasEngagement=true but no broadcastId in response")
+                return
+            }
+
+            let broadcastContext = BroadcastContext(
+                broadcastId: broadcastId,
+                broadcastName: result.broadcastName,
+                startTime: nil,
+                channelId: nil,
+                metadata: nil
+            )
+            effectiveSessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
+
+            print("🎯 [VCastingVideoPlayer] contentId flow: using broadcastId=\(broadcastId)")
+            if autoDiscover {
+                await campaignManager.discoverCampaigns(broadcastId: broadcastId)
+            }
+            await campaignManager.setBroadcastContext(broadcastContext)
+            await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true)
+            return
+        }
+
+        // Legacy flow: broadcastContext from session or match
+        let broadcastContext: BroadcastContext
+        if let ctx = effectiveSessionContext.broadcastContext {
+            broadcastContext = ctx
+        } else {
+            broadcastContext = match.toBroadcastContext(channelId: config.campaignConfiguration.channelId)
+            effectiveSessionContext.configure(broadcastContext: broadcastContext)
+        }
+
         print("🎯 [VCastingVideoPlayer] Setting up broadcast context: \(broadcastContext.broadcastId)")
-        
+
         if autoDiscover {
-            // Use auto-discovery mode
             print("🎯 [VCastingVideoPlayer] Auto-discovery enabled, discovering campaigns for broadcast: \(broadcastContext.broadcastId)")
             await campaignManager.discoverCampaigns(broadcastId: broadcastContext.broadcastId)
-            
-            // Set broadcast context to filter components
             await campaignManager.setBroadcastContext(broadcastContext)
         } else {
-            // Legacy mode: just set broadcast context if campaign is already loaded
             print("🎯 [VCastingVideoPlayer] Legacy mode, setting broadcast context")
             await campaignManager.setBroadcastContext(broadcastContext)
         }
+
+        await EngagementManager.shared.loadEngagement(for: broadcastContext)
     }
 }
 

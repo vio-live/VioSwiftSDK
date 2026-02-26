@@ -494,6 +494,10 @@ public struct CampaignConfiguration {
     /// Configured in vio-config.json under "campaigns.campaignAdminApiKey"
     /// Only needed if autoDiscover is false (legacy mode)
     public let campaignAdminApiKey: String
+    /// API key for SDK/campaigns endpoints (GET /v1/sdk/broadcast, GET /v1/sdk/campaigns)
+    /// When set, used instead of apiKey for contentId validation and campaign discovery
+    /// Configured in vio-config.json under "campaigns.campaignApiKey"
+    public let campaignApiKey: String
     /// Enable auto-discovery of campaigns using only the Vio SDK API key
     /// When true, campaigns are discovered automatically via GET /v1/sdk/campaigns
     /// When false, uses legacy mode with campaignId from configuration
@@ -505,12 +509,14 @@ public struct CampaignConfiguration {
         webSocketBaseURL: String = "https://api-dev.vio.live",
         restAPIBaseURL: String = "https://api-dev.vio.live",
         campaignAdminApiKey: String = "",
+        campaignApiKey: String = "",
         autoDiscover: Bool = false,
         channelId: Int? = nil
     ) {
         self.webSocketBaseURL = webSocketBaseURL
         self.restAPIBaseURL = restAPIBaseURL
         self.campaignAdminApiKey = campaignAdminApiKey
+        self.campaignApiKey = campaignApiKey
         self.autoDiscover = autoDiscover
         self.channelId = channelId
     }

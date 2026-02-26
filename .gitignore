@@ -25,11 +25,13 @@ VioWorkspace.xcworkspace/
 
 # Kotlin implementation guide (moved to trello-mcp-server)
 KOTLIN_IMPLEMENTATION_GUIDE.md
+VioWorkspace.xcworkspace/
 ReachuWorkspace.xcworkspace/
 
 # Internal documentation (personal use only, not for main branch)
 CURSOR_SDK_INFRASTRUCTURE*.md
 BACKEND_*.md
+VIO_IO_URLS_LIST.md
 REACHU_IO_URLS_LIST.md
 HARDCODED_VALUES_REPLACEMENT_LIST.md
 TRELLO_CARDS_TO_CREATE.md

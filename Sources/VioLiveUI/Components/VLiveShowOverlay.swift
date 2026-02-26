@@ -6,10 +6,10 @@ import VioDesignSystem
 import VioUI
 
 /// Modular and configurable LiveShow overlay component
-public struct RLiveShowOverlay: View {
+public struct VLiveShowOverlay: View {
     
     // MARK: - Configuration
-    private let configuration: RLiveShowConfiguration
+    private let configuration: VLiveShowConfiguration
     private let stream: LiveStream
     private let onDismiss: () -> Void
     
@@ -26,26 +26,26 @@ public struct RLiveShowOverlay: View {
     @State private var showProductsGrid = false
     
     // MARK: - Computed Properties
-    private var colors: RLiveShowConfiguration.Colors {
+    private var colors: VLiveShowConfiguration.Colors {
         configuration.colors
     }
     
-    private var layout: RLiveShowConfiguration.Layout {
+    private var layout: VLiveShowConfiguration.Layout {
         configuration.layout
     }
     
-    private var typography: RLiveShowConfiguration.Typography {
+    private var typography: VLiveShowConfiguration.Typography {
         configuration.typography
     }
     
-    private var spacing: RLiveShowConfiguration.Spacing {
+    private var spacing: VLiveShowConfiguration.Spacing {
         configuration.spacing
     }
     
     // MARK: - Initializer
     public init(
         stream: LiveStream,
-        configuration: RLiveShowConfiguration = .default,
+        configuration: VLiveShowConfiguration = .default,
         onDismiss: @escaping () -> Void = {}
     ) {
         self.stream = stream
@@ -83,7 +83,7 @@ public struct RLiveShowOverlay: View {
         }
         .sheet(isPresented: $showProductsGrid) {
             if layout.showProducts {
-                RLiveProductsGridOverlay(products: stream.featuredProducts)
+                VLiveProductsGridOverlay(products: stream.featuredProducts)
                     .environmentObject(cartManager)
             }
         }
@@ -126,7 +126,7 @@ public struct RLiveShowOverlay: View {
         
         // Likes overlay
         if layout.showLikes {
-            RLiveLikesComponent()
+            VLiveLikesComponent()
         }
     }
     
@@ -215,7 +215,7 @@ public struct RLiveShowOverlay: View {
         VStack(spacing: 0) {
             // Chat component
             if layout.showChat {
-                RLiveChatComponent()
+                VLiveChatComponent()
                     .environmentObject(cartManager)
             }
             
@@ -231,7 +231,7 @@ public struct RLiveShowOverlay: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: spacing.productSpacing) {
                 ForEach(stream.featuredProducts) { product in
-                    RLiveProductCard(product: product)
+                    VLiveProductCard(product: product)
                         .frame(width: 300)
                         .environmentObject(cartManager)
                         .onTapGesture {
@@ -454,18 +454,18 @@ public struct RLiveShowOverlay: View {
     }
 }
 
-// AnimatedLiveBadge removed - using existing one from RLiveShowFullScreenOverlay
+// AnimatedLiveBadge removed - using existing one from VLiveShowFullScreenOverlay
 
 // MARK: - Usage Examples and Presets
 
-extension RLiveShowOverlay {
+extension VLiveShowOverlay {
     
     /// Minimal LiveShow overlay with basic functionality
     public static func minimal(
         stream: LiveStream,
         onDismiss: @escaping () -> Void = {}
     ) -> some View {
-        RLiveShowOverlay(
+        VLiveShowOverlay(
             stream: stream,
             configuration: .minimal,
             onDismiss: onDismiss
@@ -477,7 +477,7 @@ extension RLiveShowOverlay {
         stream: LiveStream,
         onDismiss: @escaping () -> Void = {}
     ) -> some View {
-        RLiveShowOverlay(
+        VLiveShowOverlay(
             stream: stream,
             configuration: .adaptive(for: SwiftUI.ColorScheme.dark),
             onDismiss: onDismiss
@@ -487,18 +487,18 @@ extension RLiveShowOverlay {
     /// Custom configured LiveShow overlay
     public static func custom(
         stream: LiveStream,
-        colors: RLiveShowConfiguration.Colors? = nil,
-        typography: RLiveShowConfiguration.Typography? = nil,
-        spacing: RLiveShowConfiguration.Spacing? = nil,
+        colors: VLiveShowConfiguration.Colors? = nil,
+        typography: VLiveShowConfiguration.Typography? = nil,
+        spacing: VLiveShowConfiguration.Spacing? = nil,
         onDismiss: @escaping () -> Void = {}
     ) -> some View {
-        let config = RLiveShowConfiguration(
+        let config = VLiveShowConfiguration(
             colors: colors ?? .default,
             typography: typography ?? .default,
             spacing: spacing ?? .default
         )
         
-        return RLiveShowOverlay(
+        return VLiveShowOverlay(
             stream: stream,
             configuration: config,
             onDismiss: onDismiss
@@ -510,7 +510,7 @@ extension RLiveShowOverlay {
 
 #Preview {
     if let stream = LiveShowManager.shared.activeStreams.first {
-        RLiveShowOverlay(stream: stream)
+        VLiveShowOverlay(stream: stream)
             .environmentObject(CartManager())
     } else {
         Text("No stream available")

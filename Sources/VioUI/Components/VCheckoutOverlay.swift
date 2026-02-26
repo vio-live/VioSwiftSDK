@@ -13,7 +13,7 @@ import SwiftUI
 
 /// Complete checkout overlay matching original Vio design
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
-public struct VioCheckoutOverlay: View {
+public struct VCheckoutOverlay: View {
 
     // MARK: - Environment
     @EnvironmentObject private var cartManager: CartManager
@@ -269,7 +269,7 @@ public struct VioCheckoutOverlay: View {
                     
                     // Reset cart and create new one after successful payment
                     Task { @MainActor in
-                        VioLogger.debug("Payment successful - resetting cart and creating new one", component: "VioCheckoutOverlay")
+                        VioLogger.debug("Payment successful - resetting cart and creating new one", component: "VCheckoutOverlay")
                         isLoading = true
                         await cartManager.resetCartAndCreateNew()
                         isLoading = false
@@ -285,7 +285,7 @@ public struct VioCheckoutOverlay: View {
                     }
                 }
             }
-            .navigationTitle(RLocalizedString(VioTranslationKey.checkout.rawValue))
+            .navigationTitle(VLocalizedString(VioTranslationKey.checkout.rawValue))
             #if os(iOS) || os(tvOS) || os(watchOS)
                 .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -317,7 +317,7 @@ public struct VioCheckoutOverlay: View {
         } else {
             mainContent
             .onAppear {
-                VioLogger.debug("onAppear triggered", component: "VioCheckoutOverlay")
+                VioLogger.debug("onAppear triggered", component: "VCheckoutOverlay")
                 syncSelectedMarket()
                 Task { @MainActor in
                     isLoading = true
@@ -352,20 +352,20 @@ public struct VioCheckoutOverlay: View {
                 VStack {
                     Spacer()
                     HStack(spacing: 12) {
-                        VioCustomLoader(style: .rotate, size: 20, color: adaptiveColors.surface, speed: 1.5)
+                        VCustomLoader(style: .rotate, size: 20, color: adaptiveColors.surface, speed: 1.5)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(RLocalizedString(VioTranslationKey.processingPayment.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.processingPayment.rawValue))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(adaptiveColors.surface)
                             
-                            Text(RLocalizedString(VioTranslationKey.processingPaymentMessage.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.processingPaymentMessage.rawValue))
                                 .font(.system(size: 12))
                                 .foregroundColor(adaptiveColors.surface.opacity(0.9))
                                 .lineLimit(2)
                             
                             if vippsRetryCount > 0 {
-                                Text(RLocalizedString(VioTranslationKey.verifyingPayment.rawValue) + " (\(vippsRetryCount)/\(vippsMaxRetries))")
+                                Text(VLocalizedString(VioTranslationKey.verifyingPayment.rawValue) + " (\(vippsRetryCount)/\(vippsMaxRetries))")
                                     .font(.system(size: 10))
                                     .foregroundColor(adaptiveColors.surface.opacity(0.7))
                             }
@@ -397,7 +397,7 @@ public struct VioCheckoutOverlay: View {
                             .foregroundColor(.white)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(RLocalizedString(VioTranslationKey.paymentFailed.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.paymentFailed.rawValue))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundColor(.white)
                             
@@ -435,10 +435,10 @@ public struct VioCheckoutOverlay: View {
                     returnURL: returnURL,
                     onAuthorized: { authToken, finalizeRequired in
                         Task { @MainActor in
-                            VioLogger.debug("Step 5: Usuario autorizó el pago en Klarna", component: "VioCheckoutOverlay")
-                            VioLogger.debug("AuthToken (primeros 20): \(authToken.prefix(20))...", component: "VioCheckoutOverlay")
-                            VioLogger.debug("FinalizeRequired: \(finalizeRequired)", component: "VioCheckoutOverlay")
-                            VioLogger.debug("Step 6: Llamando a backend para confirmar pago", component: "VioCheckoutOverlay")
+                            VioLogger.debug("Step 5: Usuario autorizó el pago en Klarna", component: "VCheckoutOverlay")
+                            VioLogger.debug("AuthToken (primeros 20): \(authToken.prefix(20))...", component: "VCheckoutOverlay")
+                            VioLogger.debug("FinalizeRequired: \(finalizeRequired)", component: "VCheckoutOverlay")
+                            VioLogger.debug("Step 6: Llamando a backend para confirmar pago", component: "VCheckoutOverlay")
                             
                             isLoading = true
                             klarnaAutoAuthorize = false
@@ -464,7 +464,7 @@ public struct VioCheckoutOverlay: View {
                             
                             let billingAddress = shippingAddress
                             
-                            VioLogger.debug("CheckoutId: \(cartManager.checkoutId ?? "nil"), Email: \(email)", component: "VioCheckoutOverlay")
+                            VioLogger.debug("CheckoutId: \(cartManager.checkoutId ?? "nil"), Email: \(email)", component: "VCheckoutOverlay")
                             
                             // Call backend to confirm payment
                             guard let result = await cartManager.confirmKlarnaNative(
@@ -474,16 +474,16 @@ public struct VioCheckoutOverlay: View {
                                 billingAddress: billingAddress,
                                 shippingAddress: shippingAddress
                             ) else {
-                                VioLogger.error("Backend no pudo confirmar el pago", component: "VioCheckoutOverlay")
-                                VioLogger.error("Verificar: AuthToken válido, Backend respondió, Klarna API respondió", component: "VioCheckoutOverlay")
-                                VioLogger.error("Setting checkoutStep to .error (Klarna confirm failed)", component: "VioCheckoutOverlay")
+                                VioLogger.error("Backend no pudo confirmar el pago", component: "VCheckoutOverlay")
+                                VioLogger.error("Verificar: AuthToken válido, Backend respondió, Klarna API respondió", component: "VCheckoutOverlay")
+                                VioLogger.error("Setting checkoutStep to .error (Klarna confirm failed)", component: "VCheckoutOverlay")
                                 errorMessage = "Failed to confirm Klarna payment"
                                 checkoutStep = .error
                                 isLoading = false
                                 return
                             }
                             
-                            VioLogger.success("Step 7: PAGO EXITOSO - OrderId: \(result.orderId), FraudStatus: \(result.fraudStatus)", component: "VioCheckoutOverlay")
+                            VioLogger.success("Step 7: PAGO EXITOSO - OrderId: \(result.orderId), FraudStatus: \(result.fraudStatus)", component: "VCheckoutOverlay")
                             
                             klarnaNativeInitData = nil
                             checkoutStep = .success
@@ -492,8 +492,8 @@ public struct VioCheckoutOverlay: View {
                     },
                     onFailed: { message in
                         Task { @MainActor in
-                            VioLogger.error("Pago falló o fue cancelado - Mensaje: \(message)", component: "VioCheckoutOverlay")
-                            VioLogger.error("Razones posibles: Usuario canceló, Klarna rechazó, Error de red, Token expiró", component: "VioCheckoutOverlay")
+                            VioLogger.error("Pago falló o fue cancelado - Mensaje: \(message)", component: "VCheckoutOverlay")
+                            VioLogger.error("Razones posibles: Usuario canceló, Klarna rechazó, Error de red, Token expiró", component: "VCheckoutOverlay")
                             
                             klarnaAutoAuthorize = false
                             klarnaNativeInitData = nil
@@ -558,7 +558,7 @@ public struct VioCheckoutOverlay: View {
                                     checkoutStep = .success
                                     klarnaNativeInitData = nil
                                 } else {
-                                    VioLogger.error("Setting checkoutStep to .error (proceedToNext failed)", component: "VioCheckoutOverlay")
+                                    VioLogger.error("Setting checkoutStep to .error (proceedToNext failed)", component: "VCheckoutOverlay")
                                     checkoutStep = .error
                                 }
 
@@ -579,7 +579,7 @@ public struct VioCheckoutOverlay: View {
                     Text("No Klarna payment methods available.")
                     .padding()
                     .onAppear {
-                        VioLogger.error("Setting checkoutStep to .error (KlarnaNativePaymentSheet onAppear)", component: "VioCheckoutOverlay")
+                        VioLogger.error("Setting checkoutStep to .error (KlarnaNativePaymentSheet onAppear)", component: "VCheckoutOverlay")
                         showKlarnaNativeSheet = false
                         checkoutStep = .error
                     }
@@ -604,7 +604,7 @@ public struct VioCheckoutOverlay: View {
                 VStack(alignment: .leading, spacing: VioSpacing.xl) {
                     // 1. CART SECTION (Products first)
                     VStack(alignment: .leading, spacing: VioSpacing.md) {
-                        Text(RLocalizedString(VioTranslationKey.cart.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.cart.rawValue))
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(VioColors.textPrimary)
                             .padding(.horizontal, VioSpacing.lg)
@@ -617,7 +617,7 @@ public struct VioCheckoutOverlay: View {
                     // 2. SHIPPING ADDRESS SECTION (consistent sizing)
                     VStack(alignment: .leading, spacing: VioSpacing.md) {
                         HStack {
-                            Text(RLocalizedString(VioTranslationKey.shippingAddress.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.shippingAddress.rawValue))
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundColor(VioColors.textPrimary)
 
@@ -700,7 +700,7 @@ public struct VioCheckoutOverlay: View {
 
                     // 3. ORDER SUMMARY SECTION (at bottom)
                     VStack(alignment: .leading, spacing: VioSpacing.md) {
-                        Text(RLocalizedString(VioTranslationKey.orderSummary.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.orderSummary.rawValue))
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(VioColors.textPrimary)
                             .padding(.horizontal, VioSpacing.lg)
@@ -838,7 +838,7 @@ public struct VioCheckoutOverlay: View {
                     }
                 }) {
                     HStack {
-                        Text(RLocalizedString(VioTranslationKey.proceedToCheckout.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.proceedToCheckout.rawValue))
                             .font(VioTypography.headline)
                             .foregroundColor(adaptiveColors.textOnPrimary)
                         
@@ -890,7 +890,7 @@ public struct VioCheckoutOverlay: View {
                 VStack(alignment: .leading, spacing: VioSpacing.xl) {
                     // Cart Section (smaller, readonly)
                     VStack(alignment: .leading, spacing: VioSpacing.md) {
-                        Text(RLocalizedString(VioTranslationKey.cart.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.cart.rawValue))
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(VioColors.textPrimary)
                             .padding(.horizontal, VioSpacing.lg)
@@ -901,7 +901,7 @@ public struct VioCheckoutOverlay: View {
 
                     // Payment Method Selection
                     VStack(alignment: .leading, spacing: VioSpacing.md) {
-                        Text(RLocalizedString(VioTranslationKey.paymentMethod.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.paymentMethod.rawValue))
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(VioColors.textPrimary)
 
@@ -916,7 +916,7 @@ public struct VioCheckoutOverlay: View {
                             }
                             
                             if availablePaymentMethods.isEmpty {
-                                Text(RLocalizedString(VioTranslationKey.noPaymentMethods.rawValue))
+                                Text(VLocalizedString(VioTranslationKey.noPaymentMethods.rawValue))
                                     .font(VioTypography.body)
                                     .foregroundColor(VioColors.textSecondary)
                                     .padding()
@@ -977,10 +977,10 @@ public struct VioCheckoutOverlay: View {
                 // Custom button with total
                 Button(action: {
                     Task { @MainActor in
-                        VioLogger.debug("Botón 'Initiate Payment' presionado - selectedPaymentMethod: \(selectedPaymentMethod.rawValue)", component: "VioCheckoutOverlay")
+                        VioLogger.debug("Botón 'Initiate Payment' presionado - selectedPaymentMethod: \(selectedPaymentMethod.rawValue)", component: "VCheckoutOverlay")
                         
                         #if os(iOS)
-                            VioLogger.debug("Platform: iOS detected", component: "VioCheckoutOverlay")
+                            VioLogger.debug("Platform: iOS detected", component: "VCheckoutOverlay")
                             if selectedPaymentMethod == .stripe {
                                 isLoading = true
                                 let ok = await prepareStripePaymentSheet()
@@ -990,32 +990,32 @@ public struct VioCheckoutOverlay: View {
                                     presentStripePaymentSheet()
                                     return
                                 } else {
-                                    VioLogger.error("Setting checkoutStep to .error (Stripe prepareStripePaymentSheet failed)", component: "VioCheckoutOverlay")
+                                    VioLogger.error("Setting checkoutStep to .error (Stripe prepareStripePaymentSheet failed)", component: "VCheckoutOverlay")
                                     checkoutStep = .error
                                     return
                                 }
                             }
                             if selectedPaymentMethod == .klarna {
-                                VioLogger.debug("Botón 'Initiate Payment' presionado con Klarna seleccionado - Llamando a initiateKlarnaDirectFlow()", component: "VioCheckoutOverlay")
+                                VioLogger.debug("Botón 'Initiate Payment' presionado con Klarna seleccionado - Llamando a initiateKlarnaDirectFlow()", component: "VCheckoutOverlay")
                                 // Usar flujo directo de Klarna sin UI intermedia
                                 await initiateKlarnaDirectFlow()
                                 return
                             }
                             if selectedPaymentMethod == .vipps {
-                                VioLogger.debug("Botón 'Initiate Payment' presionado con Vipps seleccionado - Llamando a initiateVippsFlow()", component: "VioCheckoutOverlay")
+                                VioLogger.debug("Botón 'Initiate Payment' presionado con Vipps seleccionado - Llamando a initiateVippsFlow()", component: "VCheckoutOverlay")
                                 // Usar flujo directo de Vipps
                                 await initiateVippsFlow()
                                 return
                             }
                         #else
-                            VioLogger.warning("Platform: NO ES iOS - saltando lógica de pago", component: "VioCheckoutOverlay")
+                            VioLogger.warning("Platform: NO ES iOS - saltando lógica de pago", component: "VCheckoutOverlay")
                         #endif
-                        VioLogger.debug("Llamando a proceedToNext()", component: "VioCheckoutOverlay")
+                        VioLogger.debug("Llamando a proceedToNext()", component: "VCheckoutOverlay")
                         proceedToNext()
                     }
                 }) {
                     HStack {
-                        Text(RLocalizedString(VioTranslationKey.initiatePayment.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.initiatePayment.rawValue))
                             .font(VioTypography.headline)
                             .foregroundColor(adaptiveColors.textOnPrimary)
                         
@@ -1084,7 +1084,7 @@ public struct VioCheckoutOverlay: View {
                 VStack(alignment: .leading, spacing: VioSpacing.lg) {
                     // Product Summary Header - EXACTLY like the image
                     HStack {
-                        Text(RLocalizedString(VioTranslationKey.productSummary.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.productSummary.rawValue))
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(VioColors.textPrimary)
 
@@ -1160,7 +1160,7 @@ public struct VioCheckoutOverlay: View {
                                 // Product details
                                 VStack(spacing: VioSpacing.xs) {
                                     HStack {
-                                    Text(RLocalizedString(VioTranslationKey.orderId.rawValue))
+                                    Text(VLocalizedString(VioTranslationKey.orderId.rawValue))
                                             .font(
                                                 .system(
                                                     size: 14,
@@ -1186,7 +1186,7 @@ public struct VioCheckoutOverlay: View {
                                     }
 
                                     HStack {
-                                    Text(RLocalizedString(VioTranslationKey.colors.rawValue))
+                                    Text(VLocalizedString(VioTranslationKey.colors.rawValue))
                                             .font(
                                                 .system(
                                                     size: 14,
@@ -1214,7 +1214,7 @@ public struct VioCheckoutOverlay: View {
 
                                 // Read-only Quantity Display (NO controls in payment step)
                                 HStack {
-                                    Text(RLocalizedString(VioTranslationKey.quantity.rawValue))
+                                    Text(VLocalizedString(VioTranslationKey.quantity.rawValue))
                                         .font(
                                             .system(size: 16, weight: .semibold)
                                         )
@@ -1235,7 +1235,7 @@ public struct VioCheckoutOverlay: View {
 
                                 // Show total for this product
                                 HStack {
-                                    Text(RLocalizedString(VioTranslationKey.totalForItem.rawValue))
+                                    Text(VLocalizedString(VioTranslationKey.totalForItem.rawValue))
                                         .font(
                                             .system(size: 14, weight: .medium)
                                         )
@@ -1261,7 +1261,7 @@ public struct VioCheckoutOverlay: View {
                     // Payment Schedule (if Klarna installments selected)
                     if selectedPaymentMethod == .klarna {
                         VStack(alignment: .leading, spacing: VioSpacing.md) {
-                            Text(RLocalizedString(VioTranslationKey.paymentSchedule.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.paymentSchedule.rawValue))
                                 .font(VioTypography.bodyBold)
                                 .foregroundColor(VioColors.textPrimary)
                                 .padding(.horizontal, VioSpacing.lg)
@@ -1280,7 +1280,7 @@ public struct VioCheckoutOverlay: View {
 
             // Bottom Button
             VStack {
-                VioButton(
+                VButton(
                     title: "Payment",
                     style: .primary,
                     size: .large
@@ -1325,7 +1325,7 @@ public struct VioCheckoutOverlay: View {
                                 alignment: .leading,
                                 spacing: VioSpacing.lg
                             ) {
-                                Text(RLocalizedString(VioTranslationKey.reviewOrder.rawValue))
+                                Text(VLocalizedString(VioTranslationKey.reviewOrder.rawValue))
                                     .font(VioTypography.title2)
                                     .foregroundColor(VioColors.textPrimary)
                                     .padding(.horizontal, VioSpacing.lg)
@@ -1339,8 +1339,8 @@ public struct VioCheckoutOverlay: View {
                         }
 
                         VStack {
-                            VioButton(
-                                title: RLocalizedString(VioTranslationKey.completePurchase.rawValue),
+                            VButton(
+                                title: VLocalizedString(VioTranslationKey.completePurchase.rawValue),
                                 style: .primary,
                                 size: .large
                             ) {
@@ -1374,7 +1374,7 @@ public struct VioCheckoutOverlay: View {
                         }
                     }
                     VStack {
-                        VioButton(
+                        VButton(
                             title: "Complete Purchase",
                             style: .primary,
                             size: .large
@@ -1423,7 +1423,7 @@ public struct VioCheckoutOverlay: View {
 
                 // Success Message (smaller and more compact)
                 VStack(spacing: VioSpacing.sm) {
-                    Text(RLocalizedString(VioTranslationKey.purchaseComplete.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.purchaseComplete.rawValue))
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(VioColors.textPrimary)
                         .multilineTextAlignment(.center)
@@ -1435,8 +1435,8 @@ public struct VioCheckoutOverlay: View {
 
                     Text(
                         selectedPaymentMethod == .klarna
-                            ? RLocalizedString(VioTranslationKey.purchaseCompleteMessageKlarna.rawValue)
-                            : RLocalizedString(VioTranslationKey.purchaseCompleteMessage.rawValue)
+                            ? VLocalizedString(VioTranslationKey.purchaseCompleteMessageKlarna.rawValue)
+                            : VLocalizedString(VioTranslationKey.purchaseCompleteMessage.rawValue)
                     )
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(VioColors.textSecondary)
@@ -1454,8 +1454,8 @@ public struct VioCheckoutOverlay: View {
 
             // Bottom Close Button
             VStack {
-                VioButton(
-                    title: RLocalizedString(VioTranslationKey.close.rawValue),
+                VButton(
+                    title: VLocalizedString(VioTranslationKey.close.rawValue),
                     style: .primary,
                     size: .large
                 ) {
@@ -1538,7 +1538,7 @@ public struct VioCheckoutOverlay: View {
 
             // Bottom Action Buttons
             VStack(spacing: VioSpacing.md) {
-                VioButton(
+                VButton(
                     title: "Try Again",
                     style: .primary,
                     size: .large
@@ -1552,7 +1552,7 @@ public struct VioCheckoutOverlay: View {
                     value: checkoutStep
                 )
 
-                VioButton(
+                VButton(
                     title: "Go Back",
                     style: .secondary,
                     size: .large
@@ -1577,7 +1577,7 @@ public struct VioCheckoutOverlay: View {
         adaptiveColors.background.opacity(0.85)
             .overlay {
                 VStack(spacing: VioSpacing.md) {
-                    VioCustomLoader(style: .rotate, size: 48, speed: 1.2)
+                    VCustomLoader(style: .rotate, size: 48, speed: 1.2)
 
                     Text("Processing...")
                         .font(VioTypography.caption1)
@@ -1614,7 +1614,7 @@ public struct VioCheckoutOverlay: View {
     private var validationMessage: String {
         // Check cart first
         if cartManager.items.isEmpty {
-            return RLocalizedString(VioTranslationKey.cartEmptyMessage.rawValue)
+            return VLocalizedString(VioTranslationKey.cartEmptyMessage.rawValue)
         }
         
         // Check shipping options for orderSummary step
@@ -1630,7 +1630,7 @@ public struct VioCheckoutOverlay: View {
                 }
                 
                 if !itemsWithMultipleOptions.isEmpty {
-                    return RLocalizedString(VioTranslationKey.shippingRequired.rawValue)
+                    return VLocalizedString(VioTranslationKey.shippingRequired.rawValue)
                 }
             }
         }
@@ -1638,26 +1638,26 @@ public struct VioCheckoutOverlay: View {
         switch checkoutStep {
         case .address:
             if firstName.isEmpty || lastName.isEmpty { 
-                return RLocalizedString(VioTranslationKey.required.rawValue)
+                return VLocalizedString(VioTranslationKey.required.rawValue)
             }
             if email.isEmpty { 
-                return RLocalizedString(VioTranslationKey.invalidEmail.rawValue)
+                return VLocalizedString(VioTranslationKey.invalidEmail.rawValue)
             }
             if phone.isEmpty { 
-                return RLocalizedString(VioTranslationKey.invalidPhone.rawValue)
+                return VLocalizedString(VioTranslationKey.invalidPhone.rawValue)
             }
             if address1.isEmpty { 
-                return RLocalizedString(VioTranslationKey.invalidAddress.rawValue)
+                return VLocalizedString(VioTranslationKey.invalidAddress.rawValue)
             }
             if city.isEmpty { 
-                return RLocalizedString(VioTranslationKey.required.rawValue)
+                return VLocalizedString(VioTranslationKey.required.rawValue)
             }
             if zip.isEmpty { 
-                return RLocalizedString(VioTranslationKey.required.rawValue)
+                return VLocalizedString(VioTranslationKey.required.rawValue)
             }
-            return RLocalizedString(VioTranslationKey.required.rawValue)
+            return VLocalizedString(VioTranslationKey.required.rawValue)
         case .orderSummary:
-            return RLocalizedString(VioTranslationKey.shippingRequired.rawValue)
+            return VLocalizedString(VioTranslationKey.shippingRequired.rawValue)
         default:
             return ""
         }
@@ -1677,7 +1677,7 @@ public struct VioCheckoutOverlay: View {
     }
 
     private func proceedToNext() {
-        VioLogger.debug("proceedToNext FUNCIÓN LLAMADA - checkoutStep actual: \(checkoutStep), selectedPaymentMethod: \(selectedPaymentMethod.rawValue)", component: "VioCheckoutOverlay")
+        VioLogger.debug("proceedToNext FUNCIÓN LLAMADA - checkoutStep actual: \(checkoutStep), selectedPaymentMethod: \(selectedPaymentMethod.rawValue)", component: "VCheckoutOverlay")
         withAnimation(.easeInOut(duration: 0.3)) {
             switch checkoutStep {
             case .address:
@@ -1686,7 +1686,7 @@ public struct VioCheckoutOverlay: View {
                 // Handle Klarna direct flow
                 if selectedPaymentMethod == .klarna {
                     #if os(iOS) && canImport(KlarnaMobileSDK)
-                        VioLogger.debug("Klarna detectado en orderSummary - Llamando a initiateKlarnaDirectFlow()", component: "VioCheckoutOverlay")
+                        VioLogger.debug("Klarna detectado en orderSummary - Llamando a initiateKlarnaDirectFlow()", component: "VCheckoutOverlay")
                         Task {
                             // isLoading ya se establece dentro de initiateKlarnaDirectFlow()
                             await initiateKlarnaDirectFlow()
@@ -1982,7 +1982,7 @@ public struct VioCheckoutOverlay: View {
         }
 
         private func initiateKlarnaDirectFlow() async {
-            VioLogger.debug("Klarna Flow INICIO - Step 1: Preparando datos del checkout", component: "VioCheckoutOverlay")
+            VioLogger.debug("Klarna Flow INICIO - Step 1: Preparando datos del checkout", component: "VCheckoutOverlay")
             
             await MainActor.run {
                 isLoading = true
@@ -2013,7 +2013,7 @@ public struct VioCheckoutOverlay: View {
             let countryCode = getCountryCode(from: country)
             let locale = getLocale(for: countryCode)
             
-            VioLogger.debug("Datos preparados: Email=\(email), País=\(country)→\(countryCode), Moneda=\(cartManager.currency), Locale=\(locale), CheckoutId=\(cartManager.checkoutId ?? "nil")", component: "VioCheckoutOverlay")
+            VioLogger.debug("Datos preparados: Email=\(email), País=\(country)→\(countryCode), Moneda=\(cartManager.currency), Locale=\(locale), CheckoutId=\(cartManager.checkoutId ?? "nil")", component: "VCheckoutOverlay")
             
             let input = KlarnaNativeInitInputDto(
                 countryCode: countryCode,
@@ -2027,13 +2027,13 @@ public struct VioCheckoutOverlay: View {
                 shippingAddress: shippingAddress
             )
 
-            VioLogger.debug("Step 2: Llamando a backend Vio (initKlarnaNative)", component: "VioCheckoutOverlay")
+            VioLogger.debug("Step 2: Llamando a backend Vio (initKlarnaNative)", component: "VCheckoutOverlay")
             
             // Call backend to initialize Klarna session
             guard let dto = await cartManager.initKlarnaNative(input: input) else {
-                VioLogger.error("initKlarnaNative returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VioCheckoutOverlay")
+                VioLogger.error("initKlarnaNative returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VCheckoutOverlay")
                 await MainActor.run {
-                    VioLogger.error("Setting checkoutStep to .error (initKlarnaNative returned nil)", component: "VioCheckoutOverlay")
+                    VioLogger.error("Setting checkoutStep to .error (initKlarnaNative returned nil)", component: "VCheckoutOverlay")
                     self.isLoading = false
                     self.errorMessage = "Failed to initialize Klarna payment"
                     self.checkoutStep = .error
@@ -2041,33 +2041,33 @@ public struct VioCheckoutOverlay: View {
                 return
             }
             
-            VioLogger.success("Step 3: Backend respondió correctamente - SessionId: \(dto.sessionId), ClientToken: \(dto.clientToken.prefix(20))..., Categorías: \(dto.paymentMethodCategories?.count ?? 0)", component: "VioCheckoutOverlay")
+            VioLogger.success("Step 3: Backend respondió correctamente - SessionId: \(dto.sessionId), ClientToken: \(dto.clientToken.prefix(20))..., Categorías: \(dto.paymentMethodCategories?.count ?? 0)", component: "VCheckoutOverlay")
 
             await MainActor.run {
                 // Backend already returns the correct DTO structure
                 let categories = dto.paymentMethodCategories ?? []
                 guard !categories.isEmpty else {
-                    VioLogger.error("ERROR: No hay métodos de pago disponibles - Setting checkoutStep to .error", component: "VioCheckoutOverlay")
+                    VioLogger.error("ERROR: No hay métodos de pago disponibles - Setting checkoutStep to .error", component: "VCheckoutOverlay")
                     self.isLoading = false
                     self.errorMessage = "No Klarna payment methods available for this checkout."
                     self.checkoutStep = .error
                     return
                 }
                 
-                VioLogger.debug("Métodos de pago disponibles: \(categories.map { "\($0.identifier): \($0.name ?? "sin nombre")" }.joined(separator: ", "))", component: "VioCheckoutOverlay")
+                VioLogger.debug("Métodos de pago disponibles: \(categories.map { "\($0.identifier): \($0.name ?? "sin nombre")" }.joined(separator: ", "))", component: "VCheckoutOverlay")
                 
                 // Store categories and select first one
                 self.klarnaAvailableCategories = categories
                 if let firstCategory = categories.first {
                     self.klarnaSelectedCategoryIdentifier = firstCategory.identifier
-                    VioLogger.debug("Categoría seleccionada: \(firstCategory.identifier)", component: "VioCheckoutOverlay")
+                    VioLogger.debug("Categoría seleccionada: \(firstCategory.identifier)", component: "VCheckoutOverlay")
                 }
                 
                 // Store init data (ya viene del backend correctamente)
                 self.klarnaNativeInitData = dto
                 self.isLoading = false
                 
-                VioLogger.debug("Step 4: Activando auto-authorize (modal Klarna)", component: "VioCheckoutOverlay")
+                VioLogger.debug("Step 4: Activando auto-authorize (modal Klarna)", component: "VCheckoutOverlay")
                 // Activar auto-authorize flow
                 self.klarnaAutoAuthorize = true
             }
@@ -2075,7 +2075,7 @@ public struct VioCheckoutOverlay: View {
     #endif
 
     private func initiateVippsFlow() async {
-        VioLogger.debug("Vipps Flow INICIO - Step 1: Preparando datos del checkout", component: "VioCheckoutOverlay")
+        VioLogger.debug("Vipps Flow INICIO - Step 1: Preparando datos del checkout", component: "VCheckoutOverlay")
         
         await MainActor.run {
             isLoading = true
@@ -2087,18 +2087,18 @@ public struct VioCheckoutOverlay: View {
         let successUrlWithTracking = "\(checkoutDraft.successUrl)?checkout_id=\(checkoutId)&payment_method=vipps&status=success"
         let cancelUrlWithTracking = "\(checkoutDraft.cancelUrl)?checkout_id=\(checkoutId)&payment_method=vipps&status=cancelled"
         
-        VioLogger.debug("Datos preparados: Email=\(email), CheckoutId=\(checkoutId), Success URL=\(successUrlWithTracking), Cancel URL=\(cancelUrlWithTracking)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Datos preparados: Email=\(email), CheckoutId=\(checkoutId), Success URL=\(successUrlWithTracking), Cancel URL=\(cancelUrlWithTracking)", component: "VCheckoutOverlay")
         
-        VioLogger.debug("Step 2: Llamando a backend Vio (vippsInit)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Step 2: Llamando a backend Vio (vippsInit)", component: "VCheckoutOverlay")
         
         // Call backend to initialize Vipps payment
         guard let dto = await cartManager.vippsInit(
             email: email,
             returnUrl: successUrlWithTracking
         ) else {
-                VioLogger.error("vippsInit returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VioCheckoutOverlay")
+                VioLogger.error("vippsInit returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VCheckoutOverlay")
                 await MainActor.run {
-                    VioLogger.error("Setting checkoutStep to .error (vippsInit returned nil)", component: "VioCheckoutOverlay")
+                    VioLogger.error("Setting checkoutStep to .error (vippsInit returned nil)", component: "VCheckoutOverlay")
                 self.isLoading = false
                 self.errorMessage = "Failed to initialize Vipps payment"
                 self.checkoutStep = .error
@@ -2106,12 +2106,12 @@ public struct VioCheckoutOverlay: View {
             return
         }
         
-        VioLogger.success("Step 3: Backend respondió correctamente - Payment URL: \(dto.paymentUrl)", component: "VioCheckoutOverlay")
+        VioLogger.success("Step 3: Backend respondió correctamente - Payment URL: \(dto.paymentUrl)", component: "VCheckoutOverlay")
         
         await MainActor.run {
             self.isLoading = false
             
-            VioLogger.debug("Step 4: Abriendo Vipps en navegador", component: "VioCheckoutOverlay")
+            VioLogger.debug("Step 4: Abriendo Vipps en navegador", component: "VCheckoutOverlay")
             // Open Vipps payment URL in browser
             if let url = URL(string: dto.paymentUrl) {
                 #if os(iOS)
@@ -2129,9 +2129,9 @@ public struct VioCheckoutOverlay: View {
                 // Start retry timer for webhook delay
                 self.startVippsRetryTimer()
                 
-                VioLogger.success("Vipps abierto en navegador - Payment marked as in progress", component: "VioCheckoutOverlay")
+                VioLogger.success("Vipps abierto en navegador - Payment marked as in progress", component: "VCheckoutOverlay")
             } else {
-                VioLogger.error("ERROR: URL inválida", component: "VioCheckoutOverlay")
+                VioLogger.error("ERROR: URL inválida", component: "VCheckoutOverlay")
                 self.errorMessage = "Invalid Vipps payment URL"
                 self.checkoutStep = .error
             }
@@ -2140,7 +2140,7 @@ public struct VioCheckoutOverlay: View {
 
     // MARK: - Vipps Retry System
     private func startVippsRetryTimer() {
-        VioLogger.debug("Starting retry timer - Max retries: \(vippsMaxRetries)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Starting retry timer - Max retries: \(vippsMaxRetries)", component: "VCheckoutOverlay")
         
         // Cancel any existing timer
         vippsRetryTimer?.invalidate()
@@ -2154,7 +2154,7 @@ public struct VioCheckoutOverlay: View {
     }
     
     private func stopVippsRetryTimer() {
-        VioLogger.debug("Stopping retry timer", component: "VioCheckoutOverlay")
+        VioLogger.debug("Stopping retry timer", component: "VCheckoutOverlay")
         vippsRetryTimer?.invalidate()
         vippsRetryTimer = nil
     }
@@ -2166,14 +2166,14 @@ public struct VioCheckoutOverlay: View {
         }
         
         vippsRetryCount += 1
-        VioLogger.debug("Attempt \(vippsRetryCount)/\(vippsMaxRetries) - Checking status for checkout: \(checkoutId)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Attempt \(vippsRetryCount)/\(vippsMaxRetries) - Checking status for checkout: \(checkoutId)", component: "VCheckoutOverlay")
         
         // Check checkout status from backend
         if let checkout = await cartManager.getCheckoutById(checkoutId: checkoutId) {
-            VioLogger.debug("Checkout status: \(checkout.status ?? "unknown")", component: "VioCheckoutOverlay")
+            VioLogger.debug("Checkout status: \(checkout.status ?? "unknown")", component: "VCheckoutOverlay")
             
             if checkout.status.uppercased() == "SUCCESS" {
-                VioLogger.success("Payment successful!", component: "VioCheckoutOverlay")
+                VioLogger.success("Payment successful!", component: "VCheckoutOverlay")
                 await MainActor.run {
                     self.stopVippsRetryTimer()
                     self.vippsPaymentInProgress = false
@@ -2186,7 +2186,7 @@ public struct VioCheckoutOverlay: View {
             
             // If not SUCCESS and we've reached max retries, show error
             if vippsRetryCount >= vippsMaxRetries {
-                VioLogger.warning("Max retries reached. Payment not successful.", component: "VioCheckoutOverlay")
+                VioLogger.warning("Max retries reached. Payment not successful.", component: "VCheckoutOverlay")
                 await MainActor.run {
                     self.stopVippsRetryTimer()
                     self.vippsPaymentInProgress = false
@@ -2199,10 +2199,10 @@ public struct VioCheckoutOverlay: View {
             }
             
             // If not SUCCESS but still have retries, continue waiting
-            VioLogger.debug("Status not SUCCESS yet. Waiting for webhook... (\(vippsRetryCount)/\(vippsMaxRetries))", component: "VioCheckoutOverlay")
+            VioLogger.debug("Status not SUCCESS yet. Waiting for webhook... (\(vippsRetryCount)/\(vippsMaxRetries))", component: "VCheckoutOverlay")
             
         } else {
-            VioLogger.error("Could not retrieve checkout status", component: "VioCheckoutOverlay")
+            VioLogger.error("Could not retrieve checkout status", component: "VCheckoutOverlay")
             
             // If we can't retrieve status and reached max retries, show error
             if vippsRetryCount >= vippsMaxRetries {
@@ -2220,11 +2220,11 @@ public struct VioCheckoutOverlay: View {
 
     // MARK: - Vipps Payment Status Handler
     private func handleVippsPaymentStatusChange(_ status: VippsPaymentHandler.PaymentStatus) {
-        VioLogger.debug("Status changed to: \(status)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Status changed to: \(status)", component: "VCheckoutOverlay")
         
         switch status {
         case .success:
-            VioLogger.success("Payment successful!", component: "VioCheckoutOverlay")
+            VioLogger.success("Payment successful!", component: "VCheckoutOverlay")
             stopVippsRetryTimer()
             checkoutStep = .success
             vippsPaymentInProgress = false
@@ -2232,7 +2232,7 @@ public struct VioCheckoutOverlay: View {
             vippsRetryCount = 0
             
         case .failed, .cancelled:
-            VioLogger.error("Payment failed or cancelled", component: "VioCheckoutOverlay")
+            VioLogger.error("Payment failed or cancelled", component: "VCheckoutOverlay")
             stopVippsRetryTimer()
             errorMessage = status == .failed ? "Payment failed" : "Payment was cancelled"
             checkoutStep = .error
@@ -2241,11 +2241,11 @@ public struct VioCheckoutOverlay: View {
             vippsRetryCount = 0
             
         case .inProgress:
-            VioLogger.debug("Payment in progress", component: "VioCheckoutOverlay")
+            VioLogger.debug("Payment in progress", component: "VCheckoutOverlay")
             // Keep current state and retry timer running
             
         case .unknown:
-            VioLogger.warning("Unknown status", component: "VioCheckoutOverlay")
+            VioLogger.warning("Unknown status", component: "VCheckoutOverlay")
             // Don't change state, let retry timer continue
         }
     }
@@ -2329,7 +2329,7 @@ public struct VioCheckoutOverlay: View {
                 case .canceled:
                     withAnimation { checkoutStep = .orderSummary }  // ↩️ back to summary
                 case .failed(let error):
-                    VioLogger.error("Setting checkoutStep to .error (Stripe payment failed: \(error.localizedDescription))", component: "VioCheckoutOverlay")
+                    VioLogger.error("Setting checkoutStep to .error (Stripe payment failed: \(error.localizedDescription))", component: "VCheckoutOverlay")
                     self.errorMessage = error.localizedDescription
                     withAnimation { checkoutStep = .error }  // ❌ error
                 }
@@ -2433,7 +2433,7 @@ public struct VioCheckoutOverlay: View {
 // MARK: - Supporting Components
 
 struct PaymentMethodRowCompact: View {
-    let method: VioCheckoutOverlay.PaymentMethod
+    let method: VCheckoutOverlay.PaymentMethod
     let isSelected: Bool
     let action: () -> Void
 
@@ -2669,8 +2669,8 @@ struct PaymentScheduleDetailed: View {
     }
 }
 
-// MARK: - VioCheckoutOverlay Helper Views Extension
-extension VioCheckoutOverlay {
+// MARK: - VCheckoutOverlay Helper Views Extension
+extension VCheckoutOverlay {
 
     private var addressDisplayView: some View {
         VStack(alignment: .leading, spacing: VioSpacing.xs) {
@@ -2697,7 +2697,7 @@ extension VioCheckoutOverlay {
                 .foregroundColor(VioColors.textPrimary)
 
             HStack {
-                Text(RLocalizedString(VioTranslationKey.phoneColon.rawValue))
+                Text(VLocalizedString(VioTranslationKey.phoneColon.rawValue))
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(VioColors.textPrimary)
 
@@ -2718,7 +2718,7 @@ extension VioCheckoutOverlay {
             // Name fields
             HStack(spacing: VioSpacing.md) {
                 VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.firstName.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.firstName.rawValue))
                         .font(VioTypography.caption1)
                         .foregroundColor(VioColors.textSecondary)
                     TextField("John", text: $firstName)
@@ -2734,7 +2734,7 @@ extension VioCheckoutOverlay {
                 }
 
                 VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.lastName.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.lastName.rawValue))
                         .font(VioTypography.caption1)
                         .foregroundColor(VioColors.textSecondary)
                     TextField("Doe", text: $lastName)
@@ -2752,7 +2752,7 @@ extension VioCheckoutOverlay {
 
             // Email
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                Text(RLocalizedString(VioTranslationKey.email.rawValue))
+                Text(VLocalizedString(VioTranslationKey.email.rawValue))
                     .font(VioTypography.caption1)
                     .foregroundColor(VioColors.textSecondary)
                 TextField("your@email.com", text: $email)
@@ -2773,7 +2773,7 @@ extension VioCheckoutOverlay {
 
             // Phone with country code
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                Text(RLocalizedString(VioTranslationKey.phone.rawValue))
+                Text(VLocalizedString(VioTranslationKey.phone.rawValue))
                     .font(VioTypography.caption1)
                     .foregroundColor(VioColors.textSecondary)
 
@@ -2800,7 +2800,7 @@ extension VioCheckoutOverlay {
 
             // Address
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                Text(RLocalizedString(VioTranslationKey.address.rawValue))
+                Text(VLocalizedString(VioTranslationKey.address.rawValue))
                     .font(VioTypography.caption1)
                     .foregroundColor(VioColors.textSecondary)
                 TextField("Street address", text: $address1)
@@ -2828,7 +2828,7 @@ extension VioCheckoutOverlay {
             // City, State, ZIP
             HStack(spacing: VioSpacing.md) {
                 VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.city.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.city.rawValue))
                         .font(VioTypography.caption1)
                         .foregroundColor(VioColors.textSecondary)
                     TextField("City", text: $city)
@@ -2860,7 +2860,7 @@ extension VioCheckoutOverlay {
                 }
 
                 VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.zip.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.zip.rawValue))
                         .font(VioTypography.caption1)
                         .foregroundColor(VioColors.textSecondary)
                     TextField("ZIP", text: $zip)
@@ -2881,7 +2881,7 @@ extension VioCheckoutOverlay {
 
             // Country
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                Text(RLocalizedString(VioTranslationKey.country.rawValue))
+                Text(VLocalizedString(VioTranslationKey.country.rawValue))
                     .font(VioTypography.caption1)
                     .foregroundColor(VioColors.textSecondary)
                 CountryPicker(
@@ -2902,7 +2902,7 @@ extension VioCheckoutOverlay {
                         .font(.system(size: 48))
                         .foregroundColor(VioColors.textSecondary.opacity(0.5))
                     
-                    Text(RLocalizedString(VioTranslationKey.cartEmpty.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.cartEmpty.rawValue))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(VioColors.textPrimary)
                     
@@ -2922,7 +2922,7 @@ extension VioCheckoutOverlay {
                         // Product image
                         LoadedImage(
                             url: URL(string: item.imageUrl ?? ""),
-                            placeholder: AnyView(VioCustomLoader(style: .rotate, size: 30)),
+                            placeholder: AnyView(VCustomLoader(style: .rotate, size: 30)),
                             errorView: AnyView(Rectangle().fill(VioColors.surfaceSecondary))
                         )
                         .aspectRatio(contentMode: .fill)
@@ -3309,7 +3309,7 @@ extension VioCheckoutOverlay {
 
                 // Shipping - from checkout
                 HStack {
-                    Text(RLocalizedString(VioTranslationKey.shipping.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.shipping.rawValue))
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(VioColors.textSecondary)
 
@@ -3323,7 +3323,7 @@ extension VioCheckoutOverlay {
                 // Show discount if applied - from checkout
                 if checkoutDiscount > 0 {
                     HStack {
-                        Text(RLocalizedString(VioTranslationKey.discount.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.discount.rawValue))
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(VioColors.success)
 
@@ -3506,7 +3506,7 @@ extension VioCheckoutOverlay {
                         }
                     }
                 } else {
-                    Text(RLocalizedString(VioTranslationKey.shippingCalculated.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.shippingCalculated.rawValue))
                         .font(.system(size: 12))
                         .foregroundColor(VioColors.textSecondary)
                 }
@@ -3525,12 +3525,12 @@ extension VioCheckoutOverlay {
         return VStack(alignment: .leading, spacing: VioSpacing.md) {
             if cartManager.items.contains(where: { !$0.availableShippings.isEmpty }) {
                 HStack(spacing: 8) {
-                    Text(RLocalizedString(VioTranslationKey.shippingOptions.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.shippingOptions.rawValue))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(VioColors.textPrimary)
                     
                     if hasItemsWithoutShipping {
-                        Text(RLocalizedString(VioTranslationKey.shippingRequired.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.shippingRequired.rawValue))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(VioColors.primary)
                             .padding(.horizontal, 8)
@@ -3567,7 +3567,7 @@ extension VioCheckoutOverlay {
                 }
                 .padding(.horizontal, VioSpacing.lg)
             } else {
-                Text(RLocalizedString(VioTranslationKey.noShippingMethods.rawValue))
+                Text(VLocalizedString(VioTranslationKey.noShippingMethods.rawValue))
                     .font(.system(size: 12))
                     .foregroundColor(VioColors.textSecondary)
                     .padding(.horizontal, VioSpacing.lg)
@@ -3581,7 +3581,7 @@ extension VioCheckoutOverlay {
         VStack(spacing: VioSpacing.sm) {
             // Subtotal
             HStack {
-                Text(RLocalizedString(VioTranslationKey.subtotal.rawValue))
+                Text(VLocalizedString(VioTranslationKey.subtotal.rawValue))
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(VioColors.textSecondary)
 
@@ -3614,7 +3614,7 @@ extension VioCheckoutOverlay {
 
             // Total
             HStack {
-                Text(RLocalizedString(VioTranslationKey.total.rawValue))
+                Text(VLocalizedString(VioTranslationKey.total.rawValue))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(VioColors.textPrimary)
 
@@ -3639,7 +3639,7 @@ extension VioCheckoutOverlay {
                         .font(.system(size: 40))
                         .foregroundColor(VioColors.textSecondary.opacity(0.5))
                     
-                    Text(RLocalizedString(VioTranslationKey.cartEmpty.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.cartEmpty.rawValue))
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(VioColors.textPrimary)
                 }
@@ -3713,7 +3713,7 @@ extension VioCheckoutOverlay {
 
                 // Shipping - from checkout
                 HStack {
-                    Text(RLocalizedString(VioTranslationKey.shipping.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.shipping.rawValue))
                         .font(.system(size: 16, weight: .regular))
                         .foregroundColor(VioColors.textSecondary)
 
@@ -3727,7 +3727,7 @@ extension VioCheckoutOverlay {
                 // Discount (if applied) - from checkout
                 if checkoutDiscount > 0 {
                     HStack {
-                        Text(RLocalizedString(VioTranslationKey.discount.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.discount.rawValue))
                             .font(.system(size: 16, weight: .regular))
                             .foregroundColor(VioColors.success)
 
@@ -3878,33 +3878,33 @@ extension VioCheckoutOverlay {
     
     private func loadCheckoutTotals() async {
         guard let checkoutId = cartManager.checkoutId else {
-            VioLogger.debug("No checkoutId available to load totals", component: "VioCheckoutOverlay")
+            VioLogger.debug("No checkoutId available to load totals", component: "VCheckoutOverlay")
             return
         }
         
-        VioLogger.debug("Loading checkout totals for checkoutId: \(checkoutId)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Loading checkout totals for checkoutId: \(checkoutId)", component: "VCheckoutOverlay")
         
         if let checkout = await cartManager.getCheckoutById(checkoutId: checkoutId) {
             await MainActor.run {
                 checkoutTotals = checkout
-                VioLogger.debug("Checkout totals loaded - shipping: \(checkout.totals?.shipping ?? 0), taxes: \(checkout.totals?.taxes ?? 0)", component: "VioCheckoutOverlay")
+                VioLogger.debug("Checkout totals loaded - shipping: \(checkout.totals?.shipping ?? 0), taxes: \(checkout.totals?.taxes ?? 0)", component: "VCheckoutOverlay")
             }
         } else {
-            VioLogger.debug("Failed to load checkout totals", component: "VioCheckoutOverlay")
+            VioLogger.debug("Failed to load checkout totals", component: "VCheckoutOverlay")
         }
     }
     
     private func loadAvailablePaymentMethods() async {
-        VioLogger.debug("Loading available payment methods...", component: "VioCheckoutOverlay")
+        VioLogger.debug("Loading available payment methods...", component: "VCheckoutOverlay")
         
         // 1. Get supported methods from config
         let configMethods = VioConfiguration.shared.cartConfiguration.supportedPaymentMethods
-        VioLogger.debug("Config supported methods: \(configMethods)", component: "VioCheckoutOverlay")
+        VioLogger.debug("Config supported methods: \(configMethods)", component: "VCheckoutOverlay")
         
         // 2. Create SDK client to fetch available methods from Vio API
         let config = VioConfiguration.shared
         guard let baseURL = URL(string: config.environment.graphQLURL) else {
-            VioLogger.error("Invalid GraphQL URL", component: "VioCheckoutOverlay")
+            VioLogger.error("Invalid GraphQL URL", component: "VCheckoutOverlay")
             await setFallbackPaymentMethods(configMethods)
             return
         }
@@ -3914,21 +3914,21 @@ extension VioCheckoutOverlay {
         // 3. Fetch available methods from Vio API (API is the source of truth)
         do {
             let apiMethods = try await sdk.payment.getAvailableMethods()
-            VioLogger.info("API returned \(apiMethods.count) payment methods", component: "VioCheckoutOverlay")
+            VioLogger.info("API returned \(apiMethods.count) payment methods", component: "VCheckoutOverlay")
             
             // Use whatever the API returns (API is the authority)
             var available: [PaymentMethod] = []
             
             for apiMethod in apiMethods {
                 let methodName = apiMethod.name.lowercased()
-                VioLogger.debug("API method: \(apiMethod.name) (normalized: \(methodName))", component: "VioCheckoutOverlay")
+                VioLogger.debug("API method: \(apiMethod.name) (normalized: \(methodName))", component: "VCheckoutOverlay")
                 
                 // Try to map API method to PaymentMethod enum
                 if let paymentMethod = PaymentMethod(rawValue: methodName) {
                     available.append(paymentMethod)
-                    VioLogger.debug("Added: \(methodName)", component: "VioCheckoutOverlay")
+                    VioLogger.debug("Added: \(methodName)", component: "VCheckoutOverlay")
                 } else {
-                    VioLogger.warning("Unknown payment method (no enum case): \(methodName)", component: "VioCheckoutOverlay")
+                    VioLogger.warning("Unknown payment method (no enum case): \(methodName)", component: "VCheckoutOverlay")
                 }
             }
             
@@ -3938,14 +3938,14 @@ extension VioCheckoutOverlay {
                 // Auto-select first available method
                 if let first = available.first {
                     self.selectedPaymentMethod = first
-                    VioLogger.debug("Auto-selected: \(first.rawValue)", component: "VioCheckoutOverlay")
+                    VioLogger.debug("Auto-selected: \(first.rawValue)", component: "VCheckoutOverlay")
                 }
                 
-                VioLogger.debug("Final available methods: \(available.map { $0.rawValue })", component: "VioCheckoutOverlay")
+                VioLogger.debug("Final available methods: \(available.map { $0.rawValue })", component: "VCheckoutOverlay")
             }
             
         } catch {
-            VioLogger.error("Failed to fetch payment methods: \(error)", component: "VioCheckoutOverlay")
+            VioLogger.error("Failed to fetch payment methods: \(error)", component: "VCheckoutOverlay")
             await setFallbackPaymentMethods(configMethods)
         }
     }
@@ -3959,7 +3959,7 @@ extension VioCheckoutOverlay {
                 self.selectedPaymentMethod = first
             }
             
-            VioLogger.debug("Using config fallback: \(fallbackMethods.map { $0.rawValue })", component: "VioCheckoutOverlay")
+            VioLogger.debug("Using config fallback: \(fallbackMethods.map { $0.rawValue })", component: "VCheckoutOverlay")
         }
     }
 
@@ -4302,7 +4302,7 @@ struct CountryPicker: View {
     import VioTesting
 
     #Preview("Checkout - Address Step") {
-        VioCheckoutOverlay()
+        VCheckoutOverlay()
             .environmentObject(
                 {
                     let manager = CartManager()
@@ -4440,7 +4440,7 @@ struct CountryPicker: View {
                         // Mostrar loading mientras se inicializa en modo auto
                         if autoAuthorize && !triggerAuthorize {
                             VStack(spacing: VioSpacing.md) {
-                                VioCustomLoader(style: .rotate, size: 48, speed: 1.2)
+                                VCustomLoader(style: .rotate, size: 48, speed: 1.2)
                                 Text("Conectando con Klarna...")
                                     .font(VioTypography.body)
                                     .foregroundColor(VioColors.textSecondary)
@@ -4461,7 +4461,7 @@ struct CountryPicker: View {
 
                 // Solo mostrar botones si NO es auto-authorize
                 if !autoAuthorize {
-                    VioButton(
+                    VButton(
                         title: "Confirm with Klarna",
                         style: .primary,
                         size: .large
@@ -4469,7 +4469,7 @@ struct CountryPicker: View {
                         triggerAuthorize = true
                     }
 
-                    VioButton(
+                    VButton(
                         title: "Cancel",
                         style: .secondary,
                         size: .large
@@ -4773,15 +4773,15 @@ struct CountryPicker: View {
             }
             
             func klarnaInitialized(paymentView: KlarnaPaymentView) {
-                VioLogger.debug("Initialized", component: "VioCheckoutOverlay")
+                VioLogger.debug("Initialized", component: "VCheckoutOverlay")
             }
             
             func klarnaLoaded(paymentView: KlarnaPaymentView) {
-                VioLogger.debug("Loaded", component: "VioCheckoutOverlay")
+                VioLogger.debug("Loaded", component: "VCheckoutOverlay")
             }
             
             func klarnaLoadedPaymentReview(paymentView: KlarnaPaymentView) {
-                VioLogger.debug("Loaded payment review", component: "VioCheckoutOverlay")
+                VioLogger.debug("Loaded payment review", component: "VCheckoutOverlay")
             }
             
             func klarnaAuthorized(
@@ -4790,7 +4790,7 @@ struct CountryPicker: View {
                 authToken: String?,
                 finalizeRequired: Bool
             ) {
-                VioLogger.debug("Authorized - approved: \(approved), token: \(authToken != nil)", component: "VioCheckoutOverlay")
+                VioLogger.debug("Authorized - approved: \(approved), token: \(authToken != nil)", component: "VCheckoutOverlay")
                 guard approved, let token = authToken, !token.isEmpty else {
                     DispatchQueue.main.async {
                         self.parent.onFailed("Authorization not approved")
@@ -4807,7 +4807,7 @@ struct CountryPicker: View {
                 approved: Bool,
                 authToken: String?
             ) {
-                VioLogger.debug("Reauthorized", component: "VioCheckoutOverlay")
+                VioLogger.debug("Reauthorized", component: "VCheckoutOverlay")
             }
             
             func klarnaFinalized(
@@ -4815,7 +4815,7 @@ struct CountryPicker: View {
                 approved: Bool,
                 authToken: String?
             ) {
-                VioLogger.debug("Finalized", component: "VioCheckoutOverlay")
+                VioLogger.debug("Finalized", component: "VCheckoutOverlay")
             }
             
             func klarnaResized(paymentView: KlarnaPaymentView, to newHeight: CGFloat) {
@@ -4826,7 +4826,7 @@ struct CountryPicker: View {
                 inPaymentView paymentView: KlarnaPaymentView,
                 withError error: KlarnaPaymentError
             ) {
-                VioLogger.error("Failed: \(error.localizedDescription)", component: "VioCheckoutOverlay")
+                VioLogger.error("Failed: \(error.localizedDescription)", component: "VCheckoutOverlay")
                 DispatchQueue.main.async {
                     self.parent.onFailed(error.localizedDescription)
                 }

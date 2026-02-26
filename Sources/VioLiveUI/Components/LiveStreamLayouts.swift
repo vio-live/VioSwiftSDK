@@ -7,7 +7,7 @@ import VioUI
 // MARK: - Layout 1: Full Screen Overlay (como TikTok/Instagram Live)
 
 /// Full screen live stream overlay - Similar to TikTok/Instagram Live
-public struct RLiveStreamFullScreenOverlay: View {
+public struct VLiveStreamFullScreenOverlay: View {
     
     @ObservedObject private var liveShowManager = LiveShowManager.shared
     @Environment(\.colorScheme) private var colorScheme
@@ -399,7 +399,7 @@ public struct RLiveStreamFullScreenOverlay: View {
 // MARK: - Layout 2: Bottom Sheet
 
 /// Bottom sheet live stream layout
-public struct RLiveStreamBottomSheet: View {
+public struct VLiveStreamBottomSheet: View {
     
     let stream: LiveStream
     let onDismiss: () -> Void
@@ -620,7 +620,7 @@ public struct RLiveStreamBottomSheet: View {
 // MARK: - Layout 3: Modal
 
 /// Modal live stream layout
-public struct RLiveStreamModal: View {
+public struct VLiveStreamModal: View {
     
     let stream: LiveStream
     let onDismiss: () -> Void

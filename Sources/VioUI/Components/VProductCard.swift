@@ -18,17 +18,17 @@ import VioTesting
 /// **Usage:**
 /// ```swift
 /// // Basic usage (grid layout)
-/// VioProductCard(product: product)
+/// VProductCard(product: product)
 ///
 /// // Different variants
-/// VioProductCard(product: product, variant: .list)
-/// VioProductCard(product: product, variant: .hero)
-/// VioProductCard(product: product, variant: .minimal)
+/// VProductCard(product: product, variant: .list)
+/// VProductCard(product: product, variant: .hero)
+/// VProductCard(product: product, variant: .minimal)
 /// 
 /// // With customization
-/// VioProductCard(product: product, variant: .grid, showBrand: false)
+/// VProductCard(product: product, variant: .grid, showBrand: false)
 /// ```
-public struct VioProductCard: View {
+public struct VProductCard: View {
     
     // MARK: - Variant Types
     public enum Variant {
@@ -228,8 +228,8 @@ public struct VioProductCard: View {
                 HStack {
                     priceView
                     Spacer()
-                    VioButton(
-                        title: showCheckmark ? RLocalizedString(VioTranslationKey.success.rawValue) : RLocalizedString(VioTranslationKey.addToCart.rawValue),
+                    VButton(
+                        title: showCheckmark ? VLocalizedString(VioTranslationKey.success.rawValue) : VLocalizedString(VioTranslationKey.addToCart.rawValue),
                         style: .primary,
                         size: .large,
                         isLoading: isAddingToCart,
@@ -341,7 +341,7 @@ public struct VioProductCard: View {
                         .foregroundColor(color)
                     
                     if systemImage == "exclamationmark.triangle" {
-                        Text(RLocalizedString(VioTranslationKey.noImageAvailable.rawValue))
+                        Text(VLocalizedString(VioTranslationKey.noImageAvailable.rawValue))
                             .font(VioTypography.caption1)
                             .foregroundColor(color)
                             .multilineTextAlignment(.center)
@@ -393,11 +393,11 @@ public struct VioProductCard: View {
                 .fontWeight(.semibold)
                 .foregroundColor(adaptiveColors.priceColor)
                 .onAppear {
-                    print("💰 [VioProductCard] Showing product: \(product.title)")
-                    print("💰 [VioProductCard] Price amount: \(product.price.amount)")
-                    print("💰 [VioProductCard] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                    print("💰 [VioProductCard] Display amount: \(product.price.displayAmount)")
-                    print("💰 [VioProductCard] Currency: \(product.price.currency_code)")
+                    print("💰 [VProductCard] Showing product: \(product.title)")
+                    print("💰 [VProductCard] Price amount: \(product.price.amount)")
+                    print("💰 [VProductCard] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
+                    print("💰 [VProductCard] Display amount: \(product.price.displayAmount)")
+                    print("💰 [VProductCard] Currency: \(product.price.currency_code)")
                 }
             
             if let compareAtAmount = product.price.displayCompareAtAmount {
@@ -431,8 +431,8 @@ public struct VioProductCard: View {
                 // No button in minimal variant
                 EmptyView()
             } else if isInStock {
-                VioButton(
-                    title: showCheckmark ? (variant == .list ? "✓" : variant == .grid ? "" : RLocalizedString(VioTranslationKey.success.rawValue)) : (variant == .list ? RLocalizedString(VioTranslationKey.addToCart.rawValue) : variant == .grid ? "" : RLocalizedString(VioTranslationKey.addToCart.rawValue)),
+                VButton(
+                    title: showCheckmark ? (variant == .list ? "✓" : variant == .grid ? "" : VLocalizedString(VioTranslationKey.success.rawValue)) : (variant == .list ? VLocalizedString(VioTranslationKey.addToCart.rawValue) : variant == .grid ? "" : VLocalizedString(VioTranslationKey.addToCart.rawValue)),
                     style: .primary,
                     size: variant == .list ? .small : variant == .grid ? .small : .medium,
                     isLoading: isAddingToCart,
@@ -444,7 +444,7 @@ public struct VioProductCard: View {
                 .scaleEffect(buttonScale)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: buttonScale)
             } else {
-                Text(RLocalizedString(VioTranslationKey.outOfStock.rawValue))
+                Text(VLocalizedString(VioTranslationKey.outOfStock.rawValue))
                     .font(VioTypography.caption1)
                     .foregroundColor(adaptiveColors.error)
                     .padding(.horizontal, VioSpacing.sm)
@@ -550,7 +550,7 @@ public struct VioProductCard: View {
 #if DEBUG
 #Preview("Grid Variant") {
     VStack(spacing: VioSpacing.lg) {
-        VioProductCard(
+        VProductCard(
             product: MockDataProvider.shared.sampleProducts[0],
             variant: .grid,
             onTap: { print("Product tapped") },
@@ -564,7 +564,7 @@ public struct VioProductCard: View {
 #Preview("List Variant") {
     VStack(spacing: VioSpacing.md) {
         ForEach(MockDataProvider.shared.sampleProducts.prefix(3)) { product in
-            VioProductCard(
+            VProductCard(
                 product: product,
                 variant: .list,
                 onTap: { print("Product \(product.title) tapped") },
@@ -577,7 +577,7 @@ public struct VioProductCard: View {
 }
 
 #Preview("Hero Variant") {
-    VioProductCard(
+    VProductCard(
         product: MockDataProvider.shared.sampleProducts[0],
         variant: .hero,
         showDescription: true,
@@ -592,7 +592,7 @@ public struct VioProductCard: View {
     ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: VioSpacing.sm) {
             ForEach(MockDataProvider.shared.sampleProducts) { product in
-                VioProductCard(
+                VProductCard(
                     product: product,
                     variant: .minimal,
                     onTap: { print("Minimal product \(product.title) tapped") }
@@ -614,7 +614,7 @@ public struct VioProductCard: View {
                 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: VioSpacing.md) {
                     ForEach(MockDataProvider.shared.sampleProducts.prefix(2)) { product in
-                        VioProductCard(product: product, variant: .grid)
+                        VProductCard(product: product, variant: .grid)
                     }
                 }
                 .padding(.horizontal)
@@ -627,7 +627,7 @@ public struct VioProductCard: View {
                 
                 VStack(spacing: VioSpacing.sm) {
                     ForEach(MockDataProvider.shared.sampleProducts.prefix(2)) { product in
-                        VioProductCard(product: product, variant: .list)
+                        VProductCard(product: product, variant: .list)
                     }
                 }
                 .padding(.horizontal)
@@ -638,7 +638,7 @@ public struct VioProductCard: View {
                     .font(VioTypography.headline)
                     .padding(.horizontal)
                 
-                VioProductCard(
+                VProductCard(
                     product: MockDataProvider.shared.sampleProducts[0],
                     variant: .hero,
                     showDescription: true
@@ -654,7 +654,7 @@ public struct VioProductCard: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: VioSpacing.sm) {
                         ForEach(MockDataProvider.shared.sampleProducts) { product in
-                            VioProductCard(product: product, variant: .minimal)
+                            VProductCard(product: product, variant: .minimal)
                         }
                     }
                     .padding(.horizontal)

@@ -17,12 +17,12 @@ import VioTesting
 /// 
 /// // Show overlay
 /// .sheet(item: $selectedProduct) { product in
-///     VioProductDetailOverlay(product: product)
+///     VProductDetailOverlay(product: product)
 ///         .environmentObject(cartManager)
 /// }
 /// ```
 @available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *)
-public struct VioProductDetailOverlay: View {
+public struct VProductDetailOverlay: View {
     
     // MARK: - Properties
     private let product: Product
@@ -127,8 +127,8 @@ public struct VioProductDetailOverlay: View {
                             .frame(height: productDetailConfig.imageHeight ?? 400)
                         
                         VStack(spacing: VioSpacing.md) {
-                            VioCustomLoader(style: .rotate, size: 48)
-                            Text(RLocalizedString(VioTranslationKey.loading.rawValue))
+                            VCustomLoader(style: .rotate, size: 48)
+                            Text(VLocalizedString(VioTranslationKey.loading.rawValue))
                                 .font(VioTypography.body)
                                 .foregroundColor(adaptiveColors.textSecondary)
                         }
@@ -245,7 +245,7 @@ public struct VioProductDetailOverlay: View {
                             Image(systemName: "photo")
                                 .font(.system(size: 48))
                                 .foregroundColor(VioColors.textSecondary)
-                            Text(RLocalizedString(VioTranslationKey.noImageAvailable.rawValue))
+                            Text(VLocalizedString(VioTranslationKey.noImageAvailable.rawValue))
                                 .font(VioTypography.body)
                                 .foregroundColor(VioColors.textSecondary)
                         }
@@ -256,11 +256,11 @@ public struct VioProductDetailOverlay: View {
                     url: URL(string: displayImages[0].url),
                     placeholder: AnyView(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius)
                         .fill(VioColors.background)
-                        .overlay { VioCustomLoader(style: .rotate, size: 30) }),
+                        .overlay { VCustomLoader(style: .rotate, size: 30) }),
                     errorView: AnyView(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius)
                         .fill(VioColors.background)
                         .overlay {
-                            VioCustomLoader(style: .rotate, size: 30)
+                            VCustomLoader(style: .rotate, size: 30)
                         })
                 )
                 .aspectRatio(contentMode: .fill)
@@ -281,7 +281,7 @@ public struct VioProductDetailOverlay: View {
                                 url: URL(string: image.url),
                                 placeholder: AnyView(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius)
                                     .fill(VioColors.background)
-                                    .overlay { VioCustomLoader(style: .rotate, size: 30) }),
+                                    .overlay { VCustomLoader(style: .rotate, size: 30) }),
                                 errorView: AnyView(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius)
                                     .fill(VioColors.background)
                                     .overlay {
@@ -316,12 +316,12 @@ public struct VioProductDetailOverlay: View {
                                         placeholder: AnyView(RoundedRectangle(cornerRadius: VioBorderRadius.small)
                                             .fill(VioColors.background)
                                             .overlay {
-                                                VioCustomLoader(style: .rotate, size: 16)
+                                                VCustomLoader(style: .rotate, size: 16)
                                             }),
                                         errorView: AnyView(RoundedRectangle(cornerRadius: VioBorderRadius.small)
                                             .fill(VioColors.background)
                                             .overlay {
-                                                VioCustomLoader(style: .rotate, size: 16)
+                                                VCustomLoader(style: .rotate, size: 16)
                                             })
                                     )
                                     .aspectRatio(contentMode: .fill)
@@ -376,24 +376,24 @@ public struct VioProductDetailOverlay: View {
                         .font(VioTypography.title3)
                         .foregroundColor(adaptiveColors.priceColor)
                         .onAppear {
-                            print("🎯 [VioProductDetailOverlay] Product detail opened")
-                            print("🎯 [VioProductDetailOverlay] Product: \(product.title)")
-                            print("🎯 [VioProductDetailOverlay] Product ID: \(product.id)")
-                            print("🎯 [VioProductDetailOverlay] Base price amount: \(product.price.amount)")
-                            print("🎯 [VioProductDetailOverlay] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                            print("🎯 [VioProductDetailOverlay] Total variants: \(product.variants.count)")
+                            print("🎯 [VProductDetailOverlay] Product detail opened")
+                            print("🎯 [VProductDetailOverlay] Product: \(product.title)")
+                            print("🎯 [VProductDetailOverlay] Product ID: \(product.id)")
+                            print("🎯 [VProductDetailOverlay] Base price amount: \(product.price.amount)")
+                            print("🎯 [VProductDetailOverlay] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
+                            print("🎯 [VProductDetailOverlay] Total variants: \(product.variants.count)")
                             if let variant = selectedVariant {
-                                print("🎯 [VioProductDetailOverlay] ⚠️ VARIANT SELECTED!")
-                                print("🎯 [VioProductDetailOverlay] Variant title: \(variant.title)")
-                                print("🎯 [VioProductDetailOverlay] Variant ID: \(variant.id)")
-                                print("🎯 [VioProductDetailOverlay] Variant price amount: \(variant.price.amount)")
-                                print("🎯 [VioProductDetailOverlay] Variant price with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
+                                print("🎯 [VProductDetailOverlay] ⚠️ VARIANT SELECTED!")
+                                print("🎯 [VProductDetailOverlay] Variant title: \(variant.title)")
+                                print("🎯 [VProductDetailOverlay] Variant ID: \(variant.id)")
+                                print("🎯 [VProductDetailOverlay] Variant price amount: \(variant.price.amount)")
+                                print("🎯 [VProductDetailOverlay] Variant price with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
                             } else {
-                                print("🎯 [VioProductDetailOverlay] No variant selected, using product price")
+                                print("🎯 [VProductDetailOverlay] No variant selected, using product price")
                             }
-                            print("🎯 [VioProductDetailOverlay] Current price with taxes: \(currentPriceWithTaxes)")
-                            print("🎯 [VioProductDetailOverlay] Currency: \(product.price.currency_code)")
-                            print("🎯 [VioProductDetailOverlay] Formatted display: \(formatted(amount: Double(currentPriceWithTaxes)))")
+                            print("🎯 [VProductDetailOverlay] Current price with taxes: \(currentPriceWithTaxes)")
+                            print("🎯 [VProductDetailOverlay] Currency: \(product.price.currency_code)")
+                            print("🎯 [VProductDetailOverlay] Formatted display: \(formatted(amount: Double(currentPriceWithTaxes)))")
                         }
                     
                     // Compare at price (if available) - use compare at with taxes if available
@@ -424,7 +424,7 @@ public struct VioProductDetailOverlay: View {
         VStack(alignment: .leading, spacing: VioSpacing.sm) {
             if !product.variants.isEmpty {
                 VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.options.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.options.rawValue))
                         .font(VioTypography.caption1)
                         .fontWeight(.semibold)
                         .foregroundColor(VioColors.textPrimary)
@@ -480,7 +480,7 @@ public struct VioProductDetailOverlay: View {
     // MARK: - Quantity Selection Section
     private var quantitySelectionSection: some View {
         VStack(alignment: .leading, spacing: VioSpacing.xs) {
-            Text(RLocalizedString(VioTranslationKey.quantity.rawValue))
+            Text(VLocalizedString(VioTranslationKey.quantity.rawValue))
                 .font(VioTypography.caption1)
                 .fontWeight(.semibold)
                 .foregroundColor(VioColors.textPrimary)
@@ -542,7 +542,7 @@ public struct VioProductDetailOverlay: View {
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: VioSpacing.xs) {
             if let description = product.description, !description.isEmpty {
-                Text(RLocalizedString(VioTranslationKey.productDescription.rawValue))
+                Text(VLocalizedString(VioTranslationKey.productDescription.rawValue))
                     .font(VioTypography.caption1)
                     .fontWeight(.semibold)
                     .foregroundColor(VioColors.textPrimary)
@@ -577,28 +577,28 @@ public struct VioProductDetailOverlay: View {
     // MARK: - Specifications Section
     private var specificationsSection: some View {
         VStack(alignment: .leading, spacing: VioSpacing.xs) {
-            Text(RLocalizedString(VioTranslationKey.productDetails.rawValue))
+            Text(VLocalizedString(VioTranslationKey.productDetails.rawValue))
                 .font(VioTypography.caption1)
                 .fontWeight(.semibold)
                 .foregroundColor(VioColors.textPrimary)
             
             VStack(spacing: VioSpacing.xs) {
                 if !product.sku.isEmpty {
-                    specificationRow(title: RLocalizedString(VioTranslationKey.sku.rawValue), value: product.sku)
+                    specificationRow(title: VLocalizedString(VioTranslationKey.sku.rawValue), value: product.sku)
                 }
                 
                 if let categories = product.categories, !categories.isEmpty {
                     specificationRow(
-                        title: RLocalizedString(VioTranslationKey.category.rawValue), 
+                        title: VLocalizedString(VioTranslationKey.category.rawValue), 
                         value: categories.map(\.name).joined(separator: ", ")
                     )
                 }
                 
                 if !product.supplier.isEmpty {
-                    specificationRow(title: RLocalizedString(VioTranslationKey.supplier.rawValue), value: product.supplier)
+                    specificationRow(title: VLocalizedString(VioTranslationKey.supplier.rawValue), value: product.supplier)
                 }
                 
-                specificationRow(title: RLocalizedString(VioTranslationKey.stock.rawValue), value: "\(selectedVariant?.quantity ?? product.quantity ?? 0) \(RLocalizedString(VioTranslationKey.available.rawValue))")
+                specificationRow(title: VLocalizedString(VioTranslationKey.stock.rawValue), value: "\(selectedVariant?.quantity ?? product.quantity ?? 0) \(VLocalizedString(VioTranslationKey.available.rawValue))")
             }
         }
     }
@@ -655,7 +655,7 @@ public struct VioProductDetailOverlay: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(adaptiveColors.textOnPrimary)
                     } else if isAddingToCart {
-                        VioCustomLoader(style: .rotate, size: 20, color: adaptiveColors.textOnPrimary, speed: 1.5)
+                        VCustomLoader(style: .rotate, size: 20, color: adaptiveColors.textOnPrimary, speed: 1.5)
                     } else {
                         Image(systemName: "cart.badge.plus")
                             .font(.system(size: 18, weight: .semibold))
@@ -663,7 +663,7 @@ public struct VioProductDetailOverlay: View {
                     }
                     
                     // Button text
-                    Text(showCheckmark ? RLocalizedString(VioTranslationKey.completePurchase.rawValue) : isAddingToCart ? RLocalizedString(VioTranslationKey.loading.rawValue) : RLocalizedString(VioTranslationKey.addToCart.rawValue))
+                    Text(showCheckmark ? VLocalizedString(VioTranslationKey.completePurchase.rawValue) : isAddingToCart ? VLocalizedString(VioTranslationKey.loading.rawValue) : VLocalizedString(VioTranslationKey.addToCart.rawValue))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(adaptiveColors.textOnPrimary)
                     
@@ -846,24 +846,24 @@ public struct VioProductDetailOverlay: View {
     
     /// Initialize default options from first variant
     private func initializeDefaultOptions() {
-        print("🔧 [VioProductDetailOverlay] Initializing default options...")
-        print("🔧 [VioProductDetailOverlay] Total variants: \(product.variants.count)")
+        print("🔧 [VProductDetailOverlay] Initializing default options...")
+        print("🔧 [VProductDetailOverlay] Total variants: \(product.variants.count)")
         
         for (index, variant) in product.variants.enumerated() {
-            print("🔧 [VioProductDetailOverlay] Variant[\(index)]: \(variant.title)")
-            print("🔧 [VioProductDetailOverlay]   Price: \(variant.price.amount), with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
+            print("🔧 [VProductDetailOverlay] Variant[\(index)]: \(variant.title)")
+            print("🔧 [VProductDetailOverlay]   Price: \(variant.price.amount), with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
         }
         
         guard let firstVariant = product.variants.first else {
-            print("🔧 [VioProductDetailOverlay] No variants, selectedVariant = nil")
+            print("🔧 [VProductDetailOverlay] No variants, selectedVariant = nil")
             selectedVariant = nil
             return
         }
         
         let sortedOpts = sortedOptions
         guard !sortedOpts.isEmpty else {
-            print("🔧 [VioProductDetailOverlay] No options, selecting first variant: \(firstVariant.title)")
-            print("🔧 [VioProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
+            print("🔧 [VProductDetailOverlay] No options, selecting first variant: \(firstVariant.title)")
+            print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
             selectedVariant = firstVariant
             return
         }
@@ -876,8 +876,8 @@ public struct VioProductDetailOverlay: View {
             }
         }
         
-        print("🔧 [VioProductDetailOverlay] Selecting first variant with options: \(firstVariant.title)")
-        print("🔧 [VioProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
+        print("🔧 [VProductDetailOverlay] Selecting first variant with options: \(firstVariant.title)")
+        print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
         selectedVariant = firstVariant
     }
     
@@ -909,7 +909,7 @@ public struct VioProductDetailOverlay: View {
                 
                 // Success text
                 VStack(spacing: VioSpacing.xs) {
-                    Text(RLocalizedString(VioTranslationKey.completePurchase.rawValue))
+                    Text(VLocalizedString(VioTranslationKey.completePurchase.rawValue))
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(adaptiveColors.surface)
                         .opacity(showSuccessAnimation ? 1.0 : 0.0)
@@ -1062,7 +1062,7 @@ extension View {
                 selectedProduct = MockDataProvider.shared.sampleProducts.first
             }
             .sheet(item: $selectedProduct) { product in
-                VioProductDetailOverlay(product: product)
+                VProductDetailOverlay(product: product)
                     .environmentObject(cartManager)
             }
         }

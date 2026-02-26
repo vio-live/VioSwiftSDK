@@ -9,7 +9,7 @@ import UIKit
 #endif
 
 /// Products grid overlay that slides from bottom (80% height)
-public struct RLiveProductsGridOverlay: View {
+public struct VLiveProductsGridOverlay: View {
     
     // MARK: - Properties
     private let products: [LiveProduct]
@@ -64,7 +64,7 @@ public struct RLiveProductsGridOverlay: View {
         .clipped() // Prevent overflow
         .ignoresSafeArea(.container, edges: .bottom) // Remove white border at bottom
         .sheet(item: $selectedProduct) { product in
-            VioProductDetailOverlay(
+            VProductDetailOverlay(
                 product: product,
                 onAddToCart: { product in
                     Task {
@@ -95,7 +95,7 @@ public struct RLiveProductsGridOverlay: View {
                 Rectangle()
                     .fill(adaptiveColors.surfaceSecondary)
                     .overlay(
-                        VioCustomLoader(style: .rotate, size: 30)
+                        VCustomLoader(style: .rotate, size: 30)
                     )
             }
             .frame(height: 100) // More compact height
@@ -201,6 +201,6 @@ public struct RLiveProductsGridOverlay: View {
 // MARK: - Preview
 
 #Preview {
-    RLiveProductsGridOverlay(products: DemoProductData.featuredProducts)
+    VLiveProductsGridOverlay(products: DemoProductData.featuredProducts)
         .environmentObject(CartManager())
 }

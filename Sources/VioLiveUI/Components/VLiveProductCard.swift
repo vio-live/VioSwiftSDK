@@ -5,7 +5,7 @@ import VioDesignSystem
 import VioUI
 
 /// Live Product Card component - horizontal layout with full configuration integration
-public struct RLiveProductCard: View {
+public struct VLiveProductCard: View {
     
     // MARK: - Properties
     private let product: LiveProduct
@@ -54,7 +54,7 @@ public struct RLiveProductCard: View {
             showProductDetail = true
         }
         .sheet(isPresented: $showProductDetail) {
-            VioProductDetailOverlay(
+            VProductDetailOverlay(
                 product: productForDetail,
                 onAddToCart: { product in
                     // Handle add to cart from detail overlay
@@ -81,7 +81,7 @@ public struct RLiveProductCard: View {
             Rectangle()
                 .fill(adaptiveColors.surfaceSecondary)
                 .overlay(
-                    VioCustomLoader(style: .rotate, size: 20, speed: 1.5)
+                    VCustomLoader(style: .rotate, size: 20, speed: 1.5)
                 )
         }
         .frame(width: 60, height: 60)
@@ -175,10 +175,10 @@ public struct RLiveProductCard: View {
 
 #Preview("Light Mode") {
     VStack(spacing: 20) {
-        RLiveProductCard(product: DemoProductData.featuredProducts[0])
+        VLiveProductCard(product: DemoProductData.featuredProducts[0])
             .environmentObject(CartManager())
         
-        RLiveProductCard(product: DemoProductData.featuredProducts[1])
+        VLiveProductCard(product: DemoProductData.featuredProducts[1])
             .environmentObject(CartManager())
     }
     .padding()
@@ -187,10 +187,10 @@ public struct RLiveProductCard: View {
 
 #Preview("Dark Mode") {
     VStack(spacing: 20) {
-        RLiveProductCard(product: DemoProductData.featuredProducts[0])
+        VLiveProductCard(product: DemoProductData.featuredProducts[0])
             .environmentObject(CartManager())
         
-        RLiveProductCard(product: DemoProductData.featuredProducts[1])
+        VLiveProductCard(product: DemoProductData.featuredProducts[1])
             .environmentObject(CartManager())
     }
     .padding()

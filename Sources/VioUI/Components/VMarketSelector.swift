@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// Displays the list of available markets and allows the user to switch
 /// currency, country and phone prefix based on the selected market.
-public struct RMarketSelector: View {
+public struct VMarketSelector: View {
 
     @EnvironmentObject private var cartManager: CartManager
     @Environment(\.colorScheme) private var colorScheme

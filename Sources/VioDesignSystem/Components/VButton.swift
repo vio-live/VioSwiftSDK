@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Vio Design System Button Component
-public struct VioButton: View {
+public struct VButton: View {
     
     // MARK: - Style
     public enum Style {
@@ -169,35 +169,35 @@ public struct VioButton: View {
 // MARK: - Previews
 #Preview("Button Styles") {
     VStack(spacing: VioSpacing.md) {
-        VioButton(title: "Primary Button", style: .primary) {
+        VButton(title: "Primary Button", style: .primary) {
             print("Primary tapped")
         }
         
-        VioButton(title: "Secondary Button", style: .secondary) {
+        VButton(title: "Secondary Button", style: .secondary) {
             print("Secondary tapped")
         }
         
-        VioButton(title: "Tertiary Button", style: .tertiary) {
+        VButton(title: "Tertiary Button", style: .tertiary) {
             print("Tertiary tapped")
         }
         
-        VioButton(title: "Destructive Button", style: .destructive) {
+        VButton(title: "Destructive Button", style: .destructive) {
             print("Destructive tapped")
         }
         
-        VioButton(title: "Ghost Button", style: .ghost) {
+        VButton(title: "Ghost Button", style: .ghost) {
             print("Ghost tapped")
         }
         
-        VioButton(title: "With Icon", style: .primary, icon: "heart.fill") {
+        VButton(title: "With Icon", style: .primary, icon: "heart.fill") {
             print("Icon button tapped")
         }
         
-        VioButton(title: "Loading", style: .primary, isLoading: true) {
+        VButton(title: "Loading", style: .primary, isLoading: true) {
             print("Loading button tapped")
         }
         
-        VioButton(title: "Disabled", style: .primary, isDisabled: true) {
+        VButton(title: "Disabled", style: .primary, isDisabled: true) {
             print("Disabled button tapped")
         }
     }
@@ -206,15 +206,15 @@ public struct VioButton: View {
 
 #Preview("Button Sizes") {
     VStack(spacing: VioSpacing.md) {
-        VioButton(title: "Small Button", style: .primary, size: .small) {
+        VButton(title: "Small Button", style: .primary, size: .small) {
             print("Small tapped")
         }
         
-        VioButton(title: "Medium Button", style: .primary, size: .medium) {
+        VButton(title: "Medium Button", style: .primary, size: .medium) {
             print("Medium tapped")
         }
         
-        VioButton(title: "Large Button", style: .primary, size: .large) {
+        VButton(title: "Large Button", style: .primary, size: .large) {
             print("Large tapped")
         }
     }
