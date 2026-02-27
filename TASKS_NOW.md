@@ -1,123 +1,54 @@
-# TASKS_NOW — Cursor · VioSwiftSDK
-**Deadline: Lunes mañana**  
-**Objetivo: SDK muestra engagement real desde backend + componentes. Demo lista para TV2 el miércoles.**
+# TASKS_NOW — VioSwiftSDK · Última actualización: 2026-02-27
 
----
+## ✅ Completado
+- Fix 401 ConfigAPIClient ✅
+- Logo sponsor desde backend ✅
+- URLs event-streamer eliminadas ✅
+- integrations.commerce parseado ✅
+- Tipio eliminado completamente ✅
 
-## 🔴 1. Fix bug 401 — PRIMERO
+## 🔴 Hacer ahora — el backend está listo, cerrar el loop en UI
 
-**Archivo:** `Sources/VioCore/Network/ConfigAPIClient.swift`
-
-El SDK usa la Commerce key (`KCXF10Y-...`) para autenticarse en Vio → 401.
-Debe usar la Vio App API Key.
-
-```swift
-// ANTES (incorrecto)
-private var apiKey: String {
-    VioConfiguration.shared.apiKey // ← esta es la Commerce key en el config actual
-}
-
-// DESPUÉS (correcto)
-private var apiKey: String {
-    let campaigns = VioConfiguration.shared.campaignConfiguration
-    if !campaigns.campaignApiKey.isEmpty { return campaigns.campaignApiKey }
-    if !campaigns.campaignAdminApiKey.isEmpty { return campaigns.campaignAdminApiKey }
-    return VioConfiguration.shared.apiKey
-}
+### Datos de test confirmados
+```
+API Key:   viaplay_api_key_0c611e983b314ff8
+Campaign:  35 (Viaplay Demo 2025, sponsor Elkjøp)
+contentId: real-madrid-barcelona-2025-01-24
+País:      NO
+Broadcast: real-madrid-vs-barcelona-2026-02-25 (status: live)
+Polls:     15 (¿Quién ganará?) · 16 (¿Quién marcará el primer gol?)
+WebSocket: wss://api-dev.vio.live/ws/35
 ```
 
-**Verificación:**
-```bash
-curl "https://api-dev.vio.live/v1/campaigns/28/config?apiKey=xxl_api_key_507d4014243d8360"
-# Debe devolver 200 con brand + features + integrations.commerce
-```
+### 1. Verificar que BroadcastContextSetup cierra el loop
+Con los datos de test, el flujo debe:
+1. `GET /v1/sdk/campaigns` → campaña 35
+2. `GET /v1/campaigns/35/config` → brand Elkjøp (logoUrl real)
+3. `BroadcastContextSetup.setup(contentId: "real-madrid-barcelona-2025-01-24", country: "NO")`
+4. → broadcastId: `real-madrid-vs-barcelona-2026-02-25`
+5. → WebSocket `/ws/35`
+6. → `BackendEngagementTabView` muestra polls 15 y 16
 
----
+### 2. Verificar logo Elkjøp en UI
+`CampaignSponsorBadge` debe cargar:
+`https://api-dev.vio.live/objects/uploads/adc65620-01ff-4c66-a7e2-de456495b9d1`
+NO debe caer al fallback de DemoDataManager.
 
-## 🔴 2. Fix logo Elkjøp hardcodeado
-
-**Archivos:**
-- `Demo/Viaplay/Viaplay/Components/Common/CampaignSponsorBadge.swift`
-- `Demo/Viaplay/Viaplay/Components/ViaplayOfferBannerView.swift`
-
-El logo del sponsor (Elkjøp, XXL, etc.) debe venir de `CampaignConfig.brand.logoUrl` que llega del backend — NO del `DemoDataManager.shared.defaultLogo`.
-
-```swift
-// ANTES — fallback a asset local hardcodeado
-Image(DemoDataManager.shared.defaultLogo)
-
-// DESPUÉS — usar brand.logoUrl del backend
-if let logoUrl = campaignManager.currentCampaignConfig?.brand.logoUrl,
-   let url = URL(string: logoUrl) {
-    CachedAsyncImage(url: url) { image in image.resizable() }
-} else {
-    // fallback vacío o placeholder genérico Vio
-    Image(systemName: "photo")
+### 3. Verificar vio-config.json de la demo Viaplay
+```json
+{
+  "apiKey": "viaplay_api_key_0c611e983b314ff8",
+  "campaigns": {
+    "restAPIBaseURL": "https://api-dev.vio.live",
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "autoDiscover": true
+  }
 }
 ```
+Solo una apiKey. Sin campaignAdminApiKey ni campaignApiKey.
 
----
+### 4. Confirmar que demo legacy Barcelona-PSG sigue funcionando
+La demo estática (campaignId: 28) no debe romperse.
 
-## 🔴 3. Eliminar event-streamer URL hardcodeada
-
-**Archivos:**
-- `Sources/VioCastingUI/` → buscar `event-streamer-angelo100.replit.app`
-- `Sources/VioEngagementSystem/` → buscar también
-
-```swift
-// ANTES
-"https://event-streamer-angelo100.replit.app"
-
-// DESPUÉS
-VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
-```
-
----
-
-## 🔴 4. Parsear `integrations.commerce` en CampaignConfig
-
-El modelo ya tiene `DynamicIntegrationsConfig` con `commerce`. Verificar que:
-1. El JSON del backend se parsea correctamente
-2. Si `commerce.enabled == true` → pasar `commerce.apiKey` al módulo Commerce
-3. Si `commerce.enabled == false` → no inicializar Commerce
-
----
-
-## 🟡 5. Cleanup Tipio — ver CLEANUP_TIPIO.md
-
-Eliminar:
-- `Sources/VioLiveShow/Network/TipioApiClient.swift`
-- `Sources/VioLiveShow/Network/TipioWebSocketClient.swift`
-- `Sources/VioLiveShow/Models/TipioModels.swift`
-- Referencias en `ModuleConfigurations.swift`, `ConfigurationLoader.swift`
-- Si `VioLiveShow` queda vacío → evaluar eliminar el módulo
-
----
-
-## 🟡 6. Verificar loop completo de engagement
-
-Con los fixes anteriores, el SDK debe:
-```
-1. GET /v1/sdk/campaigns → campañas activas
-2. GET /v1/campaigns/:id/config → brand (logo real) + features + commerce key
-3. BroadcastContextSetup.setup() → contentId → broadcastId
-4. WebSocket /ws/:campaignId → eventos en tiempo real
-5. BackendEngagementTabView → muestra polls y contests del backend
-```
-
-Probar con:
-- `apiKey: viaplay_api_key_0c611e983b314ff8`
-- `contentId: real-madrid-barcelona-2025-01-24`
-- `country: NO`
-
----
-
-## ✅ Reglas mientras trabajas
-
-- Una sola `apiKey` en `vio-config.json` para todo lo de Vio
-- Commerce key viene del servidor → `integrations.commerce.apiKey`
-- Logging: `VioLogger` siempre, nunca `print()`
-- Legacy (`campaignId: 28`) debe seguir funcionando — no romper
-- Cada fix en un commit separado con mensaje claro
-
-**Cuando termines cada tarea, súbela. Viobot revisa y coordina con Replit.**
+## ⏸ Deferido
+- AnalyticsManager.swift:45 trackAutomaticEvents error — después del lunes
