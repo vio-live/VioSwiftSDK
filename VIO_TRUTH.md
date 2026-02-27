@@ -62,7 +62,7 @@ JWT Bearer Token → `POST /api/auth/token` con `{ reachuUserId }` → token de 
 ### Keys actuales de demo
 - Viaplay API Key: `viaplay_api_key_0c611e983b314ff8`
 - XXL API Key: `xxl_api_key_507d4014243d8360`
-- Commerce Key (Reachu): `KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S` ← entregada dinámicamente por el backend
+- Commerce Key (Tipio, antiguo Reachu): `KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S` ← entregada dinámicamente por el backend
 
 ---
 
