@@ -3,6 +3,7 @@
   "environment": "development",
   "campaigns": {
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "webSocketBaseURL": "https://api-dev.vio.live"
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "autoDiscover": true
   }
 }
