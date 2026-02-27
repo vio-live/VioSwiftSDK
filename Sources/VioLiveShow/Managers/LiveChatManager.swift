@@ -213,9 +213,7 @@ public class LiveChatManager: ObservableObject {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             // Parse the response data
-            let chatMessages = try decoder.decode([TipioChatMessage].self, from: data)
-            
-            // Convert to LiveChatMessage format
+            let chatMessages = try decoder.decode([ChatApiMessage].self, from: data)
             let liveChatMessages = chatMessages.map { $0.toLiveChatMessage() }
 
             if let lastPinnedMessage = liveChatMessages.last(where: { $0.isPinned }) {
@@ -244,53 +242,28 @@ public class LiveChatManager: ObservableObject {
         messages.append(message)
     }
     
-    /// Process incoming chat message from WebSocket
-    public func processIncomingMessage(_ tipioMessage: TipioChatMessageData) {
-        // Convert to LiveChatMessage
-        let liveMessage = tipioMessage.toLiveChatMessage()
-        
-        // Enhanced duplicate detection
-        if isDuplicateMessage(liveMessage) {
-            print("⚠️ [Chat] Duplicate message ignored from \(liveMessage.user.username)")
-            return
-        }
-        
-        print("💬 [Chat] Added incoming message from \(liveMessage.user.username): \(liveMessage.message) \(liveMessage.isPinned)")
-        
-        // Handle pinned messages
-        if liveMessage.isPinned {
-            pinnedMessage = liveMessage
-            print("📌 [Chat] Pinned message updated: \(liveMessage.message)")
+    /// Process incoming chat message (no-op — Tipio WebSocket removed per CLEANUP_TIPIO)
+    public func processIncomingMessage(_ message: LiveChatMessage) {
+        if isDuplicateMessage(message) { return }
+        if message.isPinned {
+            pinnedMessage = message
         } else {
-            messages.append(liveMessage)
-            
-            // Keep only last 100 messages for performance
-            if messages.count > 100 {
-                messages = Array(messages.suffix(100))
-            }
+            messages.append(message)
+            if messages.count > 100 { messages = Array(messages.suffix(100)) }
         }
     }
     
-    /// Enhanced duplicate message detection
     private func isDuplicateMessage(_ message: LiveChatMessage) -> Bool {
-        // Check by user ID, timestamp, and message content for more accurate detection
-        return messages.contains { existingMessage in
-            return existingMessage.user.id == message.user.id &&
-                   abs(existingMessage.timestamp.timeIntervalSince(message.timestamp)) < 1.0 && // Within 1 second
-                   existingMessage.message == message.message
+        messages.contains {
+            $0.user.id == message.user.id &&
+            abs($0.timestamp.timeIntervalSince(message.timestamp)) < 1.0 &&
+            $0.message == message.message
         }
     }
     
-    /// Process delete pinned message event
-    public func processDeletePinnedMessage(_ deleteData: TipioDeletePinnedMessageData) {
-        // Check if the deleted message matches our current pinned message
-        if let currentPinned = pinnedMessage,
-           currentPinned.user.id == deleteData.message.clientId &&
-           abs(currentPinned.timestamp.timeIntervalSince(deleteData.message.messageid)) < 1.0 {
-            
-            pinnedMessage = nil
-            print("🗑️ [Chat] Pinned message removed: \(currentPinned.message)")
-        }
+    /// Process delete pinned message (no-op — Tipio WebSocket removed)
+    public func processDeletePinnedMessage() {
+        pinnedMessage = nil
     }
     
     // MARK: - Private Methods

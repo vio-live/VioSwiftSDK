@@ -17,6 +17,8 @@ public struct LiveStream: Identifiable, Codable, Equatable {
     public let endTime: Date?
     public let featuredProducts: [LiveProduct]
     public let chatMessages: [LiveChatMessage]
+    /// Vimeo live event ID (for hearts API)
+    public let liveStreamId: String?
     
     public init(
         id: String,
@@ -30,7 +32,8 @@ public struct LiveStream: Identifiable, Codable, Equatable {
         startTime: Date = Date(),
         endTime: Date? = nil,
         featuredProducts: [LiveProduct] = [],
-        chatMessages: [LiveChatMessage] = []
+        chatMessages: [LiveChatMessage] = [],
+        liveStreamId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -44,6 +47,7 @@ public struct LiveStream: Identifiable, Codable, Equatable {
         self.endTime = endTime
         self.featuredProducts = featuredProducts
         self.chatMessages = chatMessages
+        self.liveStreamId = liveStreamId
     }
 }
 
@@ -343,4 +347,116 @@ extension Price {
 public enum LiveStreamSocketEvent: Equatable {
     case started(LiveStream)
     case ended(LiveStream)
+}
+
+// MARK: - Livestream Refresh API Response
+
+/// Decodes refresh-HLS API response (generic livestream format). Used for HLS URL refresh.
+struct LivestreamRefreshResponse: Codable {
+    let id: Int
+    let title: String
+    let liveStreamId: String
+    let hls: String?
+    let player: String?
+    let thumbnail: String?
+    let broadcasting: Bool
+    let date: Date
+    let endDate: Date
+    let videoUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, title, liveStreamId, hls, player, thumbnail, broadcasting, date, videoUrl
+        case endDate = "end_date"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        liveStreamId = try c.decode(String.self, forKey: .liveStreamId)
+        hls = try c.decodeIfPresent(String.self, forKey: .hls)
+        player = try c.decodeIfPresent(String.self, forKey: .player)
+        thumbnail = try c.decodeIfPresent(String.self, forKey: .thumbnail)
+        broadcasting = try c.decode(Bool.self, forKey: .broadcasting)
+        videoUrl = try c.decodeIfPresent(String.self, forKey: .videoUrl)
+        let df = ISO8601DateFormatter()
+        df.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        date = try df.date(from: c.decode(String.self, forKey: .date)) ?? Date()
+        endDate = try df.date(from: c.decode(String.self, forKey: .endDate)) ?? Date()
+    }
+    
+    func toLiveStream() -> LiveStream {
+        let name = title.components(separatedBy: " ").first ?? "Live Host"
+        let streamer = LiveStreamer(
+            id: "ls-\(id)",
+            name: name,
+            username: "@\(name.lowercased())",
+            avatarUrl: thumbnail,
+            isVerified: true,
+            followerCount: 0
+        )
+        return LiveStream(
+            id: String(id),
+            title: title,
+            description: nil,
+            streamer: streamer,
+            videoUrl: videoUrl ?? hls ?? player,
+            thumbnailUrl: thumbnail,
+            viewerCount: 0,
+            isLive: broadcasting,
+            startTime: date,
+            endTime: endDate,
+            featuredProducts: [],
+            chatMessages: [],
+            liveStreamId: liveStreamId
+        )
+    }
+}
+
+// MARK: - Chat API Response (livestream interactions API)
+
+/// Chat message from by-channel API (generic format)
+struct ChatApiMessage: Codable {
+    let user: String
+    let text: String
+    let userTime: Date
+    let role: String
+    let pinned: Bool
+    let visible: Bool?
+    let clientId: String
+    let messageid: Date
+    let father: ChatApiMessageFather?
+    let replies: [ChatApiMessage]
+    
+    enum CodingKeys: String, CodingKey {
+        case user, text, userTime, role, pinned, visible, clientId, messageid, father, replies
+    }
+}
+
+struct ChatApiMessageFather: Codable {
+    let user: String
+    let text: String
+    let userTime: Date
+}
+
+extension ChatApiMessage {
+    func toLiveChatMessage() -> LiveChatMessage {
+        let chatRole: ChatUserRole = role.lowercased() == "streamer" ? .streamer : .viewer
+        let chatUser = LiveChatUser(
+            id: clientId,
+            username: user,
+            avatarUrl: nil,
+            isVerified: false,
+            isModerator: chatRole == .streamer,
+            role: chatRole
+        )
+        return LiveChatMessage(
+            user: chatUser,
+            message: text,
+            timestamp: userTime,
+            isStreamerMessage: role.lowercased() == "streamer",
+            isPinned: pinned,
+            reactions: []
+        )
+    }
 }

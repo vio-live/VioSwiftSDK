@@ -437,12 +437,6 @@ public struct LiveShowConfiguration {
     public let enableAutoplay: Bool
     public let enablePictureInPicture: Bool
     
-    // Tipio Integration (livestream — producto SEPARADO de Commerce)
-    // Tipio = servicio de livestream (tipioapp.com). NO es Commerce (ex-Reachu).
-    // La Commerce key viene del backend en integrations.commerce.apiKey, NO de liveShow.tipio.
-    public let tipioApiKey: String
-    public let tipioBaseUrl: String
-    
     // Dynamic Components
     public let campaignId: Int  // 0 = no campaign (SDK works normally)
     
@@ -460,8 +454,6 @@ public struct LiveShowConfiguration {
         videoQuality: VideoQuality = .auto,
         enableAutoplay: Bool = false,
         enablePictureInPicture: Bool = true,
-        tipioApiKey: String = "",
-        tipioBaseUrl: String = "https://stg-dev-microservices.tipioapp.com",
         campaignId: Int = 0  // Default to 0 (no campaign restrictions)
     ) {
         self.autoJoinChat = autoJoinChat
@@ -477,8 +469,6 @@ public struct LiveShowConfiguration {
         self.videoQuality = videoQuality
         self.enableAutoplay = enableAutoplay
         self.enablePictureInPicture = enablePictureInPicture
-        self.tipioApiKey = tipioApiKey
-        self.tipioBaseUrl = tipioBaseUrl
         self.campaignId = campaignId
     }
     

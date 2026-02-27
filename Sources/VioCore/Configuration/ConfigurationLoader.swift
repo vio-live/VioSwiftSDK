@@ -524,11 +524,6 @@ public class ConfigurationLoader {
         // Use streaming.enableAutoplay if available, otherwise fallback to legacy enableAutoplay
         let enableAutoplay = config.streaming?.enableAutoplay ?? config.enableAutoplay ?? false
         
-        // Tipio configuration (livestream only — Commerce key comes from backend integrations.commerce)
-        let tipioApiKey = config.tipio?.apiKey ?? ""
-        let tipioBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
-        
-        // Dynamic components configuration
         // Priority: rootCampaignId > liveShow.campaignId > 0 (default)
         let campaignId = rootCampaignId ?? config.campaignId ?? 0
         
@@ -536,8 +531,6 @@ public class ConfigurationLoader {
             autoJoinChat: autoJoinChat,
             enableShoppingDuringStream: enableShopping,
             enableAutoplay: enableAutoplay,
-            tipioApiKey: tipioApiKey,
-            tipioBaseUrl: tipioBaseUrl,
             campaignId: campaignId
         )
     }
@@ -910,7 +903,6 @@ private struct JSONUIConfiguration: Codable {
 }
 
 private struct JSONLiveShowConfiguration: Codable {
-    let tipio: JSONTipioConfiguration?
     let vimeo: JSONVimeoConfiguration?
     let realTime: JSONRealTimeConfiguration?
     let components: JSONComponentsConfiguration?
@@ -989,13 +981,6 @@ private struct JSONBrandConfiguration: Codable {
 private struct JSONEngagementConfiguration: Codable {
     let demoMode: Bool?
     let useDynamicConfig: Bool?
-}
-
-private struct JSONTipioConfiguration: Codable {
-    let apiKey: String?
-    let baseUrl: String?
-    let enableWebhooks: Bool?
-    let webhookSecret: String?
 }
 
 private struct JSONVimeoConfiguration: Codable {

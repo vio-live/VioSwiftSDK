@@ -732,10 +732,9 @@ public struct VLiveShowFullScreenOverlay: View {
                 }
                 
                 do {
-                    // Decodifica el objeto stream actualizado
                     let decoder = JSONDecoder()
-                    let refreshedTipioStream = try decoder.decode(TipioLiveStream.self, from: data)
-                    let refreshedStream = refreshedTipioStream.toLiveStream()
+                    let refreshed = try decoder.decode(LivestreamRefreshResponse.self, from: data)
+                    let refreshedStream = refreshed.toLiveStream()
                     
                     print("✅ [LiveShow] Successfully refreshed stream")
                     print("🔗 [LiveShow] New video URL: \(refreshedStream.videoUrl ?? "nil")")
