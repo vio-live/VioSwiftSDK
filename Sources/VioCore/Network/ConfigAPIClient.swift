@@ -8,7 +8,8 @@ struct ConfigAPIClient {
     }
     
     private var apiKey: String {
-        VioConfiguration.shared.apiKey
+        let campaignKey = VioConfiguration.shared.campaignConfiguration.campaignApiKey
+        return campaignKey.isEmpty ? VioConfiguration.shared.apiKey : campaignKey
     }
     
     /// Fetch campaign configuration
@@ -16,32 +17,37 @@ struct ConfigAPIClient {
         campaignId: Int,
         broadcastId: String? = nil
     ) async throws -> CampaignConfig {
-        var urlString = "\(campaignRestAPIBaseURL)/v1/campaigns/\(campaignId)/config?apiKey=\(apiKey)"
+        let currentApiKey = apiKey
+        var urlString = "\(campaignRestAPIBaseURL)/v1/campaigns/\(campaignId)/config?apiKey=\(currentApiKey)"
         if let broadcastId = broadcastId {
             urlString += "&broadcastId=\(broadcastId)"
             // Also include matchId for backward compatibility with backend
             urlString += "&matchId=\(broadcastId)"
         }
-        
+
         guard let url = URL(string: urlString) else {
             throw ConfigAPIError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ConfigAPIError.invalidResponse
         }
-        
+
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                let keyPrefix = String(currentApiKey.prefix(8))
+                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/campaigns/\(campaignId)/config — apiKey used: \(keyPrefix)...")
+            }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }
-        
+
         let decoder = JSONDecoder()
         return try decoder.decode(CampaignConfig.self, from: data)
     }
@@ -56,29 +62,34 @@ struct ConfigAPIClient {
     
     /// Fetch engagement configuration
     func fetchEngagementConfig(broadcastId: String) async throws -> DynamicEngagementConfig {
-        var urlString = "\(campaignRestAPIBaseURL)/v1/engagement/config?apiKey=\(apiKey)&broadcastId=\(broadcastId)"
+        let currentApiKey = apiKey
+        var urlString = "\(campaignRestAPIBaseURL)/v1/engagement/config?apiKey=\(currentApiKey)&broadcastId=\(broadcastId)"
         // Also include matchId for backward compatibility with backend
         urlString += "&matchId=\(broadcastId)"
-        
+
         guard let url = URL(string: urlString) else {
             throw ConfigAPIError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ConfigAPIError.invalidResponse
         }
-        
+
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                let keyPrefix = String(currentApiKey.prefix(8))
+                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/engagement/config — apiKey used: \(keyPrefix)...")
+            }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }
-        
+
         let decoder = JSONDecoder()
         let responseWrapper = try decoder.decode(EngagementConfigResponse.self, from: data)
         return responseWrapper.engagement
@@ -95,7 +106,8 @@ struct ConfigAPIClient {
         campaignId: Int? = nil,
         broadcastId: String? = nil
     ) async throws -> DynamicLocalizationConfig {
-        var urlString = "\(campaignRestAPIBaseURL)/v1/localization/\(language)?apiKey=\(apiKey)"
+        let currentApiKey = apiKey
+        var urlString = "\(campaignRestAPIBaseURL)/v1/localization/\(language)?apiKey=\(currentApiKey)"
         if let campaignId = campaignId {
             urlString += "&campaignId=\(campaignId)"
         }
@@ -104,26 +116,30 @@ struct ConfigAPIClient {
             // Also include matchId for backward compatibility with backend
             urlString += "&matchId=\(broadcastId)"
         }
-        
+
         guard let url = URL(string: urlString) else {
             throw ConfigAPIError.invalidURL
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 10.0
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw ConfigAPIError.invalidResponse
         }
-        
+
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
+                let keyPrefix = String(currentApiKey.prefix(8))
+                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/localization/\(language) — apiKey used: \(keyPrefix)...")
+            }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }
-        
+
         let decoder = JSONDecoder()
         return try decoder.decode(DynamicLocalizationConfig.self, from: data)
     }
