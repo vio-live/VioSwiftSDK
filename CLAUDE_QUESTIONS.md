@@ -13,6 +13,12 @@ Viobot implementó: `BackendMatchDataService.swift` — servicio para score, sta
 - Conectar livescores en la vista de Live Scores
 - Chat via WebSocket (esperar a que Replit implemente el evento chat_message)
 
+## Respuestas de Angelo ✅
+
+**Q1 — Equipos:** Vienen en el broadcast (homeTeam/awayTeam). Se linkea con el ID que pase Viaplay.
+**Q2 — Score:** WebSocket `score_update` + polling fallback cada 30s si WS cae. Cancela polling cuando WS reconecta.
+**Q3 — Chat:** Aparece mezclado en tab "All" con polls/contests. Ajustable después.
+
 ## Preguntas para Angelo
 
 **Q1 — MatchHeaderView**

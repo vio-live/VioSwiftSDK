@@ -105,6 +105,8 @@ public struct BroadcastValidationResult: Codable, Equatable {
     public let status: String?
     public let campaignId: Int?
     public let websocketChannel: String?
+    public let homeTeam: BroadcastTeam?
+    public let awayTeam: BroadcastTeam?
 
     public init(
         hasEngagement: Bool,
@@ -112,7 +114,9 @@ public struct BroadcastValidationResult: Codable, Equatable {
         broadcastName: String? = nil,
         status: String? = nil,
         campaignId: Int? = nil,
-        websocketChannel: String? = nil
+        websocketChannel: String? = nil,
+        homeTeam: BroadcastTeam? = nil,
+        awayTeam: BroadcastTeam? = nil
     ) {
         self.hasEngagement = hasEngagement
         self.broadcastId = broadcastId
@@ -120,6 +124,20 @@ public struct BroadcastValidationResult: Codable, Equatable {
         self.status = status
         self.campaignId = campaignId
         self.websocketChannel = websocketChannel
+        self.homeTeam = homeTeam
+        self.awayTeam = awayTeam
+    }
+}
+
+public struct BroadcastTeam: Codable, Equatable {
+    public let name: String
+    public let logoUrl: String?
+    public let externalId: String? // ID del equipo en el sistema del partner (Viaplay, TV2)
+    
+    public init(name: String, logoUrl: String? = nil, externalId: String? = nil) {
+        self.name = name
+        self.logoUrl = logoUrl
+        self.externalId = externalId
     }
 }
 

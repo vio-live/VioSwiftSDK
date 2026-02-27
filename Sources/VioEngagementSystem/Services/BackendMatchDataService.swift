@@ -76,20 +76,46 @@ public class BackendMatchDataService: ObservableObject {
         return VioConfiguration.shared.apiKey
     }
     
+    private var pollingTask: Task<Void, Never>?
+    private var currentBroadcastId: String?
+    private var currentCountry: String = "NO"
+    
     private init() {}
     
     // MARK: - Public API
     
     public func loadAll(broadcastId: String, country: String = "NO") async {
+        currentBroadcastId = broadcastId
+        currentCountry = country
         isLoading = true
         async let scoreTask = fetchScore(broadcastId: broadcastId)
         async let statsTask = fetchStats(broadcastId: broadcastId)
         async let liveScoresTask = fetchLiveScores(country: country)
-        
         score = await scoreTask
         stats = await statsTask
         liveScores = await liveScoresTask
         isLoading = false
+    }
+    
+    /// Start polling fallback (call when WebSocket disconnects)
+    public func startPolling(interval: TimeInterval = 30) {
+        guard let broadcastId = currentBroadcastId else { return }
+        stopPolling()
+        VioLogger.debug("Starting score polling every \(Int(interval))s", component: "BackendMatchDataService")
+        pollingTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                score = await fetchScore(broadcastId: broadcastId)
+            }
+        }
+    }
+    
+    /// Stop polling fallback (call when WebSocket reconnects)
+    public func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+        VioLogger.debug("Score polling stopped", component: "BackendMatchDataService")
     }
     
     // MARK: - Score
