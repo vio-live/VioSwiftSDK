@@ -34,9 +34,8 @@ struct ViaplayOfferBannerView: View {
                 // Left column: Logo, title, subtitle, countdown
                 VStack(alignment: .leading, spacing: 4) {
                     // Logo from backend: brand.logoUrl (CampaignConfig) o campaignLogo
-                    let logoUrl = VioConfiguration.shared.dynamicBrandConfig?.logoUrl
-                        ?? campaignManager.currentCampaign?.campaignLogo
-                    if let urlString = logoUrl, let url = URL(string: urlString) {
+                    if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl ?? campaignManager.currentCampaign?.campaignLogo,
+                       let url = URL(string: urlString) {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:

@@ -36,9 +36,8 @@ struct CampaignSponsorBadge: View {
                 .foregroundColor(.white.opacity(0.8))
             
             // Logo from backend: brand.logoUrl (CampaignConfig) o campaignLogo (campañas)
-            let logoUrl = VioConfiguration.shared.dynamicBrandConfig?.logoUrl
-                ?? campaignManager.currentCampaign?.campaignLogo
-            if let urlString = logoUrl, let url = URL(string: urlString) {
+            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl ?? campaignManager.currentCampaign?.campaignLogo,
+               let url = URL(string: urlString) {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
