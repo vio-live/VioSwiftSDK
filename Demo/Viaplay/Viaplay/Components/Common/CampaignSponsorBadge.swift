@@ -35,23 +35,23 @@ struct CampaignSponsorBadge: View {
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(.white.opacity(0.8))
             
-            // Campaign logo from CampaignManager with caching
-            if let logoUrl = campaignManager.currentCampaign?.campaignLogo, let url = URL(string: logoUrl) {
+            // Logo from backend: brand.logoUrl (CampaignConfig) o campaignLogo (campañas)
+            let logoUrl = VioConfiguration.shared.dynamicBrandConfig?.logoUrl
+                ?? campaignManager.currentCampaign?.campaignLogo
+            if let urlString = logoUrl, let url = URL(string: urlString) {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 } placeholder: {
-                    // Only show placeholder if not cached (will be instant if cached)
-                    Image(DemoDataManager.shared.defaultLogo)
+                    Image(systemName: "photo")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 }
             } else {
-                // Fallback to hardcoded logo if no campaign logo
-                Image(DemoDataManager.shared.defaultLogo)
+                Image(systemName: "photo")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: maxWidth, maxHeight: maxHeight)

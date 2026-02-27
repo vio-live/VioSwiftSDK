@@ -33,8 +33,10 @@ struct ViaplayOfferBannerView: View {
             HStack(alignment: .center, spacing: 16) {
                 // Left column: Logo, title, subtitle, countdown
                 VStack(alignment: .leading, spacing: 4) {
-                    // Campaign logo from CampaignManager
-                    if let logoUrl = campaignManager.currentCampaign?.campaignLogo, let url = URL(string: logoUrl) {
+                    // Logo from backend: brand.logoUrl (CampaignConfig) o campaignLogo
+                    let logoUrl = VioConfiguration.shared.dynamicBrandConfig?.logoUrl
+                        ?? campaignManager.currentCampaign?.campaignLogo
+                    if let urlString = logoUrl, let url = URL(string: urlString) {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:
@@ -45,21 +47,15 @@ struct ViaplayOfferBannerView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(height: 16)
-                            case .failure:
-                                Image(DemoDataManager.shared.defaultLogo)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(height: 16)
-                            @unknown default:
-                                Image(DemoDataManager.shared.defaultLogo)
+                            case .failure, @unknown default:
+                                Image(systemName: "photo")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(height: 16)
                             }
                         }
                     } else {
-                        // Fallback to hardcoded logo if no campaign logo
-                        Image(DemoDataManager.shared.defaultLogo)
+                        Image(systemName: "photo")
                             .resizable()
                             .scaledToFit()
                             .frame(height: 16)
