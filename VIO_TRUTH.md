@@ -7,20 +7,21 @@
 ## 📝 PROGRESO CURSOR (2026-01-23)
 
 ### Completado
-- ✅ **OBSERVACIONES_Y_PREGUNTAS.md** — Actualizado: Commerce = ex-Reachu, Tipio = livestream (productos separados).
-- ✅ **URLs legacy** — Reemplazado `event-streamer-angelo100.replit.app` por `VioConfiguration.shared.campaignConfiguration.restAPIBaseURL` en `OfferBannerModels.swift` y `EventStreamerManager.swift`.
-- ✅ **CampaignConfig + integrations** — Añadidos `IntegrationsConfig`, `DynamicCommerceConfig`, campo `integrations` en `CampaignConfig`, `updateDynamicCommerceConfig()` en `VioConfiguration`, uso en `CampaignManager`.
-- ✅ **LiveShowConfiguration** — Documentado que `tipioApiKey`/`tipioBaseUrl` son para Tipio (livestream), no Commerce; la Commerce key viene de `integrations.commerce.apiKey`.
-- ✅ **TipioApiClient** — Documentada inconsistencia: el fallback `KCXF10Y-...` es la Commerce key, no Tipio. Tipio y Commerce son productos distintos. Pendiente confirmar con backend si comparten infra.
+- ✅ **Fix 401** — ConfigAPIClient usa Vio App API Key (campaignApiKey → campaignAdminApiKey → apiKey). Commerce key nunca en config estático.
+- ✅ **Logo sponsor** — CampaignSponsorBadge y ViaplayOfferBannerView usan `brand.logoUrl` del backend (dynamicBrandConfig) en lugar de DemoDataManager.defaultLogo.
+- ✅ **URLs legacy** — Reemplazado `event-streamer-angelo100.replit.app` por `restAPIBaseURL` en OfferBannerModels y EventStreamerManager.
+- ✅ **CampaignConfig + integrations** — IntegrationsConfig, DynamicCommerceConfig, updateDynamicCommerceConfig en VioConfiguration y CampaignManager.
+- ✅ **Cleanup Tipio** (CLEANUP_TIPIO.md) — Eliminados TipioApiClient, TipioWebSocketClient, TipioModels. LiveShowManager sin Tipio (stubs no-op). LivestreamRefreshResponse y ChatApiMessage en LiveStreamModels para refresh HLS y chat. LiveStream.liveStreamId para hearts API.
 
 ### Pendiente
 - Verificar que demo Barcelona–PSG siga funcionando.
 - Backend (Replit): asegurar que devuelve `integrations.commerce` en `/v1/campaigns/:id/config` (no `integrations.tipio`).
+- **Build:** `AnalyticsManager.swift:45` — error `extra argument 'trackAutomaticEvents' in call` (pre-existente, no relacionado con Tipio cleanup).
 
 ### Preguntas abiertas
 1. ¿El backend ya devuelve `integrations.commerce.apiKey` en `GET /v1/campaigns/:id/config`?
-2. ¿Tipio y Commerce comparten infra (tipioapp.com) o son completamente separados?
-3. ¿El SDK debe priorizar flujo contentId → broadcast sobre legacy (campaignId fijo)?
+2. ¿El SDK debe priorizar flujo contentId → broadcast sobre legacy (campaignId fijo)?
+3. ¿Corregir el error de AnalyticsManager (trackAutomaticEvents) o es por versión de Mixpanel?
 
 ---
 
