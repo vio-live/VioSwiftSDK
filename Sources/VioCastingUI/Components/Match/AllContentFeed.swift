@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import VioCore
 import VioEngagementUI
 
 struct AllContentFeed: View {
@@ -345,7 +346,8 @@ struct AllContentFeed: View {
                     TimelinePollCard(
                         poll: pollEvent,
                         onVote: { optionId in
-                            print("📊 Usuario votó: \(optionId) en poll: \(pollEvent.id)")
+                            onPollVote(pollEvent.id, optionId)
+                            VioLogger.debug("Poll vote: \(optionId) in poll: \(pollEvent.id)", component: "AllContentFeed")
                         }
                     )
                     .transition(.asymmetric(
@@ -360,7 +362,7 @@ struct AllContentFeed: View {
                     CastingProductCardWrapper(
                         productEvent: productEvent,
                         onViewProduct: {
-                            print("🛒 Usuario ve Elkjøp product: \(productEvent.id)")
+                            VioLogger.debug("Product viewed: \(productEvent.id)", component: "AllContentFeed")
                         }
                     )
                     .transition(.asymmetric(
@@ -375,7 +377,7 @@ struct AllContentFeed: View {
                     CastingContestCardWrapper(
                         contest: contest,
                         onParticipate: {
-                            print("🏆 Usuario participa en Elkjøp contest: \(contest.id)")
+                            VioLogger.debug("Contest participation: \(contest.id)", component: "AllContentFeed")
                         }
                     )
                     .transition(.asymmetric(
@@ -397,7 +399,7 @@ struct AllContentFeed: View {
                             question: announcement.metadata?["question"],
                             drawTime: announcement.metadata?["drawTime"],
                             onParticipate: {
-                                print("🏆 Usuario participa en concurso!")
+                                VioLogger.debug("Contest participation: \(announcement.id)", component: "AllContentFeed")
                             }
                         )
                         .transition(.asymmetric(

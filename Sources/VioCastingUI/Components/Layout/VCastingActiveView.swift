@@ -91,7 +91,7 @@ public struct VCastingActiveView: View {
                         },
                         duration: poll.duration,
                         onVote: { optionId in
-                            print("📊 [Poll] Votado: \(optionId)")
+                            VioLogger.debug("Poll vote: \(optionId)", component: "VCastingActiveView")
                         },
                         onDismiss: {
                             eventStreamer.currentPoll = nil
@@ -108,7 +108,7 @@ public struct VCastingActiveView: View {
                             discountPercentage: nil
                         ),
                         onAddToCart: {
-                            print("🛍️ Producto agregado al carrito")
+                            VioLogger.debug("Product added to cart", component: "VCastingActiveView")
                         },
                         onDismiss: {
                             eventStreamer.currentProduct = nil
@@ -129,7 +129,7 @@ public struct VCastingActiveView: View {
                         brandIcon: brandConfig.iconAsset,
                         displayTime: contest.deadline,
                         onParticipate: {
-                            print("🎁 [Contest] Usuario se unió")
+                            VioLogger.debug("Contest joined", component: "VCastingActiveView")
                             eventStreamer.currentContest = nil
                         }
                     )
@@ -166,8 +166,10 @@ public struct VCastingActiveView: View {
         .navigationBarHidden(true)
         .environmentObject(effectiveSessionContext)
         .task {
-            // Set broadcast context for auto-discovery and context-aware campaigns
-            await setupBroadcastContext()
+            await BroadcastContextSetup.setup(
+                sessionContext: effectiveSessionContext,
+                fallbackBroadcastContext: { match.toBroadcastContext(channelId: VioConfiguration.shared.campaignConfiguration.channelId) }
+            )
         }
         .onAppear {
             eventStreamer.connect()
@@ -529,69 +531,6 @@ public struct VCastingActiveView: View {
         sessionContext ?? defaultSessionContext
     }
 
-    /// Sets up broadcast context for auto-discovery and context-aware campaigns.
-    /// Uses broadcastContext from VioSessionContext when provided (e.g. broadcastId from backend).
-    /// When contentId + country are set, validates via GET /v1/sdk/broadcast before showing engagement.
-    private func setupBroadcastContext() async {
-        let config = VioConfiguration.shared
-        let autoDiscover = config.campaignConfiguration.autoDiscover
-
-        // ContentId flow: validate before discoverCampaigns/loadEngagement
-        if let contentId = effectiveSessionContext.contentId, let country = effectiveSessionContext.country {
-            let result = await BroadcastValidationService.validate(contentId: contentId, country: country)
-            print("🎯 [VCastingActiveView] contentId validation: hasEngagement=\(result.hasEngagement)")
-
-            if !result.hasEngagement {
-                print("🎯 [VCastingActiveView] No engagement for contentId=\(contentId), skipping discoverCampaigns and loadEngagement")
-                return
-            }
-
-            guard let broadcastId = result.broadcastId else {
-                print("🎯 [VCastingActiveView] hasEngagement=true but no broadcastId in response")
-                return
-            }
-
-            let broadcastContext = BroadcastContext(
-                broadcastId: broadcastId,
-                broadcastName: result.broadcastName,
-                startTime: nil,
-                channelId: nil,
-                metadata: nil
-            )
-            effectiveSessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
-
-            print("🎯 [VCastingActiveView] contentId flow: using broadcastId=\(broadcastId)")
-            if autoDiscover {
-                await campaignManager.discoverCampaigns(broadcastId: broadcastId)
-            }
-            await campaignManager.setBroadcastContext(broadcastContext)
-            await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true)
-            return
-        }
-
-        // Legacy flow: broadcastContext from session or match
-        let broadcastContext: BroadcastContext
-        if let ctx = effectiveSessionContext.broadcastContext {
-            broadcastContext = ctx
-        } else {
-            broadcastContext = match.toBroadcastContext(channelId: config.campaignConfiguration.channelId)
-            effectiveSessionContext.configure(broadcastContext: broadcastContext)
-        }
-
-        print("🎯 [VCastingActiveView] Setting up broadcast context: \(broadcastContext.broadcastId)")
-
-        if autoDiscover {
-            print("🎯 [VCastingActiveView] Auto-discovery enabled, discovering campaigns for broadcast: \(broadcastContext.broadcastId)")
-            await campaignManager.discoverCampaigns(broadcastId: broadcastContext.broadcastId)
-            await campaignManager.setBroadcastContext(broadcastContext)
-        } else {
-            print("🎯 [VCastingActiveView] Legacy mode, setting broadcast context")
-            await campaignManager.setBroadcastContext(broadcastContext)
-        }
-
-        await EngagementManager.shared.loadEngagement(for: broadcastContext)
-    }
-    
     // MARK: - Video Sync Setup
     
     /// Sets up video synchronization with VideoSyncManager

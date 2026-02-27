@@ -111,7 +111,8 @@ public struct RelatedTeam: Identifiable {
 }
 
 // MARK: - BroadcastContext Helper
-extension Match {
+
+extension Match: BroadcastContextProvider {
     /// Creates a BroadcastContext from Match for SDK integration
     public func toBroadcastContext(channelId: Int? = nil) -> BroadcastContext {
         let broadcastId = generateBroadcastId()

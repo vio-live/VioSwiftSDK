@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct HighlightSummaryView: View {
     let highlights: [HighlightTimelineEvent]
@@ -28,22 +29,16 @@ struct HighlightSummaryView: View {
     private var summaryEvents: [SummaryEvent] {
         var events: [SummaryEvent] = []
         
-        print("🎬 [HighlightSummary] Current video time: \(currentVideoTime)s (\(displayMinute)')")
-        print("🎬 [HighlightSummary] Total match events: \(matchEvents.count)")
-        
         // Filter by videoTimestamp (same as All tab)
         let visibleEvents = matchEvents.filter { 
             TimeInterval($0.minute * 60) <= currentVideoTime 
         }
-        
-        print("🎬 [HighlightSummary] Visible events after filter: \(visibleEvents.count)")
         
         // Add match events (goals, cards, subs)
         for matchEvent in visibleEvents {
             // Only show important events (goals, cards, subs)
             switch matchEvent.type {
             case .goal, .yellowCard, .redCard, .substitution:
-                print("🎬 [HighlightSummary] Adding event: \(matchEvent.minute)' \(matchEvent.type)")
                 events.append(SummaryEvent(
                     id: matchEvent.id.uuidString,
                     minute: matchEvent.minute,
@@ -60,7 +55,6 @@ struct HighlightSummaryView: View {
             }
         }
         
-        print("🎬 [HighlightSummary] Total summary events: \(events.count)")
         return events
     }
     

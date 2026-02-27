@@ -25,14 +25,6 @@ struct VgApp: App {
         print("✅ [VG] Vio SDK configured successfully")
         print("🎨 [VG] Theme: \(VioConfiguration.shared.theme.name)")
         print("🎨 [VG] Mode: \(VioConfiguration.shared.theme.mode)")
-
-        // MARK: - Vio Diagnostic Logs
-        let cfg = VioConfiguration.shared
-        let apiKeyMasked = cfg.apiKey.isEmpty ? "(empty)" : String(repeating: "*", count: max(0, cfg.apiKey.count - 4)) + cfg.apiKey.suffix(4)
-        print("🔧 [Vio][Config] environment=\(cfg.environment.rawValue)")
-        print("🔧 [Vio][Config] graphQLURL=\(cfg.environment.graphQLURL)")
-        print("🔧 [Vio][Config] apiKey=\(apiKeyMasked)")
-        print("🔧 [Vio][Market] country=\(cfg.marketConfiguration.countryCode) currency=\(cfg.marketConfiguration.currencyCode)")
     }
 
     var body: some Scene {

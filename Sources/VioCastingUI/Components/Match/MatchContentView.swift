@@ -6,11 +6,14 @@
 //
 
 import SwiftUI
+import VioCore
+import VioEngagementSystem
 
 struct MatchContentView: View {
     let selectedTab: MatchTab
     @ObservedObject var viewModel: LiveMatchViewModel
-    
+    @EnvironmentObject private var sessionContext: VioSessionContext
+
     var body: some View {
         GeometryReader { geometry in
             Group {
@@ -125,6 +128,9 @@ struct MatchContentView: View {
                     
                 case .statistics:
                     MatchStatsView(statistics: viewModel.matchStatistics)
+
+                case .engagement:
+                    BackendEngagementTabView(sessionContext: sessionContext)
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)

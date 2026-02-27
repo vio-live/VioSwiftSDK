@@ -251,7 +251,7 @@ struct CastingContestModal: View {
         // Simulate submission
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             isSubmitting = false
-            print("✅ Contest submitted: \(contest.id), Phone: \(phoneNumber)")
+            VioLogger.debug("Contest submitted: \(contest.id)", component: "VCastingContestModal")
             onDismiss()
         }
     }

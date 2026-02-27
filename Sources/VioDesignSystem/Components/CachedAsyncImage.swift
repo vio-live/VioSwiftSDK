@@ -187,7 +187,11 @@ public class ImageLoader: ObservableObject {
                 try fileManager.removeItem(at: fileURL)
                 VioLogger.debug("Cleared cache for logo: \(url.absoluteString)", component: "ImageLoader")
             } catch {
-                VioLogger.warning("Failed to remove cached logo file: \(error)", component: "ImageLoader")
+                // File may already be gone (e.g. after full cache clear) - only warn for unexpected errors
+                let nsError = error as NSError
+                if nsError.domain != NSPOSIXErrorDomain || nsError.code != 2 { // 2 = ENOENT (no such file)
+                    VioLogger.warning("Failed to remove cached logo file: \(error)", component: "ImageLoader")
+                }
             }
         }
     }

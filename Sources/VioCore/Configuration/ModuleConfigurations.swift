@@ -486,17 +486,14 @@ public struct LiveShowConfiguration {
 // MARK: - Campaign Configuration
 
 /// Configuration for Campaign endpoints
+/// Uses single Vio App API Key (apiKey root) for all SDK endpoints.
+/// Commerce key is delivered dynamically by backend in GET /v1/campaigns/:id/config → integrations.commerce.apiKey
 public struct CampaignConfiguration {
     public let webSocketBaseURL: String  // WebSocket endpoint for campaigns (e.g., "https://api-dev.vio.live")
     public let restAPIBaseURL: String    // REST API endpoint for campaigns (same as WebSocket base URL)
-    /// API key for campaign admin endpoints (different from SDK API key)
-    /// Used for endpoints like GET /v1/sdk/config and GET /v1/offers
-    /// Configured in vio-config.json under "campaigns.campaignAdminApiKey"
-    /// Only needed if autoDiscover is false (legacy mode)
-    public let campaignAdminApiKey: String
-    /// API key for SDK/campaigns endpoints (GET /v1/sdk/broadcast, GET /v1/sdk/campaigns)
-    /// When set, used instead of apiKey for contentId validation and campaign discovery
-    /// Configured in vio-config.json under "campaigns.campaignApiKey"
+    /// API key for SDK/campaigns endpoints (GET /v1/sdk/broadcast, GET /v1/sdk/campaigns, GET /v1/campaigns/:id/config)
+    /// When set, used instead of root apiKey. Typically same as apiKey (Vio App Key).
+    /// Configured in vio-config.json under "campaigns.campaignApiKey" — optional; root apiKey is used if empty
     public let campaignApiKey: String
     /// Enable auto-discovery of campaigns using only the Vio SDK API key
     /// When true, campaigns are discovered automatically via GET /v1/sdk/campaigns
@@ -508,14 +505,12 @@ public struct CampaignConfiguration {
     public init(
         webSocketBaseURL: String = "https://api-dev.vio.live",
         restAPIBaseURL: String = "https://api-dev.vio.live",
-        campaignAdminApiKey: String = "",
         campaignApiKey: String = "",
         autoDiscover: Bool = false,
         channelId: Int? = nil
     ) {
         self.webSocketBaseURL = webSocketBaseURL
         self.restAPIBaseURL = restAPIBaseURL
-        self.campaignAdminApiKey = campaignAdminApiKey
         self.campaignApiKey = campaignApiKey
         self.autoDiscover = autoDiscover
         self.channelId = channelId

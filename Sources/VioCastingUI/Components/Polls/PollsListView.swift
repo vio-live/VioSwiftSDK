@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import VioCore
 import VioDesignSystem
 
 struct PollsListView: View {
@@ -85,7 +86,7 @@ struct PollsListView: View {
                             title: contest.title.replacingOccurrences(of: "🏆 ", with: ""),
                             prize: contest.metadata?["prize"] ?? "Premie",
                             onParticipate: {
-                                print("🏆 Usuario participa!")
+                                VioLogger.debug("Contest participate", component: "PollsListView")
                             }
                         )
                         .padding(.horizontal, 16)
@@ -97,7 +98,7 @@ struct PollsListView: View {
                         TimelinePollCard(
                             poll: poll,
                             onVote: { optionId in
-                                print("📊 Usuario votó: \(optionId)")
+                                VioLogger.debug("Poll vote: \(optionId)", component: "PollsListView")
                             }
                         )
                         .padding(.horizontal, 16)

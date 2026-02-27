@@ -6,6 +6,7 @@
 import SwiftUI
 import VioCore
 import VioDesignSystem
+import VioEngagementSystem
 
 /// Main live match view - refactored using small, reusable components
 public struct LiveMatchView: View {
@@ -82,6 +83,12 @@ public struct LiveMatchView: View {
         }
         .navigationBarHidden(true)
         .environmentObject(effectiveSessionContext)
+        .task {
+            await BroadcastContextSetup.setup(
+                sessionContext: effectiveSessionContext,
+                fallbackBroadcastContext: { match.toBroadcastContext(channelId: VioConfiguration.shared.campaignConfiguration.channelId) }
+            )
+        }
         .onAppear {
             viewModel.onAppear()
         }

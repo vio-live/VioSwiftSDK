@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct ShareHighlightModal: View {
     let highlightTitle: String
@@ -147,7 +148,7 @@ struct ShareHighlightModal: View {
     // MARK: - Actions
     
     private func downloadVideo() {
-        print("📥 Downloading video: \(videoURL)")
+        VioLogger.debug("Downloading video: \(videoURL)", component: "ShareHighlightModal")
         
         // Simulate download
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {

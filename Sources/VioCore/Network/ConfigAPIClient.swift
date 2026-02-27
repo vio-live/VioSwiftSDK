@@ -7,8 +7,11 @@ struct ConfigAPIClient {
         VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
     }
     
+    /// Vio App API Key for all SDK endpoints (from campaignApiKey or root apiKey)
     private var apiKey: String {
-        VioConfiguration.shared.apiKey
+        let config = VioConfiguration.shared
+        let campaignApiKey = config.campaignConfiguration.campaignApiKey
+        return campaignApiKey.isEmpty ? config.apiKey : campaignApiKey
     }
     
     /// Fetch campaign configuration

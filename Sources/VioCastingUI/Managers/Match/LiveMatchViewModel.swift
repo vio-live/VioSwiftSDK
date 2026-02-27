@@ -15,6 +15,7 @@ public enum MatchTab: String, CaseIterable {
     case statistics = "Statistics"
     case polls = "Interaktivt"
     case liveScores = "Live Scores"
+    case engagement = "Engagement"
 
     public var icon: String {
         switch self {
@@ -24,7 +25,16 @@ public enum MatchTab: String, CaseIterable {
         case .liveScores: return "trophy"
         case .polls: return "hand.raised.fill"
         case .statistics: return "chart.bar"
+        case .engagement: return "sparkles"
         }
+    }
+
+    /// Tabs to display. Engagement tab only shown when backend has engagement (contentId flow).
+    public static func visibleTabs(hasEngagement: Bool) -> [MatchTab] {
+        if hasEngagement {
+            return allCases
+        }
+        return allCases.filter { $0 != .engagement }
     }
 }
 

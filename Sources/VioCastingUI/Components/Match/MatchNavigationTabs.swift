@@ -6,16 +6,18 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct MatchNavigationTabs: View {
     @Binding var selectedTab: MatchTab
-    
+    @EnvironmentObject private var sessionContext: VioSessionContext
+
     var body: some View {
         VStack(spacing: 0) {
             // Removed drag handle for cleaner look
-            
+
             HStack(spacing: 0) {
-                ForEach(MatchTab.allCases, id: \.self) { tab in
+                ForEach(MatchTab.visibleTabs(hasEngagement: sessionContext.useBackendEngagement), id: \.self) { tab in
                     MatchTabButton(
                         tab: tab,
                         isSelected: selectedTab == tab,
@@ -68,6 +70,7 @@ private struct MatchNavigationTabs_PreviewWrapper: View {
     @State var selectedTab: MatchTab = .all
     var body: some View {
         MatchNavigationTabs(selectedTab: $selectedTab)
+            .environmentObject(VioSessionContext())
     }
 }
 

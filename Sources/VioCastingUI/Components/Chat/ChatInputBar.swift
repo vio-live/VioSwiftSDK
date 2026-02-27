@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct ChatInputBar: View {
     @Binding var messageText: String
@@ -114,7 +115,7 @@ struct ChatInputBar: View {
                     messageText: $text,
                     isFocused: $focused,
                     onSend: {
-                        print("Send: \(text)")
+                        VioLogger.debug("Chat message sent", component: "ChatInputBar")
                         text = ""
                     }
                 )

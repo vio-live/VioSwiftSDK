@@ -85,6 +85,14 @@ public struct BroadcastContext: Codable, Equatable {
     }
 }
 
+// MARK: - Broadcast Context Provider
+
+/// Protocol for any event type (match, concert, live show) that can provide a BroadcastContext.
+/// Enables generic engagement setup for different live event types.
+public protocol BroadcastContextProvider {
+    func toBroadcastContext(channelId: Int?) -> BroadcastContext
+}
+
 // MARK: - Broadcast Validation (contentId flow)
 
 /// Result of validating a contentId against the backend.

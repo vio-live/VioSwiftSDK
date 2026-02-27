@@ -102,34 +102,34 @@ extension ContentView {
 
     private func logConfig() {
         let cfg = VioConfiguration.shared
-        print("🧭 [Diag][Vio] env=\(cfg.environment.rawValue) base=\(cfg.environment.graphQLURL)")
-        print("🧭 [Diag][Vio] apiKey=\(maskKey(cfg.apiKey))")
-        print("🧭 [Diag][Vio] market country=\(cfg.marketConfiguration.countryCode) currency=\(cfg.marketConfiguration.currencyCode)")
+        VioLogger.debug("env=\(cfg.environment.rawValue) base=\(cfg.environment.graphQLURL)", component: "ViaplayDemo")
+        VioLogger.debug("apiKey=\(maskKey(cfg.apiKey))", component: "ViaplayDemo")
+        VioLogger.debug("market country=\(cfg.marketConfiguration.countryCode) currency=\(cfg.marketConfiguration.currencyCode)", component: "ViaplayDemo")
     }
 
     private func sdkClient() -> SdkClient? {
         guard let base = resolveBaseURL() else {
-            print("❌ [Diag][Vio] Invalid base URL from configuration")
+            VioLogger.warning("Invalid base URL from configuration", component: "ViaplayDemo")
             return nil
         }
         let key = VioConfiguration.shared.apiKey.isEmpty ? "DEMO_KEY" : VioConfiguration.shared.apiKey
-        print("🔌 [Diag][Vio] Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key))")
+        VioLogger.debug("Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key))", component: "ViaplayDemo")
         return SdkClient(baseUrl: base, apiKey: key)
     }
 
     private func logRequest(_ name: String, payload: [String: Any]) {
-        print("➡️ [Diag][Request] \(name) payload=\(payload)")
+        VioLogger.debug("Request \(name) payload=\(payload)", component: "ViaplayDemo")
     }
 
     private func logResponse(_ name: String, info: [String: Any]) {
-        print("✅ [Diag][Response] \(name) info=\(info)")
+        VioLogger.debug("Response \(name) info=\(info)", component: "ViaplayDemo")
     }
 
     private func logError(_ name: String, error: Error) {
         if let sdkErr = error as? SdkException {
-            print("❌ [Diag][Error] \(name) sdk=\(sdkErr.description)")
+            VioLogger.warning("\(name) sdk=\(sdkErr.description)", component: "ViaplayDemo")
         } else {
-            print("❌ [Diag][Error] \(name) msg=\(error.localizedDescription)")
+            VioLogger.warning("\(name) msg=\(error.localizedDescription)", component: "ViaplayDemo")
         }
     }
 

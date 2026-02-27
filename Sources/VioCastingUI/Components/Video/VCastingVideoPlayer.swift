@@ -171,8 +171,7 @@ public struct VCastingVideoPlayer: View {
                     duration: poll.duration,
                     isChatExpanded: isChatExpanded,
                     onVote: { option in
-                        print("📊 [Poll] Votado: \(option)")
-                        // Aquí se enviará el voto al servidor después
+                        VioLogger.debug("Poll vote: \(option)", component: "VCastingVideoPlayer")
                     },
                     onDismiss: {
                         withAnimation {
@@ -199,14 +198,13 @@ public struct VCastingVideoPlayer: View {
                     isLoading: productFetchViewModel.isLoading,
                     onAddToCart: {
                         if let apiProduct = productFetchViewModel.product {
-                            print("🛍️ [Product] Agregando producto de la API al carrito: \(apiProduct.title)")
                             let product = convertDtoToProduct(apiProduct)
                             Task {
                                 await cartManager.addProduct(product, quantity: 1)
-                                print("✅ [Product] Producto agregado al carrito")
+                                VioLogger.debug("Product added to cart: \(apiProduct.title)", component: "VCastingVideoPlayer")
                             }
                         } else {
-                            print("⚠️ [Product] Producto de la API aún no disponible")
+                            VioLogger.warning("Product API not yet available", component: "VCastingVideoPlayer")
                         }
                     },
                     onShowDetail: {
@@ -251,7 +249,7 @@ public struct VCastingVideoPlayer: View {
                     prizes: nil,
                     isChatExpanded: isChatExpanded,
                     onJoin: {
-                        print("🎁 [Contest] Usuario se unió: \(contest.name)")
+                        VioLogger.debug("Contest joined: \(contest.name)", component: "VCastingVideoPlayer")
                     },
                     onDismiss: {
                         withAnimation {
@@ -283,8 +281,10 @@ public struct VCastingVideoPlayer: View {
         .ignoresSafeArea() // Full screen
         .environmentObject(effectiveSessionContext)
         .task {
-            // Set broadcast context for auto-discovery and context-aware campaigns
-            await setupBroadcastContext()
+            await BroadcastContextSetup.setup(
+                sessionContext: effectiveSessionContext,
+                fallbackBroadcastContext: { match.toBroadcastContext(channelId: VioConfiguration.shared.campaignConfiguration.channelId) }
+            )
         }
         .onAppear {
             playerViewModel.setupPlayer()
@@ -304,58 +304,36 @@ public struct VCastingVideoPlayer: View {
         }
         .onReceive(eventStreamer.$currentPoll) { newPoll in
             guard let poll = newPoll else { return }
-            print("🎯 [VideoPlayer] Poll recibido: \(poll.question)")
-            if true {
-                print("🎯 [VideoPlayer] Mostrando poll")
-                withAnimation {
-                    showPoll = true
-                }
-                
-                // Auto-ocultar después de la duración del poll
-                if let duration = newPoll?.duration {
-                    print("🎯 [VideoPlayer] Auto-ocultar en \(duration)s")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(duration)) {
-                        withAnimation {
-                            print("🎯 [VideoPlayer] Ocultando poll")
-                            showPoll = false
-                        }
+            withAnimation {
+                showPoll = true
+            }
+            if let duration = newPoll?.duration {
+                DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(duration)) {
+                    withAnimation {
+                        showPoll = false
                     }
                 }
             }
         }
         .onReceive(eventStreamer.$currentProduct) { newProduct in
-            guard let product = newProduct else { return }
-            print("🎯 [VideoPlayer] Producto recibido: \(product.name)")
-            if true {
-                print("🎯 [VideoPlayer] Mostrando producto")
+            guard newProduct != nil else { return }
+            withAnimation {
+                showProduct = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
                 withAnimation {
-                    showProduct = true
-                }
-                
-                // Auto-ocultar después de 30 segundos
-                DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
-                    withAnimation {
-                        print("🎯 [VideoPlayer] Ocultando producto")
-                        showProduct = false
-                    }
+                    showProduct = false
                 }
             }
         }
         .onReceive(eventStreamer.$currentContest) { newContest in
-            guard let contest = newContest else { return }
-            print("🎁 [VideoPlayer] Concurso recibido: \(contest.name)")
-            if true {
-                print("🎁 [VideoPlayer] Mostrando concurso")
+            guard newContest != nil else { return }
+            withAnimation {
+                showContest = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
                 withAnimation {
-                    showContest = true
-                }
-                
-                // Auto-ocultar después de 15 segundos
-                DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
-                    withAnimation {
-                        print("🎁 [VideoPlayer] Ocultando concurso")
-                        showContest = false
-                    }
+                    showContest = false
                 }
             }
         }
@@ -659,68 +637,6 @@ public struct VCastingVideoPlayer: View {
         sessionContext ?? defaultSessionContext
     }
 
-    /// Sets up broadcast context for auto-discovery and context-aware campaigns.
-    /// Uses broadcastContext from VioSessionContext when provided (e.g. broadcastId from backend).
-    /// When contentId + country are set, validates via GET /v1/sdk/broadcast before showing engagement.
-    private func setupBroadcastContext() async {
-        let config = VioConfiguration.shared
-        let autoDiscover = config.campaignConfiguration.autoDiscover
-
-        // ContentId flow: validate before discoverCampaigns/loadEngagement
-        if let contentId = effectiveSessionContext.contentId, let country = effectiveSessionContext.country {
-            let result = await BroadcastValidationService.validate(contentId: contentId, country: country)
-            print("🎯 [VCastingVideoPlayer] contentId validation: hasEngagement=\(result.hasEngagement)")
-
-            if !result.hasEngagement {
-                print("🎯 [VCastingVideoPlayer] No engagement for contentId=\(contentId), skipping discoverCampaigns and loadEngagement")
-                return
-            }
-
-            guard let broadcastId = result.broadcastId else {
-                print("🎯 [VCastingVideoPlayer] hasEngagement=true but no broadcastId in response")
-                return
-            }
-
-            let broadcastContext = BroadcastContext(
-                broadcastId: broadcastId,
-                broadcastName: result.broadcastName,
-                startTime: nil,
-                channelId: nil,
-                metadata: nil
-            )
-            effectiveSessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
-
-            print("🎯 [VCastingVideoPlayer] contentId flow: using broadcastId=\(broadcastId)")
-            if autoDiscover {
-                await campaignManager.discoverCampaigns(broadcastId: broadcastId)
-            }
-            await campaignManager.setBroadcastContext(broadcastContext)
-            await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true)
-            return
-        }
-
-        // Legacy flow: broadcastContext from session or match
-        let broadcastContext: BroadcastContext
-        if let ctx = effectiveSessionContext.broadcastContext {
-            broadcastContext = ctx
-        } else {
-            broadcastContext = match.toBroadcastContext(channelId: config.campaignConfiguration.channelId)
-            effectiveSessionContext.configure(broadcastContext: broadcastContext)
-        }
-
-        print("🎯 [VCastingVideoPlayer] Setting up broadcast context: \(broadcastContext.broadcastId)")
-
-        if autoDiscover {
-            print("🎯 [VCastingVideoPlayer] Auto-discovery enabled, discovering campaigns for broadcast: \(broadcastContext.broadcastId)")
-            await campaignManager.discoverCampaigns(broadcastId: broadcastContext.broadcastId)
-            await campaignManager.setBroadcastContext(broadcastContext)
-        } else {
-            print("🎯 [VCastingVideoPlayer] Legacy mode, setting broadcast context")
-            await campaignManager.setBroadcastContext(broadcastContext)
-        }
-
-        await EngagementManager.shared.loadEngagement(for: broadcastContext)
-    }
 }
 
 // MARK: - Custom Video Player View
@@ -776,9 +692,7 @@ private func orientationToUIDeviceOrientation(_ mask: UIInterfaceOrientationMask
 
 struct VCastingVideoPlayer_Previews: PreviewProvider {
     static var previews: some View {
-        VCastingVideoPlayer(match: Match.barcelonaPSG) {
-            print("Dismissed")
-        }
-        .environmentObject(CartManager())
+        VCastingVideoPlayer(match: Match.barcelonaPSG, onDismiss: {})
+            .environmentObject(CartManager())
     }
 }
