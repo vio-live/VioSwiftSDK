@@ -490,7 +490,9 @@ public class ComponentManager: ObservableObject {
     @Published public private(set) var isConnected = false
     
     public let campaignId: Int
-    private let baseURL = "https://event-streamer-angelo100.replit.app"
+    private var baseURL: String {
+        VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
+    }
     private var webSocketManager: WebSocketManager?
     
     // MARK: - Singleton

@@ -44,6 +44,7 @@ public class VioConfiguration: ObservableObject {
     // MARK: - Dynamic Configuration Properties
     @Published public private(set) var dynamicBrandConfig: DynamicBrandConfig?
     @Published public private(set) var dynamicEngagementConfig: DynamicEngagementConfig?
+    @Published public private(set) var dynamicCommerceConfig: DynamicCommerceConfig?
     @Published public private(set) var dynamicLocalizationConfig: DynamicLocalizationConfig?
     
     @Published public private(set) var isConfigured: Bool = false
@@ -280,6 +281,12 @@ public class VioConfiguration: ObservableObject {
             
             self.engagementConfiguration = mergedEngagement
         }
+    }
+    
+    /// Update dynamic commerce configuration from backend (integrations.commerce)
+    /// Commerce = ex-Reachu (ecommerce). Key used for checkout, product catalog (graph-ql-dev.vio.live)
+    public func updateDynamicCommerceConfig(_ config: DynamicCommerceConfig?) {
+        self.dynamicCommerceConfig = config
     }
     
     /// Update dynamic localization configuration from backend

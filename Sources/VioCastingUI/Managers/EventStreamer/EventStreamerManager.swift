@@ -3,11 +3,12 @@
 //  VioCastingUI
 //
 //  WebSocket manager for demo event stream (polls, products, contests).
-//  URL: wss://event-streamer-angelo100.replit.app/ws/3
+//  Uses VioConfiguration.shared.campaignConfiguration for base URL.
 //
 
 import Foundation
 import Combine
+import VioCore
 
 /// Manager for WebSocket connection with demo event streamer
 /// Delivers poll, product, and contest events to casting overlays
@@ -28,7 +29,12 @@ public class EventStreamerManager: NSObject, ObservableObject {
     public func connect() {
         guard !isConnected else { return }
         
-        let url = URL(string: "wss://event-streamer-angelo100.replit.app/ws/3")!
+        let baseURL = VioConfiguration.shared.campaignConfiguration.webSocketBaseURL
+            .replacingOccurrences(of: "https://", with: "wss://")
+            .replacingOccurrences(of: "http://", with: "ws://")
+        let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
+        let wsPath = campaignId > 0 ? campaignId : 3
+        let url = URL(string: "\(baseURL)/ws/\(wsPath)")!
         webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
         isConnected = true

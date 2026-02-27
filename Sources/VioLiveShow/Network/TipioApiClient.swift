@@ -18,6 +18,9 @@ public class TipioApiClient {
     
     // MARK: - Convenience Initializer
     /// Initialize with configuration from VioConfiguration
+    /// - Note: INCONSISTENCIA: El fallback KCXF10Y-... es la Commerce key (ex-Reachu), no una key de Tipio.
+    ///   Tipio = livestream, Commerce = ecommerce (productos separados). Si tipioapp.com comparte infra
+    ///   con Commerce (legacy), este fallback puede ser válido. Pendiente confirmar con backend.
     public convenience init() {
         let config = VioConfiguration.shared.liveShowConfiguration
         

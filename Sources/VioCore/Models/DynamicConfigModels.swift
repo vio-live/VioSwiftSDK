@@ -10,6 +10,7 @@ public struct CampaignConfig: Codable {
     public let engagement: DynamicEngagementConfig?
     public let ui: DynamicUIConfig?
     public let features: DynamicFeatureFlags?
+    public let integrations: IntegrationsConfig?
     public let cache: CacheConfig?
     
     public init(
@@ -19,6 +20,7 @@ public struct CampaignConfig: Codable {
         engagement: DynamicEngagementConfig? = nil,
         ui: DynamicUIConfig? = nil,
         features: DynamicFeatureFlags? = nil,
+        integrations: IntegrationsConfig? = nil,
         cache: CacheConfig? = nil
     ) {
         self.campaignId = campaignId
@@ -27,7 +29,33 @@ public struct CampaignConfig: Codable {
         self.engagement = engagement
         self.ui = ui
         self.features = features
+        self.integrations = integrations
         self.cache = cache
+    }
+}
+
+// MARK: - Integrations Configuration
+
+/// Integrations from backend (commerce, etc.)
+/// Backend uses `integrations.commerce` (NOT integrations.tipio — Tipio is livestream, separate product)
+public struct IntegrationsConfig: Codable {
+    public let commerce: DynamicCommerceConfig?
+    
+    public init(commerce: DynamicCommerceConfig? = nil) {
+        self.commerce = commerce
+    }
+}
+
+/// Commerce (ex-Reachu) integration — ecommerce, checkout, product catalog
+public struct DynamicCommerceConfig: Codable {
+    public let enabled: Bool?
+    public let apiKey: String?
+    public let channelId: String?
+    
+    public init(enabled: Bool? = nil, apiKey: String? = nil, channelId: String? = nil) {
+        self.enabled = enabled
+        self.apiKey = apiKey
+        self.channelId = channelId
     }
 }
 

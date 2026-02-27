@@ -437,7 +437,9 @@ public struct LiveShowConfiguration {
     public let enableAutoplay: Bool
     public let enablePictureInPicture: Bool
     
-    // Tipio Integration
+    // Tipio Integration (livestream — producto SEPARADO de Commerce)
+    // Tipio = servicio de livestream (tipioapp.com). NO es Commerce (ex-Reachu).
+    // La Commerce key viene del backend en integrations.commerce.apiKey, NO de liveShow.tipio.
     public let tipioApiKey: String
     public let tipioBaseUrl: String
     

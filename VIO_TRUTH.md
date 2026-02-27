@@ -1,6 +1,26 @@
 # VIO TRUTH — Fuente Absoluta de Verdad
-> Última actualización: 2026-02-27
+> Última actualización: 2026-01-23
 > Mantenido por: Viobot — coordinador técnico entre Replit, Cursor y Angelo
+
+---
+
+## 📝 PROGRESO CURSOR (2026-01-23)
+
+### Completado
+- ✅ **OBSERVACIONES_Y_PREGUNTAS.md** — Actualizado: Commerce = ex-Reachu, Tipio = livestream (productos separados).
+- ✅ **URLs legacy** — Reemplazado `event-streamer-angelo100.replit.app` por `VioConfiguration.shared.campaignConfiguration.restAPIBaseURL` en `OfferBannerModels.swift` y `EventStreamerManager.swift`.
+- ✅ **CampaignConfig + integrations** — Añadidos `IntegrationsConfig`, `DynamicCommerceConfig`, campo `integrations` en `CampaignConfig`, `updateDynamicCommerceConfig()` en `VioConfiguration`, uso en `CampaignManager`.
+- ✅ **LiveShowConfiguration** — Documentado que `tipioApiKey`/`tipioBaseUrl` son para Tipio (livestream), no Commerce; la Commerce key viene de `integrations.commerce.apiKey`.
+- ✅ **TipioApiClient** — Documentada inconsistencia: el fallback `KCXF10Y-...` es la Commerce key, no Tipio. Tipio y Commerce son productos distintos. Pendiente confirmar con backend si comparten infra.
+
+### Pendiente
+- Verificar que demo Barcelona–PSG siga funcionando.
+- Backend (Replit): asegurar que devuelve `integrations.commerce` en `/v1/campaigns/:id/config` (no `integrations.tipio`).
+
+### Preguntas abiertas
+1. ¿El backend ya devuelve `integrations.commerce.apiKey` en `GET /v1/campaigns/:id/config`?
+2. ¿Tipio y Commerce comparten infra (tipioapp.com) o son completamente separados?
+3. ¿El SDK debe priorizar flujo contentId → broadcast sobre legacy (campaignId fijo)?
 
 ---
 
@@ -115,9 +135,8 @@ private var apiKey: String {
 }
 ```
 
-**2. Eliminar URL hardcodeada legacy**
-`event-streamer-angelo100.replit.app` aparece en `OfferBannerModels` y `EventStreamerManager`.
-→ Reemplazar por `VioConfiguration.shared.campaignConfiguration.restAPIBaseURL`
+**2. Eliminar URL hardcodeada legacy** ✅ HECHO
+`event-streamer-angelo100.replit.app` → reemplazado por `restAPIBaseURL` en `OfferBannerModels` y `EventStreamerManager`.
 
 **3. Cerrar el loop de engagement**
 Con el fix del 401, el SDK debe:
@@ -126,9 +145,8 @@ Con el fix del 401, el SDK debe:
 - Recibir `poll_created` / `broadcast_started` → mostrar `BackendEngagementTabView`
 - Polls y contests en tiempo real desde el backend
 
-**4. Parsear `integrations.commerce` en `CampaignConfig`**
-El modelo `CampaignConfig` no tiene el campo `integrations`.
-Añadir y pasar `commerce.apiKey` al módulo Commerce si `enabled: true`.
+**4. Parsear `integrations.commerce` en `CampaignConfig`** ✅ HECHO
+`IntegrationsConfig`, `DynamicCommerceConfig`, `integrations` añadidos. `updateDynamicCommerceConfig()` en `VioConfiguration` y `CampaignManager`.
 
 **5. Verificar que legacy sigue funcionando**
 `campaignId = 28` en `liveShow` debe seguir funcionando para la demo estática.

@@ -524,7 +524,7 @@ public class ConfigurationLoader {
         // Use streaming.enableAutoplay if available, otherwise fallback to legacy enableAutoplay
         let enableAutoplay = config.streaming?.enableAutoplay ?? config.enableAutoplay ?? false
         
-        // Tipio configuration
+        // Tipio configuration (livestream only — Commerce key comes from backend integrations.commerce)
         let tipioApiKey = config.tipio?.apiKey ?? ""
         let tipioBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
         

@@ -149,6 +149,9 @@ public class CampaignManager: ObservableObject {
             if let engagementConfig = config.engagement {
                 VioConfiguration.shared.updateDynamicEngagementConfig(engagementConfig)
             }
+            if let commerceConfig = config.integrations?.commerce {
+                VioConfiguration.shared.updateDynamicCommerceConfig(commerceConfig)
+            }
             VioLogger.debug("initializeCampaign: Loaded dynamic config for campaignId=\(campaignId)", component: "CampaignManager")
         }
         

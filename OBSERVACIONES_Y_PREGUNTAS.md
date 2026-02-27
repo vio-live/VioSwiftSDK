@@ -9,7 +9,8 @@
 
 ### API Keys
 - **Vio App API Key:** Una por Client App. Va en `vio-config.json` como `apiKey` raíz. Se usa en todos los endpoints SDK.
-- **Commerce key:** Antes "Reachu", ahora se llama Tipio en el código. NO va en config estático; el backend la envía en `GET /v1/campaigns/:id/config` → `integrations.commerce.apiKey`.
+- **Commerce key (ex-Reachu):** Módulo de ecommerce. NO va en config estático; el backend la envía en `GET /v1/campaigns/:id/config` → `integrations.commerce.apiKey`.
+- **Tipio:** Servicio de livestream. Producto SEPARADO de Commerce. NO es Reachu. (VIO_TRUTH v4 aclara esta distinción; el SDK tenía nomenclatura confusa.)
 
 ### SDK Swift
 - Ya adaptado al modelo de una sola Vio App Key.
@@ -25,7 +26,7 @@
 
 ## 2. Observaciones
 
-1. **Nomenclatura Tipio vs Reachu:** En el código hay referencias a "Tipio" (tipioApiKey, tipioBaseUrl, JSONTipioConfiguration). Si Tipio es el antiguo Reachu, conviene documentarlo explícitamente para evitar confusión.
+1. **Nomenclatura Tipio vs Commerce:** VIO_TRUTH v4 aclara: Tipio = livestream (producto separado), Commerce = ex-Reachu (ecommerce). El código usa `tipioApiKey` en LiveShowConfiguration para TipioApiClient (livestream); Commerce key debe venir de `integrations.commerce.apiKey` (backend).
 
 2. **Commerce key en el SDK:** El modelo `CampaignConfig` no incluye `integrations`. Si el backend ya devuelve `integrations.commerce.apiKey`, el SDK Swift no la consume. Habría que añadir el campo y un `updateDynamicCommerceConfig()` (o similar).
 
@@ -39,8 +40,8 @@
 
 ### API Keys y Commerce
 1. ¿El backend ya devuelve `integrations.commerce.apiKey` en `GET /v1/campaigns/:id/config`? Si sí, ¿en qué estructura exacta (ej. `{ "integrations": { "commerce": { "apiKey": "KCXF10Y-..." } } }`)?
-2. ¿Tipio y Reachu son el mismo producto/servicio con nombre distinto, o hay diferencias técnicas?
-3. ¿La Commerce key se usa solo para Tipio/Reachu, o hay otros proveedores de commerce en el futuro?
+2. ¿Tipio y Commerce comparten infra (tipioapp.com) o son completamente separados? (TipioApiClient usa fallback KCXF10Y que es Commerce key.)
+3. ¿La Commerce key se usa solo para Commerce (ex-Reachu), o hay otros proveedores de commerce en el futuro?
 
 ### SDK y Flujo
 4. ¿El SDK Swift debe priorizar el flujo contentId → broadcast sobre el legacy (campaignId fijo)?
@@ -54,7 +55,7 @@
 
 ## 4. Sugerencias
 
-- Añadir en VIO_TRUTH: "Tipio (antiguo Reachu)" donde se mencione Commerce.
+- VIO_TRUTH v4 ya documenta: Commerce = ex-Reachu, Tipio = livestream (producto separado).
 - Si el backend ya envía `integrations.commerce`, implementar en el SDK Swift el parseo y uso de esa key.
 - Mantener CURSOR_CONTEXT y VIO_TRUTH sincronizados cuando cambie el modelo de keys o flujos.
 
