@@ -549,6 +549,7 @@ public class ConfigurationLoader {
             webSocketBaseURL: config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL,
             restAPIBaseURL: config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL,
             campaignApiKey: config.campaignApiKey ?? CampaignConfiguration.default.campaignApiKey,
+            campaignAdminApiKey: config.campaignAdminApiKey ?? CampaignConfiguration.default.campaignAdminApiKey,
             autoDiscover: config.autoDiscover ?? CampaignConfiguration.default.autoDiscover,
             channelId: config.channelId
         )
@@ -962,6 +963,7 @@ private struct JSONCampaignConfiguration: Codable {
     let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-dev.vio.live")
     let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://api.vio.live")
     let campaignApiKey: String?  // Optional override; root apiKey (Vio App Key) used when empty. Commerce key comes from backend.
+    let campaignAdminApiKey: String?  // Legacy alias; same as campaignApiKey (Vio App Key for campaign 28 etc.)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
     let channelId: Int?  // Optional channel ID to filter campaigns during auto-discovery
 }

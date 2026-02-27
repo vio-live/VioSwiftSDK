@@ -7,11 +7,13 @@ struct ConfigAPIClient {
         VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
     }
     
-    /// Vio App API Key for all SDK endpoints (from campaignApiKey or root apiKey)
+    /// Vio App API Key for all SDK endpoints. NEVER use Commerce key (KCXF10Y-...) — that comes from backend.
+    /// Fallback: campaignApiKey → campaignAdminApiKey → root apiKey (all Vio App keys).
     private var apiKey: String {
-        let config = VioConfiguration.shared
-        let campaignApiKey = config.campaignConfiguration.campaignApiKey
-        return campaignApiKey.isEmpty ? config.apiKey : campaignApiKey
+        let campaigns = VioConfiguration.shared.campaignConfiguration
+        if !campaigns.campaignApiKey.isEmpty { return campaigns.campaignApiKey }
+        if !campaigns.campaignAdminApiKey.isEmpty { return campaigns.campaignAdminApiKey }
+        return VioConfiguration.shared.apiKey
     }
     
     /// Fetch campaign configuration
