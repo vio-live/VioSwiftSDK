@@ -125,6 +125,15 @@ struct ViaplayApp: App {
             
             print("🎮 [Viaplay] Demo mode enabled for Engagement System")
         }
+
+        // ── Step 1: Discover active campaigns from backend (global, once) ──
+        // autoDiscover: true in vio-config.json means we must trigger this manually on launch.
+        // discoverCampaigns() → GET /v1/sdk/campaigns → sets activeCampaigns + connects WebSocket
+        Task { @MainActor in
+            VioLogger.debug("── App launch: discovering campaigns ──", component: "ViaplayApp")
+            await CampaignManager.shared.discoverCampaigns()
+            VioLogger.debug("── Campaigns discovered: \(CampaignManager.shared.activeCampaigns.count) active ──", component: "ViaplayApp")
+        }
     }
 
     var body: some Scene {

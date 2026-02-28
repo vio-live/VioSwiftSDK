@@ -17,8 +17,47 @@ Loop completo: Admin crea poll → SDK lo muestra en tiempo real → usuario vot
 | Backend (socket-server) | ✅ Endpoints listos | Replit |
 | Swift SDK — modelos | ✅ BroadcastTeam, homeTeam/awayTeam | Viobot |
 | Swift SDK — BackendMatchDataService | ✅ Score/stats/polling | Viobot |
-| Swift SDK — vistas conectadas | ❌ Pendiente | **Cursor** |
+| Swift SDK — launch init (discoverCampaigns) | ✅ Añadido en ViaplayApp.swift | Viobot |
+| Swift SDK — vistas conectadas | ❌ Pendiente validación paso a paso | **Cursor** |
 | Kotlin SDK — namespace migrado | ❌ BLOCKER | Alan |
+
+## 🧠 Decisiones de arquitectura (2026-02-28)
+
+### Flujo correcto del SDK (definitivo)
+
+```
+App launch (ViaplayApp.init)
+  └── CampaignManager.shared.discoverCampaigns()
+       ├── GET /v1/sdk/campaigns → campaña activa + componentes
+       ├── GET /v1/campaigns/:id/config → branding Sponsor + Commerce key
+       └── WebSocket /ws/:campaignId → componentes activos/inactivos
+
+Usuario abre stream (SportDetailView)
+  └── VioSessionContext.forContentId("real-madrid-barcelona-2025-01-24", country: "NO")
+       └── BroadcastContextSetup.setup()
+            ├── GET /v1/sdk/broadcast?contentId=xxx → hasEngagement?
+            ├── false → usuario no se entera, pasa de largo
+            └── true → mostrar botón casting
+                 └── usuario abre overlay
+                      └── WebSocket ya conectado → polls/contests/chat/score en tiempo real
+```
+
+### Reglas
+- `discoverCampaigns()` → al launch, sin broadcastId (descubre todas las campañas activas)
+- `setBroadcastContext()` → cuando usuario abre un stream específico
+- WebSocket → mismo canal `/ws/:campaignId`, conectado desde el paso 1
+- contentId hardcodeado por ahora: `"real-madrid-barcelona-2025-01-24"` country `"NO"`
+- Barcelona-PSG → datos demo estáticos (TimelineDataGenerator), sin backend
+
+### Avanzamos paso a paso
+1. ✅ App compila
+2. 🔄 discoverCampaigns() al launch → ver logs "X campaigns discovered"
+3. ⬜ Validar que config/branding del Sponsor llega (logo Elkjøp)
+4. ⬜ Validar contentId flow → hasEngagement: true
+5. ⬜ Overlay muestra polls activos
+6. ⬜ Votar funciona
+7. ⬜ Chat en tab "All"
+8. ⬜ Score en MatchHeaderView
 
 ---
 
