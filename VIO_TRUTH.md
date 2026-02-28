@@ -31,7 +31,7 @@
 |--------|--------|--------|
 | **Vio** | Plataforma de engagement para live events (polls, contests, chat, componentes) | Activo — foco principal |
 | **Commerce (ex-Reachu)** | Módulo de ecommerce — overlay de producto, checkout, integración con sistemas de pago. Empresa adquirida, rebranding en curso. GraphQL en `graph-ql-dev.vio.live` | Módulo opcional por campaña |
-| **Tipio** | Servicio de livestream. Producto SEPARADO. NO es Reachu/Commerce. | Futuro lejano — no tocar |
+| **Tipio** | Servicio de livestream. Producto SEPARADO. NO es Reachu/Commerce. | Eliminado del SDK (CLEANUP_TIPIO). Fuera de scope. |
 
 ### ⚠️ ERROR ACTIVO EN REPLIT
 `integrations.tipio` → debe ser `integrations.commerce`. Tipio es livestream, no ecommerce. **Revertir.**
