@@ -60,8 +60,9 @@ struct ContentView: View {
                     .environmentObject(cartManager)
                     .environmentObject(checkoutDraft)
             }
-            // MARK: - Vio Diagnostics (App Start)
+            // MARK: - Vio SDK Initialization
             .task {
+                await initializeVioSDK()
                 await debugVioPing()
             }
             .navigationBarHidden(true)
@@ -139,6 +140,23 @@ extension ContentView {
 
     private func currentCountry() -> String {
         VioConfiguration.shared.marketConfiguration.countryCode
+    }
+
+    private func initializeVioSDK() async {
+        VioLogger.debug("── Step 1: Loading campaigns from backend ──", component: "ViaplayDemo")
+        let apiKey = VioConfiguration.shared.campaignConfiguration.apiKey
+        let baseURL = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
+        VioLogger.debug("apiKey=\(String(apiKey.suffix(8))) baseURL=\(baseURL)", component: "ViaplayDemo")
+
+        await CampaignManager.shared.initializeCampaign()
+        VioLogger.debug("── Step 1 complete: CampaignManager initialized ──", component: "ViaplayDemo")
+
+        VioLogger.debug("── Step 2: Loading campaign config (branding + Commerce key) ──", component: "ViaplayDemo")
+        if let config = DynamicConfigurationManager.shared.currentConfig {
+            VioLogger.debug("brand.name=\(config.brand?.name ?? "nil") commerce.enabled=\(config.integrations?.commerce?.enabled ?? false)", component: "ViaplayDemo")
+        } else {
+            VioLogger.warning("No campaign config loaded yet", component: "ViaplayDemo")
+        }
     }
 
     private func debugVioPing() async {
