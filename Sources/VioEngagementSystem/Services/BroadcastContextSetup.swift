@@ -28,18 +28,20 @@ public enum BroadcastContextSetup {
 
         // ContentId flow: validate before discoverCampaigns/loadEngagement
         if let contentId = sessionContext.contentId, let country = sessionContext.country {
+            VioLogger.debug("⬡ STEP 3 — GET /v1/sdk/broadcast?contentId=\(contentId)&country=\(country)", component: "VioInit")
             let result = await BroadcastValidationService.validate(contentId: contentId, country: country)
-            VioLogger.debug("contentId validation: hasEngagement=\(result.hasEngagement), contentId=\(contentId)", component: "BroadcastContextSetup")
 
             if !result.hasEngagement {
-                VioLogger.debug("No engagement for contentId=\(contentId), skipping", component: "BroadcastContextSetup")
+                VioLogger.debug("⭕ STEP 3 — hasEngagement=false for contentId=\(contentId). No overlay shown.", component: "VioInit")
                 return
             }
 
             guard let broadcastId = result.broadcastId else {
-                VioLogger.warning("hasEngagement=true but no broadcastId in response", component: "BroadcastContextSetup")
+                VioLogger.warning("❌ STEP 3 — hasEngagement=true but no broadcastId in response", component: "VioInit")
                 return
             }
+
+            VioLogger.debug("✅ STEP 3 — hasEngagement=true broadcastId=\(broadcastId) status=\(result.status ?? "unknown")", component: "VioInit")
 
             let broadcastContext = BroadcastContext(
                 broadcastId: broadcastId,
@@ -50,12 +52,15 @@ public enum BroadcastContextSetup {
             )
             sessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
 
-            VioLogger.debug("contentId flow: using broadcastId=\(broadcastId)", component: "BroadcastContextSetup")
+            VioLogger.debug("⬡ STEP 4 — Connecting WebSocket /ws/\(campaignManager.activeCampaigns.first?.id ?? -1)", component: "VioInit")
             if autoDiscover {
                 await campaignManager.discoverCampaigns(broadcastId: broadcastId)
             }
             await campaignManager.setBroadcastContext(broadcastContext)
+
+            VioLogger.debug("⬡ STEP 5 — Loading engagement (polls, contests, chat)", component: "VioInit")
             await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true)
+            VioLogger.debug("✅ STEP 5 — Engagement loaded. Overlay should be visible.", component: "VioInit")
             return
         }
 
