@@ -107,17 +107,6 @@ Depende de: VIO-003 (endpoint historial chat) + VIO-007.
 
 ---
 
-### VIO-010 · Alan · 🔴 blocker
-**Migrar namespace io.reachu → live.vio en KotlinSDK (191 archivos)**
-
-Por qué: Cualquier integrador Android de Viaplay o TV2 verá "import io.reachu.VioUI". Mata la venta en el momento en que abren el código.
-
-Alcance:
-- Package: io.reachu.* → live.vio.*
-- Maven groupId: io.github.reachudevteam → io.github.angelosv
-- Maven artifactId: reachu-kotlin-sdk → vio-kotlin-sdk
-- README: actualizar imports de ejemplo
-
 ---
 
 ## COMPLETADO
@@ -145,6 +134,18 @@ Health check + deploy en autoscale — /health responde, deploy estable.
 
 ### VIO-018 · Viobot · ✅ 2026-02-28
 VIO_TRUTH.md v5 — Tipio eliminado, flujo paso a paso, componentes pendientes.
+
+---
+
+## KOTLIN — FUERA DEL SPRINT ACTUAL
+> No mezclar con el flujo Swift/backend hasta que esté estabilizado.
+
+### VIO-010 · Alan · ⚪ pendiente (futuro)
+**Migrar namespace io.reachu → live.vio en KotlinSDK (191 archivos)**
+
+Por qué: Cualquier integrador Android de Viaplay o TV2 verá "import io.reachu.VioUI". Mata la venta.
+Alcance: Package, Maven groupId/artifactId, README.
+Cuando atacar: Después de que el flujo Swift + backend esté validado end-to-end.
 
 ---
 
