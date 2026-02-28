@@ -15,20 +15,15 @@
 
 ## SPRINT ACTIVO — Semana 28 feb
 
-### VIO-001 · Replit · 🔴 blocker
+### VIO-001 · Replit · ✅ 2026-02-28
 **Editar status de broadcast desde el dashboard**
 
-Por qué: El operador gestiona el partido en vivo desde el dashboard. Si no puede cambiar el status de un broadcast (upcoming → live → ended), no puede operar. En una demo con Viaplay/TV2 esto es inaceptable — Viobot tuvo que hacerlo via curl hoy.
-
-Escenario real:
-  Operador abre dashboard → va a Broadcasts → selecciona "Real Madrid vs Barcelona"
-  → pulsa "Marcar como Live" → WS emite broadcast_started → SDK activa el overlay
-
-Fix: Añadir control de status en el dialog de edición del broadcast.
-- Select con opciones: upcoming / live / ended
-- Al cambiar a live → emitir WS broadcast_started a /ws/:campaignId
-- Al cambiar a ended → emitir WS broadcast_ended
-- Archivos: client/src/components/dashboard/ (dialog edición broadcast)
+Fix aplicado:
+- Select de status (upcoming/live/ended) en el dialog de edición del broadcast ✅ (ya estaba)
+- Botones rápidos en la lista: "Go Live" (verde, solo en upcoming) + "End" (rojo, solo en live) ✅ nuevo
+- Backend emite broadcast_started / broadcast_ended via WebSocket al cambiar status ✅ (ya estaba)
+- Toast de confirmación con mensaje específico por estado ✅
+- Tests e2e pasados: flujo completo upcoming → live → ended verificado ✅
 
 ---
 
@@ -40,25 +35,23 @@ Pendiente confirmar que el SDK lo recibe correctamente (depende de VIO-005).
 
 ---
 
-### VIO-003 · Replit · ⚪ pendiente
+### VIO-003 · Replit · ✅ 2026-02-28
 **Endpoint historial de chat por broadcast**
 
-Por qué: Cuando el usuario abre el overlay a mitad del partido, debe ver los mensajes anteriores. Sin historial, el chat parece vacío y roto aunque el WebSocket funcione.
-
-Implementar:
-  GET /v1/sdk/broadcasts/:broadcastId/chat?apiKey=...&limit=50
-  → { broadcastId, messages: [...], count: N }
+Verificado en producción:
+  GET /v1/sdk/broadcasts/real-madrid-vs-barcelona-2026-02-25/chat?apiKey=...&limit=5
+  → { broadcastId, messages: [...], count: 5 }
+Responde correctamente con mensajes del broadcast.
 
 ---
 
-### VIO-004 · Replit · ⚪ pendiente
+### VIO-004 · Replit · ✅ 2026-02-28
 **Endpoint componentes por locationId**
 
-Por qué: Los banners, countdown y carruseles son la capa de monetización. El desarrollador de Viaplay define slots en su código (locationId). Sin este endpoint, los componentes nunca llegan al SDK aunque estén activos en el dashboard.
-
-Implementar:
+Verificado en producción:
   GET /v1/sdk/components?locationId=sport-banner&apiKey=...&campaignId=35
-  → componente activo para ese slot, o vacío si no hay ninguno
+  → { components: [], count: 0 }
+Endpoint existe y responde. Retorna vacío si no hay componentes con ese locationId configurados.
 
 ---
 
