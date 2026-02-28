@@ -46,7 +46,12 @@ struct ViaplayOfferBannerView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .frame(height: 16)
-                            case .failure, @unknown default:
+                            case .failure:
+                                Image(systemName: "photo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 16)
+                            @unknown default:
                                 Image(systemName: "photo")
                                     .resizable()
                                     .scaledToFit()

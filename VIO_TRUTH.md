@@ -1,27 +1,6 @@
 # VIO TRUTH — Fuente Absoluta de Verdad
-> Última actualización: 2026-01-23
-> Mantenido por: Viobot — coordinador técnico entre Replit, Cursor y Angelo
-
----
-
-## 📝 PROGRESO CURSOR (2026-01-23)
-
-### Completado
-- ✅ **Fix 401** — ConfigAPIClient usa Vio App API Key (campaignApiKey → campaignAdminApiKey → apiKey). Commerce key nunca en config estático.
-- ✅ **Logo sponsor** — CampaignSponsorBadge y ViaplayOfferBannerView usan `brand.logoUrl` del backend (dynamicBrandConfig) en lugar de DemoDataManager.defaultLogo.
-- ✅ **URLs legacy** — Reemplazado `event-streamer-angelo100.replit.app` por `restAPIBaseURL` en OfferBannerModels y EventStreamerManager.
-- ✅ **CampaignConfig + integrations** — IntegrationsConfig, DynamicCommerceConfig, updateDynamicCommerceConfig en VioConfiguration y CampaignManager.
-- ✅ **Cleanup Tipio** (CLEANUP_TIPIO.md) — Eliminados TipioApiClient, TipioWebSocketClient, TipioModels. LiveShowManager sin Tipio (stubs no-op). LivestreamRefreshResponse y ChatApiMessage en LiveStreamModels para refresh HLS y chat. LiveStream.liveStreamId para hearts API.
-
-### Pendiente
-- Verificar que demo Barcelona–PSG siga funcionando.
-- Backend (Replit): asegurar que devuelve `integrations.commerce` en `/v1/campaigns/:id/config` (no `integrations.tipio`).
-- **Build:** `AnalyticsManager.swift:45` — error `extra argument 'trackAutomaticEvents' in call` (pre-existente, no relacionado con Tipio cleanup).
-
-### Preguntas abiertas
-1. ¿El backend ya devuelve `integrations.commerce.apiKey` en `GET /v1/campaigns/:id/config`?
-2. ¿El SDK debe priorizar flujo contentId → broadcast sobre legacy (campaignId fijo)?
-3. ¿Corregir el error de AnalyticsManager (trackAutomaticEvents) o es por versión de Mixpanel?
+> Última actualización: 2026-02-28
+> Mantenido por: Viobot
 
 ---
 
@@ -30,11 +9,14 @@
 | Nombre | Qué es | Estado |
 |--------|--------|--------|
 | **Vio** | Plataforma de engagement para live events (polls, contests, chat, componentes) | Activo — foco principal |
-| **Commerce (ex-Reachu)** | Módulo de ecommerce — overlay de producto, checkout, integración con sistemas de pago. Empresa adquirida, rebranding en curso. GraphQL en `graph-ql-dev.vio.live` | Módulo opcional por campaña |
-| **Tipio** | Servicio de livestream. Producto SEPARADO. NO es Reachu/Commerce. | Eliminado del SDK (CLEANUP_TIPIO). Fuera de scope. |
+| **Commerce (ex-Reachu)** | Módulo de ecommerce — overlay de producto, checkout. GraphQL en `graph-ql-dev.vio.live` | Módulo opcional por campaña |
+| **Tipio** | NO EXISTE. Nombre eliminado. Cualquier referencia a Tipio es un bug. | ❌ ELIMINAR si aparece |
 
-### ⚠️ ERROR ACTIVO EN REPLIT
-`integrations.tipio` → debe ser `integrations.commerce`. Tipio es livestream, no ecommerce. **Revertir.**
+### Reglas de naming — sin excepciones
+- `integrations.commerce` → correcto ✅
+- `integrations.tipio` → BUG ❌
+- Commerce key → viene del servidor en `integrations.commerce.apiKey` ✅
+- Tipio key → NO existe ❌
 
 ---
 
@@ -45,116 +27,32 @@ Vio es la **segunda pantalla oficial para eventos deportivos.**
 El usuario ve el partido en la TV. En el móvil tiene el panel de Vio (integrado en la app de Viaplay/TV2) con:
 - **Engagement** (CORE): polls, contests, chat en tiempo real — sincronizados con el partido
 - **Commerce** (MONETIZACIÓN): banners, productos, carrusel, mini tienda — comprables en el momento de máxima emoción
-- **Info**: estadísticas, live scores, highlights, tweets curados por moderador
+- **Info**: estadísticas, live scores, score en tiempo real
 
 **El loop de valor:**
 ```
 Engagement engancha → atención sostenida → Commerce convierte
 ```
 
-El timing es el producto. Una camiseta del Real Madrid en el minuto 90 tras un gol vale más que cualquier banner.
-
 ---
 
-## 🚀 PLAN INMEDIATO — DEMO TV2 (MIÉRCOLES)
+## 🪜 PRIORIDAD DE DESARROLLO — PASO A PASO
 
-### Objetivo
-SDK muestra engagement overlay desde el backend real + componentes funcionando.
+Avanzamos en este orden. No saltar pasos.
 
-### Loop que debe cerrar antes del lunes
 ```
-Dashboard (Replit) → programar poll/contest → Backend → SDK iOS muestra en tiempo real
-```
-
-### Estado actual
-- ✅ Legacy funciona: demo Barcelona-PSG con datos estáticos
-- ⚠️ Nuevo flujo: SDK llama al backend pero no cierra el loop (bug 401 + migración en curso)
-- El `BroadcastContextSetup` y `BackendEngagementTabView` son el puente entre legacy y nuevo
-
----
-
-## 📋 TAREAS — REPLIT
-
-### URGENTE (antes del lunes)
-
-**1. Fix: `integrations.tipio` → `integrations.commerce`**
-Renombraste mal. Tipio es livestream. El ecommerce es Commerce (ex-Reachu).
-
-**2. Verificar endpoint crítico**
-```bash
-GET https://api-dev.vio.live/v1/campaigns/28/config?apiKey=xxl_api_key_507d4014243d8360
-```
-Debe devolver:
-```json
-{
-  "brand": { "name": "XXL Sports", "logoUrl": "...", "iconUrl": "..." },
-  "features": { "enablePolls": true, "enableContests": true, "enableChat": true },
-  "integrations": {
-    "commerce": { "enabled": true/false, "apiKey": "KCXF10Y-...", "channelId": "..." }
-  }
-}
+1. SDK inicializa correctamente (una apiKey, carga campaña)
+2. SDK muestra branding del Sponsor (logo, colores)
+3. SDK resuelve contentId → broadcast → hasEngagement
+4. WebSocket conecta y recibe eventos en tiempo real
+5. Polls y contests se muestran y se puede votar
+6. Chat funciona en tab "All" mezclado con engagement
+7. Score y stats en tiempo real (BackendMatchDataService)
+8. Componentes del dashboard (product_carousel, banner, countdown)
+9. Commerce módulo (cuando esté completamente definido)
 ```
 
-**3. Verificar flujo contentId completo**
-```bash
-GET https://api-dev.vio.live/v1/sdk/broadcast?contentId=real-madrid-barcelona-2025-01-24&country=NO&apiKey=viaplay_api_key_0c611e983b314ff8
-```
-Debe devolver `hasEngagement: true` + broadcastId + polls activos.
-
-**4. Transacciones DB en votos** — CRÍTICO para producción
-Envolver en transacción Drizzle:
-- insert poll_vote
-- update poll_options.vote_count  
-- update polls.total_votes
-
-**5. Dashboard — que se vea avanzado para la demo**
-Asegurarse de que crear campaña → crear broadcast → programar polls/contests fluye sin errores.
-
-### BACKLOG
-- Revertir `integrations.tipio` → `integrations.commerce`
-- Paginación en listados
-- Broadcast validator middleware en todos los endpoints engagement
-
----
-
-## 📋 TAREAS — CURSOR
-
-### URGENTE (antes del lunes)
-
-**1. Fix bug 401 — `ConfigAPIClient.swift`**
-```swift
-// ANTES (usa Commerce key — da 401)
-private var apiKey: String {
-    VioConfiguration.shared.apiKey // KCXF10Y-... ← esta es la Commerce key
-}
-
-// DESPUÉS (usa Vio App key)
-private var apiKey: String {
-    VioConfiguration.shared.campaignConfiguration.campaignApiKey.isEmpty
-        ? VioConfiguration.shared.apiKey
-        : VioConfiguration.shared.campaignConfiguration.campaignApiKey
-}
-```
-
-**2. Eliminar URL hardcodeada legacy** ✅ HECHO
-`event-streamer-angelo100.replit.app` → reemplazado por `restAPIBaseURL` en `OfferBannerModels` y `EventStreamerManager`.
-
-**3. Cerrar el loop de engagement**
-Con el fix del 401, el SDK debe:
-- Llamar a `/v1/campaigns/:id/config` → recibir features + commerce key
-- Conectar WebSocket → `/ws/:campaignId`  
-- Recibir `poll_created` / `broadcast_started` → mostrar `BackendEngagementTabView`
-- Polls y contests en tiempo real desde el backend
-
-**4. Parsear `integrations.commerce` en `CampaignConfig`** ✅ HECHO
-`IntegrationsConfig`, `DynamicCommerceConfig`, `integrations` añadidos. `updateDynamicCommerceConfig()` en `VioConfiguration` y `CampaignManager`.
-
-**5. Verificar que legacy sigue funcionando**
-`campaignId = 28` en `liveShow` debe seguir funcionando para la demo estática.
-
-### BLOCKER (Kotlin — puede esperar al miércoles pero no más)
-- Migrar namespace `io.reachu.*` → `live.vio.*` (191 archivos)
-- Renombrar Maven: `reachu-kotlin-sdk` → `vio-kotlin-sdk`
+**Hoy: pasos 1-5. No avanzar sin validar cada paso.**
 
 ---
 
@@ -175,7 +73,7 @@ Con el fix del 401, el SDK debe:
        ▼
 [Backend Vio — api-dev.vio.live]
        │
-       ├── PostgreSQL (Neon) · 19 tablas · Drizzle ORM
+       ├── PostgreSQL (Neon) · Drizzle ORM
        └── Si commerce.enabled = true ──▶ [graph-ql-dev.vio.live] (infraestructura separada)
 ```
 
@@ -183,34 +81,32 @@ Con el fix del 401, el SDK debe:
 | Servicio | URL |
 |----------|-----|
 | Backend Vio | `https://api-dev.vio.live` |
-| Dashboard admin | `https://api-dev.vio.live` → login: seleccionar "Reachu-admin" |
 | Commerce GraphQL | `https://graph-ql-dev.vio.live/graphql` |
 | ~~event-streamer-angelo100.replit.app~~ | DEPRECADO → usar api-dev.vio.live |
 
 ---
 
-## 🔐 AUTENTICACIÓN
+## 🔐 AUTENTICACIÓN — UNA SOLA KEY
 
-### SDK — Una sola Vio App Key
 ```json
+// vio-config.json — SOLO ESTO
 {
   "apiKey": "<Vio App API Key>",
-  "campaigns": {
-    "restAPIBaseURL": "https://api-dev.vio.live",
-    "webSocketBaseURL": "https://api-dev.vio.live"
-  }
+  "restAPIBaseURL": "https://api-dev.vio.live",
+  "webSocketBaseURL": "https://api-dev.vio.live"
 }
 ```
 
-### Keys de demo
-| Key | Para qué |
-|-----|----------|
-| `viaplay_api_key_0c611e983b314ff8` | Demo Viaplay |
-| `xxl_api_key_507d4014243d8360` | Demo XXL / campaña 28 |
-| `KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S` | Commerce (GraphQL) — viene del servidor |
+- Una sola `apiKey` para TODOS los endpoints Vio
+- La Commerce key la entrega el servidor en `integrations.commerce.apiKey`
+- Nunca hardcodear la Commerce key en el config del app
 
-### Commerce key — nunca en el config del app
-El servidor la entrega en `GET /v1/campaigns/:id/config` → `integrations.commerce.apiKey`.
+### Keys de demo
+| Key | Cliente |
+|-----|---------|
+| `viaplay_api_key_0c611e983b314ff8` | Viaplay |
+| `xxl_api_key_507d4014243d8360` | XXL / campaña 28 |
+| `KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S` | Commerce GraphQL (solo viene del servidor) |
 
 ---
 
@@ -218,15 +114,17 @@ El servidor la entrega en `GET /v1/campaigns/:id/config` → `integrations.comme
 
 ```
 Client App (ej. Viaplay iOS)
-  └── Campaigns (una o varias)
-       ├── Sponsor → fuente única de branding (logo, colores)
-       ├── Components → banners, carrusel, productos, mini tienda
-       │    (el desarrollador define locaciones con IDs, Vio asigna contenido)
-       └── Broadcasts → partidos / eventos deportivos
-            ├── Polls (pre-programados + tiempo real)
-            ├── Contests (pre-programados + tiempo real)
-            └── Chat (con tweets curados por moderador de Viaplay)
+  └── Campaigns
+       ├── Sponsor → ÚNICA fuente de branding (logo, colores)
+       ├── Components → banners, carrusel, countdown (locationId)
+       └── Broadcasts → partidos / eventos
+            ├── Polls (activos + tiempo real)
+            ├── Contests (activos + tiempo real)
+            ├── Chat (mezclado en tab "All")
+            └── Match Data (score, stats — BackendMatchDataService)
 ```
+
+**Channels:** Ignorar por ahora. Son legacy opcionales. No bloquean nada.
 
 ---
 
@@ -237,10 +135,81 @@ Client App (ej. Viaplay iOS)
 | `broadcast_started` | Broadcast → live | Activar polls/contests/chat |
 | `broadcast_ended` | Broadcast → ended | Ocultar engagement |
 | `poll_results_updated` | Voto recibido | Actualizar porcentajes |
-| `poll` | Admin/operador dispara | Mostrar poll overlay |
-| `contest` | Admin/operador dispara | Mostrar contest overlay |
+| `poll` | Admin dispara | Mostrar poll overlay |
+| `contest` | Admin dispara | Mostrar contest overlay |
+| `chat_message` | Usuario envía chat | Añadir al feed "All" |
+| `tweet` | Admin dispara | Añadir al feed "All" |
+| `score_update` | Admin actualiza score | Actualizar MatchHeaderView |
 | `component:activated` | Scheduler | Mostrar componente |
 | `component:deactivated` | Scheduler | Ocultar componente |
+
+---
+
+## 🧩 COMPONENTES — PENDIENTE CONSOLIDAR
+
+Los siguientes componentes existen en el backend pero necesitan consolidación de nombre + implementación en el SDK iOS:
+
+| Tipo | Estado backend | Estado SDK |
+|------|---------------|------------|
+| `banner` | ✅ | ✅ parcial |
+| `offer_banner` | ✅ | ✅ parcial |
+| `countdown` | ✅ | ❌ pendiente |
+| `product_carousel` | ✅ | ❌ pendiente |
+| `product_banner` | ✅ | ❌ pendiente |
+| `product_store` | ✅ | ❌ pendiente |
+
+**Tarea pendiente:** Consolidar nombres y estructura JSON entre backend y SDK antes de implementar.
+
+---
+
+## 🔄 FLUJO DE INICIALIZACIÓN SDK (orden correcto)
+
+```
+1. GET /v1/sdk/campaigns
+   → campañas activas + componentes de campaña
+   → SDK guarda lista de campañas
+
+2. GET /v1/campaigns/:id/config
+   → brand del Sponsor (logo, colores)
+   → features (polls, contests, chat)
+   → integrations.commerce (enabled, apiKey)
+   → SDK aplica branding
+
+3. (al abrir stream)
+   GET /v1/sdk/broadcast?contentId=xxx&country=NO
+   → hasEngagement true/false
+   → si true: broadcastId, polls activos, contests activos
+
+4. WebSocket wss://api-dev.vio.live/ws/:campaignId
+   → eventos en tiempo real
+
+5. POST /v1/engagement/polls/:id/vote
+   → votar
+```
+
+---
+
+## 🔴 ENDPOINTS NUEVOS (score, chat, tweets)
+
+```
+GET  /v1/sdk/broadcasts/:id/score     → score en tiempo real
+GET  /v1/sdk/broadcasts/:id/stats     → stats del partido
+GET  /v1/sdk/livescores               → partidos activos
+POST /api/broadcasts/:id/chat         → chat → WS chat_message
+POST /api/broadcasts/:id/tweet        → tweet → WS tweet
+GET  /health                          → health check
+```
+
+---
+
+## ⛔ REGLAS — NUNCA ROMPER
+
+1. `campaignId: 28` (demo XXL legacy) — sigue funcionando siempre
+2. `/v1/sdk/config` — no modificar estructura de respuesta
+3. `integrations.commerce` — nunca renombrar a tipio
+4. Branding siempre desde `CampaignConfig.brand` (sponsor) — nunca hardcodear
+5. `VioLogger` en Swift — nunca `print()`
+6. URLs siempre desde config — nunca hardcodear `api-dev.vio.live`
 
 ---
 
@@ -248,31 +217,9 @@ Client App (ej. Viaplay iOS)
 
 | Partner | Estado |
 |---------|--------|
-| **Viaplay** | 4 reuniones. Jefe de producto. Noruega aprobado internamente. Pendiente decisión escandinava. |
-| **TV2** | 2ª reunión el miércoles. Fase temprana. |
+| **Viaplay** | 4 reuniones. Noruega aprobado internamente. Pendiente decisión escandinava. |
+| **TV2** | 2ª reunión próxima. Fase temprana. |
 
 ---
 
-## 🔮 FUTURO (no tocar ahora)
-
-- Usuarios viendo en móvil también pueden interactuar (ahora solo second screen TV)
-- Modelos AI que automatizan el rol del operador — detectan momentos clave y lanzan polls/contests
-- Tipio (livestream service) — futuro lejano
-- KotlinSDK namespace migration → después del miércoles
-
----
-
-## 🛠️ VARIABLES DE ENTORNO BACKEND
-
-| Variable | Requerida |
-|----------|-----------|
-| `DATABASE_URL` | ✅ |
-| `SESSION_SECRET` | ✅ |
-| `SCHEDULER_INTERVAL_MINUTES` | No (default: 1 min) |
-| `USE_QUEUE` | No |
-| `REDIS_HOST` | No (prod) |
-
----
-
-_Actualizado: 2026-02-27 · Coordinado por Viobot_
-_Próxima revisión: self-optimize 23:00 Oslo_
+_Actualizado: 2026-02-28 · Viobot_
