@@ -601,7 +601,8 @@ public struct VLiveShowFullScreenOverlay: View {
     // MARK: - Helper Methods
 
     private func monitorPlayerStatus(_ item: AVPlayerItem) {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak item] timer in
+            guard let item = item else { timer.invalidate(); return }
             print("📊 [LiveShow] Player status: \(item.status.description)")
             
             // Log additional HLS debugging info

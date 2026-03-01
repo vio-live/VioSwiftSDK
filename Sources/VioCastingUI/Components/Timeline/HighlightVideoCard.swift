@@ -410,6 +410,7 @@ struct HighlightVideoPlayerView: View {
         }
         .onDisappear {
             player?.pause()
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
             player = nil
         }
     }

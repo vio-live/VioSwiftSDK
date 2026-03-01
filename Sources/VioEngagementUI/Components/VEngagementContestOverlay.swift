@@ -335,7 +335,7 @@ public struct VEngagementContestOverlay: View {
     }
     
     private func startCountdown() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
             if countdown > 0 {
                 countdown -= 1
             } else {

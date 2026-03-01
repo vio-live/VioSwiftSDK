@@ -49,7 +49,12 @@ class ImageLoader: ObservableObject {
     @Published var image: Image?
     
     private let url: URL?
-    private static let cache = NSCache<NSString, UIImage>()
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.countLimit = 50          // max 50 images
+        c.totalCostLimit = 50 * 1024 * 1024  // max 50MB
+        return c
+    }()
     private static let fileManager = FileManager.default
     
     init(url: URL?) {
