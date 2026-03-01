@@ -141,7 +141,7 @@ struct ViaplayApp: App {
 
             // STEP 1 — Discover active campaigns
             VioLogger.debug("⬡ STEP 1 — GET /v1/sdk/campaigns", component: "VioInit")
-            await CampaignManager.shared.discoverCampaigns()
+            await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
             let count = CampaignManager.shared.activeCampaigns.count
             if count > 0 {
                 let campaign = CampaignManager.shared.activeCampaigns.first!
