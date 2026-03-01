@@ -125,6 +125,51 @@ struct ViaplayApp: App {
             
             print("🎮 [Viaplay] Demo mode enabled for Engagement System")
         }
+
+        // ── Vio SDK Initialization — global, once at launch ──
+        Task { @MainActor in
+            let baseURL = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
+            let apiKey = VioConfiguration.shared.apiKey
+            print("")
+            print("╔══════════════════════════════════════════╗")
+            print("║       VIO SDK — INITIALIZATION           ║")
+            print("╠══════════════════════════════════════════╣")
+            print("║  baseURL: \(baseURL)")
+            print("║  apiKey:  ...\(String(apiKey.suffix(8)))")
+            print("╚══════════════════════════════════════════╝")
+            print("")
+
+            // STEP 1 — Discover active campaigns
+            VioLogger.debug("⬡ STEP 1 — GET /v1/sdk/campaigns", component: "VioInit")
+            await CampaignManager.shared.discoverCampaigns()
+            let count = CampaignManager.shared.activeCampaigns.count
+            if count > 0 {
+                let campaign = CampaignManager.shared.activeCampaigns.first!
+                VioLogger.debug("✅ STEP 1 — \(count) campaign(s) found. First: id=\(campaign.id) state=\(campaign.currentState)", component: "VioInit")
+            } else {
+                VioLogger.warning("❌ STEP 1 — No active campaigns found. Check apiKey and campaign dates.", component: "VioInit")
+                return
+            }
+
+            // STEP 2 — Load campaign config (branding + Commerce key)
+            guard let campaignId = CampaignManager.shared.activeCampaigns.first?.id else { return }
+            VioLogger.debug("⬡ STEP 2 — GET /v1/campaigns/\(campaignId)/config", component: "VioInit")
+            if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(campaignId: campaignId, broadcastId: nil) {
+                let brandName = config.brand?.name ?? "nil"
+                let logoUrl = config.brand?.logoUrl ?? "nil"
+                let commerceEnabled = config.integrations?.commerce?.enabled ?? false
+                VioLogger.debug("✅ STEP 2 — brand=\(brandName) logoUrl=\(logoUrl.prefix(60))... commerce=\(commerceEnabled)", component: "VioInit")
+            } else {
+                VioLogger.warning("❌ STEP 2 — Failed to load campaign config", component: "VioInit")
+            }
+
+            VioLogger.debug("⬡ STEP 3 — WebSocket will connect when user opens a stream (contentId flow)", component: "VioInit")
+            print("")
+            print("╔══════════════════════════════════════════╗")
+            print("║  VIO SDK READY ✅                        ║")
+            print("╚══════════════════════════════════════════╝")
+            print("")
+        }
     }
 
     var body: some Scene {
