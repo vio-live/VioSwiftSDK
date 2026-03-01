@@ -127,7 +127,7 @@ struct ViaplayApp: App {
         }
 
         // ── Vio SDK Initialization — global, once at launch ──
-        Task { @MainActor in
+        Task.detached(priority: .userInitiated) {
             let baseURL = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
             let apiKey = VioConfiguration.shared.apiKey
             print("")

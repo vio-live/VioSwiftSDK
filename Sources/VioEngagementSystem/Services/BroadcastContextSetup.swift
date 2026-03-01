@@ -53,7 +53,8 @@ public enum BroadcastContextSetup {
             sessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
 
             print("⬡ [VioInit] STEP 4 — Connecting WebSocket /ws/\(campaignManager.activeCampaigns.first?.id ?? -1)")
-            if autoDiscover {
+            // Skip discoverCampaigns if already done at launch (activeCampaigns already loaded)
+            if autoDiscover && campaignManager.activeCampaigns.isEmpty {
                 await campaignManager.discoverCampaigns(broadcastId: broadcastId)
             }
             await campaignManager.setBroadcastContext(broadcastContext)
