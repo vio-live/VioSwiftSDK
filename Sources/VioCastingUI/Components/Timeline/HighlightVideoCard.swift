@@ -353,8 +353,8 @@ struct HighlightVideoPlayerView: View {
     let title: String
     let onDismiss: () -> Void
     
-@State private var player: AVPlayer?
-    @State private var loopToken: Any?
+    @State private var player: AVPlayer?
+    @State private var loopObserver: NSObjectProtocol?
     
     var body: some View {
         ZStack {
@@ -399,8 +399,8 @@ struct HighlightVideoPlayerView: View {
             player = AVPlayer(url: videoURL)
             player?.play()
             
-            // Loop video — store token for proper removal
-            let loopObserver = NotificationCenter.default.addObserver(
+            // Loop video — store token for correct removeObserver
+            loopObserver = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: player?.currentItem,
                 queue: .main
@@ -408,14 +408,13 @@ struct HighlightVideoPlayerView: View {
                 player?.seek(to: .zero)
                 player?.play()
             }
-            loopToken = loopObserver
         }
         .onDisappear {
             player?.pause()
-            if let token = loopToken {
-                NotificationCenter.default.removeObserver(token)
-                loopToken = nil
+            if let obs = loopObserver {
+                NotificationCenter.default.removeObserver(obs)
             }
+            loopObserver = nil
             player = nil
         }
     }

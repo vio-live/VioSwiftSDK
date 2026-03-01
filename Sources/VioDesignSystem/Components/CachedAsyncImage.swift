@@ -52,7 +52,7 @@ public class ImageLoader: ObservableObject {
     private static let cache: NSCache<NSString, UIImage> = {
         let c = NSCache<NSString, UIImage>()
         c.countLimit = 50
-        c.totalCostLimit = 50 * 1024 * 1024  // 50MB
+        c.totalCostLimit = 50 * 1024 * 1024  // 50 MB
         return c
     }()
     private static let fileManager = FileManager.default

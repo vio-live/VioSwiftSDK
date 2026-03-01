@@ -24,6 +24,7 @@ public struct VLiveShowFullScreenOverlay: View {
     @State private var player: AVPlayer?
     @State private var showControls = true
     @State private var controlsTimer: Timer?
+    @State private var playerStatusTimer: Timer?
     // showShopping removed - now handled by VLiveBottomTabs
     @State private var isLoading = true
     @State private var isPlaying = false
@@ -601,9 +602,9 @@ public struct VLiveShowFullScreenOverlay: View {
     // MARK: - Helper Methods
 
     private func monitorPlayerStatus(_ item: AVPlayerItem) {
-        controlsTimer?.invalidate() // reuse controlsTimer slot to save reference
-        controlsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak item, weak self] timer in
-            guard let item = item else { timer.invalidate(); self?.controlsTimer = nil; return }
+        playerStatusTimer?.invalidate()
+        playerStatusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak item] timer in
+            guard let item = item else { timer.invalidate(); return }
             print("📊 [LiveShow] Player status: \(item.status.description)")
             
             // Log additional HLS debugging info
@@ -1367,6 +1368,8 @@ public struct VLiveShowFullScreenOverlay: View {
     private func cleanup() {
         player?.pause()
         controlsTimer?.invalidate()
+        playerStatusTimer?.invalidate()
+        playerStatusTimer = nil
     }
     
     // MARK: - Right Side Controls

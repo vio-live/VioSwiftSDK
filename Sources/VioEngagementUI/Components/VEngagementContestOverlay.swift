@@ -27,8 +27,8 @@ public struct VEngagementContestOverlay: View {
     @State private var finalPrize: String = ""
     @State private var isSpinning = false
     @State private var countdown: Int = 10
-    @State private var dragOffset: CGFloat = 0
     @State private var countdownTimer: Timer?
+    @State private var dragOffset: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.colorScheme) private var colorScheme
@@ -341,15 +341,14 @@ public struct VEngagementContestOverlay: View {
     
     private func startCountdown() {
         countdownTimer?.invalidate()
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else { timer.invalidate(); return }
-            if self.countdown > 0 {
-                self.countdown -= 1
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
+            if countdown > 0 {
+                countdown -= 1
             } else {
                 timer.invalidate()
-                self.countdownTimer = nil
-                if self.hasJoined {
-                    self.startWheel()
+                countdownTimer = nil
+                if hasJoined {
+                    startWheel()
                 }
             }
         }
