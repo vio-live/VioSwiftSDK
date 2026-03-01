@@ -13,6 +13,9 @@ import VioCore
 /// Validates via GET /v1/sdk/broadcast when contentId + country are set.
 @MainActor
 public enum BroadcastContextSetup {
+    
+    // Prevent concurrent setup calls
+    private static var isSettingUp = false
 
     /// Sets up broadcast context for a session. Call from .task when view appears.
     /// - Parameters:
@@ -22,6 +25,14 @@ public enum BroadcastContextSetup {
         sessionContext: VioSessionContext,
         fallbackBroadcastContext: () -> BroadcastContext
     ) async {
+        // Guard against concurrent calls — SwiftUI can re-render multiple times
+        guard !isSettingUp else {
+            print("⚠️ [VioInit] BroadcastContextSetup already running, skipping duplicate call")
+            return
+        }
+        isSettingUp = true
+        defer { isSettingUp = false }
+
         let config = VioConfiguration.shared
         let autoDiscover = config.campaignConfiguration.autoDiscover
         let campaignManager = CampaignManager.shared
