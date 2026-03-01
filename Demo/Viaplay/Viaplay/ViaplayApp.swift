@@ -127,9 +127,9 @@ struct ViaplayApp: App {
         }
 
         // ── Vio SDK Initialization — global, once at launch ──
-        Task.detached(priority: .userInitiated) {
-            let baseURL = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
-            let apiKey = VioConfiguration.shared.apiKey
+        Task(priority: .userInitiated) {
+            let baseURL = await VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
+            let apiKey = await VioConfiguration.shared.apiKey
             print("")
             print("╔══════════════════════════════════════════╗")
             print("║       VIO SDK — INITIALIZATION           ║")
@@ -142,9 +142,9 @@ struct ViaplayApp: App {
             // STEP 1 — Discover active campaigns
             print("⬡ [VioInit] STEP 1 — GET /v1/sdk/campaigns")
             await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
-            let count = CampaignManager.shared.activeCampaigns.count
+            let count = await CampaignManager.shared.activeCampaigns.count
             if count > 0 {
-                let campaign = CampaignManager.shared.activeCampaigns.first!
+                let campaign = await CampaignManager.shared.activeCampaigns.first!
                 print("✅ [VioInit] STEP 1 — \(count) campaign(s). id=\(campaign.id) state=\(campaign.currentState)")
             } else {
                 print("❌ [VioInit] STEP 1 — No active campaigns. Check apiKey and endDate in dashboard.")
@@ -152,7 +152,7 @@ struct ViaplayApp: App {
             }
 
             // STEP 2 — Load campaign config (branding + Commerce key)
-            guard let campaignId = CampaignManager.shared.activeCampaigns.first?.id else { return }
+            guard let campaignId = await CampaignManager.shared.activeCampaigns.first?.id else { return }
             print("⬡ [VioInit] STEP 2 — GET /v1/campaigns/\(campaignId)/config")
             if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(campaignId: campaignId, broadcastId: nil) {
                 let brandName = config.brand?.name ?? "nil"
