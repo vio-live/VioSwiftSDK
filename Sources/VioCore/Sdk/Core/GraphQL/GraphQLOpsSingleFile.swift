@@ -82,7 +82,11 @@ private enum _GQLOperationFallbackFromVars {
 public final class GraphQLOperationLoader: @unchecked Sendable {
     private let session: URLSession
     private let timeout: TimeInterval
-    private let cache = NSCache<NSString, NSString>()
+    private let cache: NSCache<NSString, NSString> = {
+        let c = NSCache<NSString, NSString>()
+        c.countLimit = 100
+        return c
+    }()
 
     public init(timeout: TimeInterval = 3.5) {
         self.timeout = timeout

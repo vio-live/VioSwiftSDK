@@ -28,6 +28,7 @@ public struct VEngagementContestOverlay: View {
     @State private var isSpinning = false
     @State private var countdown: Int = 10
     @State private var dragOffset: CGFloat = 0
+    @State private var countdownTimer: Timer?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.colorScheme) private var colorScheme
@@ -99,6 +100,10 @@ public struct VEngagementContestOverlay: View {
         }
         .onAppear {
             startCountdown()
+        }
+        .onDisappear {
+            countdownTimer?.invalidate()
+            countdownTimer = nil
         }
     }
     
@@ -335,13 +340,16 @@ public struct VEngagementContestOverlay: View {
     }
     
     private func startCountdown() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [self] timer in
-            if countdown > 0 {
-                countdown -= 1
+        countdownTimer?.invalidate()
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            guard let self = self else { timer.invalidate(); return }
+            if self.countdown > 0 {
+                self.countdown -= 1
             } else {
                 timer.invalidate()
-                if hasJoined {
-                    startWheel()
+                self.countdownTimer = nil
+                if self.hasJoined {
+                    self.startWheel()
                 }
             }
         }
