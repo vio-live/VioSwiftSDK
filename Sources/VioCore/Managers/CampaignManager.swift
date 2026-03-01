@@ -202,8 +202,10 @@ public class CampaignManager: ObservableObject {
         
         // Check if auto-discovery is enabled
         if config.campaignConfiguration.autoDiscover {
-            // Use auto-discovery
-            await discoverCampaigns(broadcastId: context.broadcastId)
+            // Only re-discover if no campaigns loaded yet — prevents infinite loop
+            if activeCampaigns.isEmpty {
+                await discoverCampaigns(broadcastId: context.broadcastId)
+            }
         } else if let campaignId = campaignId, campaignId > 0 {
             // Use legacy single campaign mode
             await initializeCampaign()
