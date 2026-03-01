@@ -8,125 +8,63 @@
 
 - **IDs**: VIO-XXX — nunca se reutilizan
 - **Estado**: 🔴 blocker · 🟡 en progreso · ⚪ pendiente · ✅ hecho
-- **Propietario**: Replit (backend/dashboard) · Cursor (SDK Swift) · Alan (SDK Kotlin) · Viobot (infra/docs)
+- **Propietario**: Replit (backend/dashboard) · Viobot/Claude (SDK Swift) · Alan (SDK Kotlin) · Viobot (infra/docs)
 - Cuando termines una tarea → cambia el estado a ✅ y añade la fecha
 
 ---
 
-## SPRINT ACTIVO — Semana 28 feb
+## SPRINT ACTIVO — Semana 1 Mar
 
-### VIO-001 · Replit · ✅ 2026-02-28
-**Editar status de broadcast desde el dashboard**
-
-Fix aplicado:
-- Select de status (upcoming/live/ended) en el dialog de edición del broadcast ✅ (ya estaba)
-- Botones rápidos en la lista: "Go Live" (verde, solo en upcoming) + "End" (rojo, solo en live) ✅ nuevo
-- Backend emite broadcast_started / broadcast_ended via WebSocket al cambiar status ✅ (ya estaba)
-- Toast de confirmación con mensaje específico por estado ✅
-- Tests e2e pasados: flujo completo upcoming → live → ended verificado ✅
-
----
-
-### VIO-002 · Replit · ✅ 2026-02-28
-**Verificar /v1/campaigns/:id/config devuelve branding completo**
-
-Verificado 17:28 Oslo — brand.name: Elkjøp, logoUrl presente.
-Pendiente confirmar que el SDK lo recibe correctamente (depende de VIO-005).
-
----
-
-### VIO-003 · Replit · ✅ 2026-02-28
+### VIO-003 · Replit · ⚪ pendiente
 **Endpoint historial de chat por broadcast**
 
-Verificado en producción:
-  GET /v1/sdk/broadcasts/real-madrid-vs-barcelona-2026-02-25/chat?apiKey=...&limit=5
-  → { broadcastId, messages: [...], count: 5 }
-Responde correctamente con mensajes del broadcast.
+Por qué: Cuando el usuario abre el overlay a mitad del partido, debe ver los mensajes anteriores. Sin historial, el chat parece vacío aunque el WebSocket funcione.
+
+Implementar:
+  GET /v1/sdk/broadcasts/:broadcastId/chat?apiKey=...&limit=50
+  → { broadcastId, messages: [...], count: N }
 
 ---
 
-### VIO-004 · Replit · ✅ 2026-02-28
+### VIO-004 · Replit · ⚪ pendiente
 **Endpoint componentes por locationId**
 
-Verificado en producción:
+Por qué: Los banners, countdown y carruseles son la capa de monetización. El desarrollador define slots en su código (locationId). Sin este endpoint los componentes nunca llegan al SDK.
+
+Implementar:
   GET /v1/sdk/components?locationId=sport-banner&apiKey=...&campaignId=35
-  → { components: [], count: 0 }
-Endpoint existe y responde. Retorna vacío si no hay componentes con ese locationId configurados.
+  → componente activo para ese slot, o vacío si no hay ninguno
 
 ---
 
-### VIO-005 · Cursor · 🟡 en progreso
-**Inicializar CampaignManager al arrancar la app**
-
-Por qué: Con autoDiscover: true, el SDK necesita llamar a discoverCampaigns() al launch. Sin esto, el SDK está configurado pero nunca conecta al backend.
-
-Fix aplicado: ViaplayApp.swift → Task { await CampaignManager.shared.discoverCampaigns() }
-Validar: Logs deben mostrar "Campaigns discovered: 1 active" al arrancar.
-
----
-
-### VIO-006 · Cursor · ⚪ pendiente
+### VIO-006 · Viobot · 🟡 en progreso
 **Validar que branding del Sponsor se aplica en el overlay**
 
-Por qué: El SDK recibe brand.logoUrl del backend. Confirmar que MatchHeaderView y el overlay muestran el logo de Elkjøp en lugar de un placeholder.
-Depende de: VIO-005 completado y VIO-002 verificado.
+Verificado que llega brand=Elkjøp + logoUrl desde backend. Pendiente confirmar que se renderiza en el overlay en el Simulator.
 
 ---
 
-### VIO-007 · Cursor · ⚪ pendiente
+### VIO-007 · Viobot · ✅ 2026-03-01
 **Validar flujo contentId → hasEngagement → overlay**
 
-Por qué: Este es el corazón del producto. El usuario abre el stream de Real Madrid en Viaplay → el SDK resuelve el contentId → hasEngagement: true → aparece el botón de casting.
-
-contentId demo: real-madrid-barcelona-2025-01-24 · país: NO
-Depende de: VIO-005 completado.
+contentId real-madrid-barcelona-2025-01-24 → hasEngagement:true → STEP 3 ✅ → STEP 4 WebSocket → STEP 5 loadEngagement.
+Barcelona-PSG → hasEngagement:false → sin overlay. ✅
 
 ---
 
-### VIO-008 · Cursor · ⚪ pendiente
+### VIO-008 · Viobot · ⚪ pendiente
 **Conectar BackendMatchDataService en MatchHeaderView**
 
-Por qué: El header muestra 0-0 hardcodeado. Debe mostrar Real Madrid 2-1 Barcelona desde el backend.
+El header muestra 0-0 hardcodeado. Debe mostrar Real Madrid 2-1 Barcelona desde backend.
 Archivo: Sources/VioCastingUI/Components/Match/MatchHeaderView.swift
-Depende de: VIO-007 completado.
+Depende de: VIO-007 ✅
 
 ---
 
-### VIO-009 · Cursor · ⚪ pendiente
+### VIO-009 · Viobot · ⚪ pendiente
 **Chat en tab "All" mezclado con polls/contests**
 
-Por qué: El tab "All" es el feed principal. Polls, contests y chat deben aparecer mezclados cronológicamente.
-Depende de: VIO-003 (endpoint historial chat) + VIO-007.
-
----
-
----
-
-## COMPLETADO
-
-### VIO-011 · Viobot · ✅ 2026-02-27
-Fix 401 en ConfigAPIClient.swift — SDK usaba Commerce key para autenticarse en Vio.
-
-### VIO-012 · Viobot · ✅ 2026-02-27
-Eliminar Tipio del SDK Swift — TipioApiClient, TipioWebSocketClient, TipioModels eliminados.
-
-### VIO-013 · Viobot · ✅ 2026-02-27
-BackendMatchDataService — score/stats/polling fallback 30s si WS cae.
-
-### VIO-014 · Viobot · ✅ 2026-02-27
-BroadcastTeam en modelos — BroadcastValidationResult incluye homeTeam/awayTeam.
-
-### VIO-015 · Replit · ✅ 2026-02-27
-Endpoints match data — /score, /stats, /livescores operativos.
-
-### VIO-016 · Replit · ✅ 2026-02-27
-Chat y tweets via WebSocket — chat_message y tweet eventos funcionando.
-
-### VIO-017 · Replit · ✅ 2026-02-28
-Health check + deploy en autoscale — /health responde, deploy estable.
-
-### VIO-018 · Viobot · ✅ 2026-02-28
-VIO_TRUTH.md v5 — Tipio eliminado, flujo paso a paso, componentes pendientes.
+Depende de: VIO-003 (endpoint historial chat)
 
 ---
 
@@ -135,10 +73,56 @@ VIO_TRUTH.md v5 — Tipio eliminado, flujo paso a paso, componentes pendientes.
 
 ### VIO-010 · Alan · ⚪ pendiente (futuro)
 **Migrar namespace io.reachu → live.vio en KotlinSDK (191 archivos)**
-
-Por qué: Cualquier integrador Android de Viaplay o TV2 verá "import io.reachu.VioUI". Mata la venta.
-Alcance: Package, Maven groupId/artifactId, README.
 Cuando atacar: Después de que el flujo Swift + backend esté validado end-to-end.
+
+---
+
+## COMPLETADO
+
+### VIO-001 · Replit · ✅ 2026-02-28
+Status buttons "Go Live" / "End" en lista de broadcasts del dashboard.
+
+### VIO-002 · Replit · ✅ 2026-02-28
+/v1/campaigns/:id/config devuelve brand=Elkjøp, logoUrl, commerce.enabled. Verificado.
+
+### VIO-005 · Viobot · ✅ 2026-03-01
+discoverCampaigns(broadcastId: nil) en ViaplayApp.swift al launch. 1 campaign encontrada.
+
+### VIO-007 · Viobot · ✅ 2026-03-01
+contentId flow completo — STEP 1-5 verificados en Simulator.
+
+### VIO-011 · Viobot · ✅ 2026-02-27
+Fix 401 ConfigAPIClient.swift — usa Vio App API Key.
+
+### VIO-012 · Viobot · ✅ 2026-02-27
+Tipio eliminado del SDK Swift.
+
+### VIO-013 · Viobot · ✅ 2026-02-27
+BackendMatchDataService — score/stats/polling fallback 30s.
+
+### VIO-014 · Viobot · ✅ 2026-02-27
+BroadcastTeam en modelos — homeTeam/awayTeam en BroadcastValidationResult.
+
+### VIO-015 · Replit · ✅ 2026-02-27
+Endpoints match data — /score, /stats, /livescores operativos.
+
+### VIO-016 · Replit · ✅ 2026-02-27
+Chat y tweets via WebSocket.
+
+### VIO-017 · Replit · ✅ 2026-02-28
+Health check + deploy en autoscale.
+
+### VIO-018 · Viobot · ✅ 2026-02-28
+VIO_TRUTH.md v5 — Tipio eliminado, flujo paso a paso.
+
+### VIO-019 · Viobot · ✅ 2026-03-01
+Memory leaks corregidos:
+- NSCache límites en VioDesignSystem/CachedAsyncImage + GraphQLOpsSingleFile
+- monitorPlayerStatus Timer: guardado en controlsTimer, [weak item, weak self]
+- startCountdown Timer: @State countdownTimer, [weak self], .onDisappear invalida
+- HighlightVideoCard: token guardado en @State loopToken, removeObserver(token) correcto
+- BroadcastContextSetup: guard isSettingUp contra llamadas concurrentes SwiftUI
+- refreshCampaignsForContext: guard activeCampaigns.isEmpty evita loop infinito
 
 ---
 
@@ -158,4 +142,4 @@ Cuando atacar: Después de que el flujo Swift + backend esté validado end-to-en
 
 ---
 
-_Actualizado: 2026-02-28 17:36 Oslo · Viobot_
+_Actualizado: 2026-03-01 21:42 Oslo · Viobot_
