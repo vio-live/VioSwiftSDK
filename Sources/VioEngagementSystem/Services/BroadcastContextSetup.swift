@@ -71,7 +71,7 @@ public enum BroadcastContextSetup {
             await campaignManager.setBroadcastContext(broadcastContext)
 
             print("⬡ [VioInit] STEP 5 — Loading engagement (polls, contests, chat)")
-            await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true)
+            // await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true) // Comentado para debug RAM
             print("✅ [VioInit] STEP 5 — Engagement loaded. Overlay should be visible.")
             return
         }
@@ -91,6 +91,6 @@ public enum BroadcastContextSetup {
         } else {
             await campaignManager.setBroadcastContext(broadcastContext)
         }
-        await EngagementManager.shared.loadEngagement(for: broadcastContext)
+        // await EngagementManager.shared.loadEngagement(for: broadcastContext) // Comentado para debug RAM
     }
 }

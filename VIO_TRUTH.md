@@ -1,5 +1,5 @@
 # VIO TRUTH — Fuente Absoluta de Verdad
-> Última actualización: 2026-02-28
+> Última actualización: 2026-03-02
 > Mantenido por: Viobot
 
 ---
@@ -202,6 +202,18 @@ GET  /health                          → health check
 
 ---
 
+## ⚠️ BUG CONOCIDO — Memory leak loadEngagement (2026-03-02)
+
+**Síntoma:** Al entrar a Real Madrid - Barcelona, la RAM sube de forma continua hasta tener que cerrar la app.
+
+**Causa confirmada:** `EngagementManager.shared.loadEngagement()` en BroadcastContextSetup.
+
+**Workaround:** loadEngagement está comentado en BroadcastContextSetup.swift. Los polls y contests no se cargan hasta resolver.
+
+**Pendiente:** Profilar con Instruments, revisar BackendEngagementRepository, EngagementCache, DynamicConfigurationManager.
+
+---
+
 ## ⛔ REGLAS — NUNCA ROMPER
 
 1. `campaignId: 28` (demo XXL legacy) — sigue funcionando siempre
@@ -222,4 +234,4 @@ GET  /health                          → health check
 
 ---
 
-_Actualizado: 2026-02-28 · Viobot_
+_Actualizado: 2026-03-02 · Viobot_

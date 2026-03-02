@@ -16,25 +16,23 @@ Tu trabajo: mantener los SDKs en sync con el backend (`api-dev.vio.live`), imple
 
 ---
 
-## Estado actual — Swift SDK (commit 31979a0)
+## Estado actual — Swift SDK (commit 3319a03)
 
 ### Lo que acaba de llegar (nuevos archivos):
 - `BroadcastContextSetup.swift` — orquestador del flujo contentId. Es el punto de entrada para cualquier integración de streaming.
 - `BackendEngagementTabView.swift` — UI de polls y contests consumiendo el backend directamente.
 
-### BUG ACTIVO — Prioridad alta
-`ConfigAPIClient` usa la Commerce key (`KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S`) para llamar a `/v1/campaigns/:id/config` → recibe 401.
+### BUG ACTIVO — Prioridad alta — Memory leak en loadEngagement (2026-03-02)
+**Confirmado:** Al entrar a Real Madrid - Barcelona, la RAM sube de forma continua hasta tener que cerrar la app. La causa es `EngagementManager.shared.loadEngagement()`.
 
-**Fix:** Usar `VioConfiguration.shared.apiKey` (la Vio App API Key) en lugar de la Commerce key.
+**Workaround actual:** `loadEngagement` está **comentado** en `BroadcastContextSetup.swift` (líneas 74 y 94). Los polls y contests no se cargan hasta resolver el bug.
 
-```swift
-// ConfigAPIClient.swift — línea que debe cambiar:
-// ❌ Incorrecto — usa Commerce key
-private var apiKey: String { VioConfiguration.shared.commerceApiKey }
+**Diagnóstico:** Se descartó eventStreamer.connect(), chat, WebSocket. El pico ocurre solo cuando loadEngagement se ejecuta.
 
-// ✅ Correcto — usa la Vio App API Key
-private var apiKey: String { VioConfiguration.shared.apiKey }
-```
+**Rama backup con fixes intentados:** `backup/memory-debug-20260302` (limit:20, NSCache, observers, etc. — no resolvieron).
+
+### BUG resuelto — ConfigAPIClient 401
+`ConfigAPIClient` usaba la Commerce key para `/v1/campaigns/:id/config` → 401. **Fix aplicado:** Usar `VioConfiguration.shared.apiKey`.
 
 ### TODOs pendientes (no bloqueantes para Viaplay demo)
 - `UnifiedTimelineManager` — esperar definición de backend

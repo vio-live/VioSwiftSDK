@@ -1,4 +1,11 @@
-# TASKS_NOW — VioSwiftSDK · Última actualización: 2026-02-27
+# TASKS_NOW — VioSwiftSDK · Última actualización: 2026-03-02
+
+## 🔴 BUG CRÍTICO — Memory leak loadEngagement (pendiente resolver)
+Al entrar a Real Madrid - Barcelona, la RAM sube sin parar. **Causa confirmada:** `EngagementManager.shared.loadEngagement()`.
+
+**Estado:** loadEngagement está **comentado** en BroadcastContextSetup como workaround. Los polls/contests no cargan.
+
+**Próximos pasos:** Profilar con Instruments, revisar BackendEngagementRepository, EngagementCache, DynamicConfigurationManager, o volumen de datos del backend.
 
 ## ✅ Completado
 - Fix 401 ConfigAPIClient ✅
