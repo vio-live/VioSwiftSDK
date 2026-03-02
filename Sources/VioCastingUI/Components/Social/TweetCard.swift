@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import VioDesignSystem
 
 struct TweetCard: View {
     let tweet: TweetEvent
