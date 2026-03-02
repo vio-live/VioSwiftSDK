@@ -258,25 +258,12 @@ struct SportDetailView: View {
                         .padding(.top, 24)
                         .frame(width: geometry.size.width)
                         
-                        // Products carousel from SDK
+                        // Products carousel from SDK (sponsor badge comes from VProductCarousel)
                         VStack(alignment: .leading, spacing: 10) {
-                            // Header with title and sponsor badge
-                            HStack(alignment: .top, spacing: 12) {
-                                // Title
-                                Text("Produkter")
-                                    .font(.system(size: 18, weight: .regular))
-                                    .foregroundColor(.white)
-                                
-                                Spacer()
-                                
-                                // Campaign sponsor badge
-                                CampaignSponsorBadge(
-                                    maxWidth: 80,
-                                    maxHeight: 24,
-                                    alignment: .leading
-                                )
-                            }
-                            .padding(.horizontal, 16)
+                            Text("Produkter")
+                                .font(.system(size: 18, weight: .regular))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
                             
                             VProductCarousel(
                                 componentId: "6f6c5337-c721-471b-bff3-adc55a0349ef",
