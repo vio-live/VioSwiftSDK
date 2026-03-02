@@ -43,6 +43,7 @@ public class VioConfiguration: ObservableObject {
     
     // MARK: - Dynamic Configuration Properties
     @Published public private(set) var dynamicBrandConfig: DynamicBrandConfig?
+    @Published public private(set) var sponsorConfig: SponsorConfig?
     @Published public private(set) var dynamicEngagementConfig: DynamicEngagementConfig?
     @Published public private(set) var dynamicCommerceConfig: DynamicCommerceConfig?
     @Published public private(set) var dynamicLocalizationConfig: DynamicLocalizationConfig?
@@ -244,6 +245,11 @@ public class VioConfiguration: ObservableObject {
     // MARK: - Dynamic Configuration Methods
     
     /// Update dynamic brand configuration from backend
+    public func updateSponsorConfig(_ config: SponsorConfig?) {
+        self.sponsorConfig = config
+        VioLogger.debug("updateSponsorConfig: \(config?.name ?? "nil")", component: "VioConfiguration")
+    }
+    
     public func updateDynamicBrandConfig(_ config: DynamicBrandConfig?) {
         self.dynamicBrandConfig = config
         

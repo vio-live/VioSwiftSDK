@@ -2,15 +2,15 @@
 //  CampaignSponsorBadge.swift
 //  VioDesignSystem
 //
-//  Reusable component for displaying campaign sponsor logo
-//  Uses VioConfiguration.dynamicBrandConfig.logoUrl (set by DynamicConfigurationManager)
+//  Displays campaign sponsor logo from backend.
+//  Source of truth: VioConfiguration.sponsorConfig (section "sponsor" in /v1/campaigns/:id/config)
+//  Fallback: VioConfiguration.dynamicBrandConfig.logoUrl (section "brand")
 //
 
 import SwiftUI
 import VioCore
 
 /// Reusable component for displaying campaign sponsor logo
-/// Uses CampaignManager to get the logo dynamically with caching
 public struct CampaignSponsorBadge: View {
     let text: String
     let maxWidth: CGFloat?
@@ -18,6 +18,7 @@ public struct CampaignSponsorBadge: View {
     let alignment: HorizontalAlignment
     
     @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var config = VioConfiguration.shared
     
     public init(
         text: String = "Sponset av",
@@ -31,29 +32,42 @@ public struct CampaignSponsorBadge: View {
         self.alignment = alignment
     }
     
+    // Sponsor logo URL: prefer sponsorConfig, fallback to dynamicBrandConfig
+    private var logoUrl: URL? {
+        let urlString = config.sponsorConfig?.logoUrl ?? config.dynamicBrandConfig?.logoUrl
+        guard let s = urlString, !s.isEmpty else { return nil }
+        return URL(string: s)
+    }
+    
+    // Sponsor label text from backend or param
+    private var sponsorLabel: String {
+        // Use sponsorBadgeText from brand config if available (localized)
+        let lang = Locale.current.language.languageCode?.identifier ?? "en"
+        return config.dynamicBrandConfig?.sponsorBadgeText?[lang]
+            ?? config.dynamicBrandConfig?.sponsorBadgeText?["en"]
+            ?? text
+    }
+    
     public var body: some View {
         let colors = VioColors.adaptive(for: colorScheme)
         
         VStack(alignment: alignment, spacing: 2) {
-            Text(text)
+            Text(sponsorLabel)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(colors.textSecondary)
             
-            // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS en campaignManager.currentCampaign?.campaignLogo)
-            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
+            if let url = logoUrl {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 } placeholder: {
-                    // Placeholder will be instant if cached
                     Rectangle()
                         .fill(colors.surfaceSecondary)
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 }
             } else {
-                // Fallback placeholder if no campaign logo
                 Rectangle()
                     .fill(colors.surfaceSecondary)
                     .frame(maxWidth: maxWidth, maxHeight: maxHeight)

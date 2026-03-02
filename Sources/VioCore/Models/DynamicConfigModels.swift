@@ -12,6 +12,7 @@ public struct CampaignConfig: Codable {
     public let features: DynamicFeatureFlags?
     public let integrations: IntegrationsConfig?
     public let cache: CacheConfig?
+    public let sponsor: SponsorConfig?
     
     public init(
         campaignId: Int,
@@ -21,7 +22,8 @@ public struct CampaignConfig: Codable {
         ui: DynamicUIConfig? = nil,
         features: DynamicFeatureFlags? = nil,
         integrations: IntegrationsConfig? = nil,
-        cache: CacheConfig? = nil
+        cache: CacheConfig? = nil,
+        sponsor: SponsorConfig? = nil
     ) {
         self.campaignId = campaignId
         self.version = version
@@ -31,6 +33,7 @@ public struct CampaignConfig: Codable {
         self.features = features
         self.integrations = integrations
         self.cache = cache
+        self.sponsor = sponsor
     }
 }
 
@@ -56,6 +59,35 @@ public struct DynamicCommerceConfig: Codable {
         self.enabled = enabled
         self.apiKey = apiKey
         self.channelId = channelId
+    }
+}
+
+
+// MARK: - Sponsor Configuration
+
+/// Sponsor data from backend campaign config (section: sponsor)
+public struct SponsorConfig: Codable {
+    public let id: Int?
+    public let name: String?
+    public let logoUrl: String?
+    public let avatarUrl: String?
+    public let primaryColor: String?
+    public let secondaryColor: String?
+    
+    public init(
+        id: Int? = nil,
+        name: String? = nil,
+        logoUrl: String? = nil,
+        avatarUrl: String? = nil,
+        primaryColor: String? = nil,
+        secondaryColor: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.logoUrl = logoUrl
+        self.avatarUrl = avatarUrl
+        self.primaryColor = primaryColor
+        self.secondaryColor = secondaryColor
     }
 }
 
@@ -224,6 +256,7 @@ public struct DynamicLocalizationConfig: Codable {
     public let dateFormat: String?
     public let timeFormat: String?
     public let cache: CacheConfig?
+    public let sponsor: SponsorConfig?
     
     public init(
         language: String,
@@ -231,7 +264,8 @@ public struct DynamicLocalizationConfig: Codable {
         translations: [String: String],
         dateFormat: String? = nil,
         timeFormat: String? = nil,
-        cache: CacheConfig? = nil
+        cache: CacheConfig? = nil,
+        sponsor: SponsorConfig? = nil
     ) {
         self.language = language
         self.campaignId = campaignId

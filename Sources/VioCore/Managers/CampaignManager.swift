@@ -162,6 +162,9 @@ public class CampaignManager: ObservableObject {
             if let brandConfig = config.brand {
                 VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
             }
+            if let sponsorConfig = config.sponsor {
+                VioConfiguration.shared.updateSponsorConfig(sponsorConfig)
+            }
             if let engagementConfig = config.engagement {
                 VioConfiguration.shared.updateDynamicEngagementConfig(engagementConfig)
             }
