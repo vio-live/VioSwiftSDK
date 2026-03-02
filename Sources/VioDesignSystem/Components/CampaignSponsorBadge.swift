@@ -67,26 +67,7 @@ public struct CampaignSponsorBadge: View {
     public var body: some View {
         let colors = VioColors.adaptive(for: colorScheme)
         
-        HStack(spacing: 6) {
-            // Small sponsor avatar (sponsor.avatarUrl) — icon inside polls/contests
-            if let url = avatarUrl {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    case .failure, .empty:
-                        EmptyView()
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-                .frame(width: 20, height: 20)
-                .clipShape(Circle())
-            }
-            
-            VStack(alignment: alignment, spacing: 2) {
+        VStack(alignment: alignment, spacing: 2) {
                 Text(sponsorLabel)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(colors.textSecondary)
@@ -110,7 +91,6 @@ public struct CampaignSponsorBadge: View {
                 Rectangle()
                     .fill(colors.surfaceSecondary)
                     .frame(maxWidth: maxWidth, maxHeight: maxHeight)
-            }
             }
         }
     }
