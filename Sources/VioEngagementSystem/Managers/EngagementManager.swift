@@ -280,6 +280,37 @@ public class EngagementManager: ObservableObject {
     }
 }
 
+
+    // MARK: - WebSocket-driven updates
+
+    /// Add or update a poll received via WebSocket event
+    public func addOrUpdatePoll(_ poll: Poll, broadcastId: String) {
+        VioLogger.debug("WS poll received: id=\(poll.id), broadcastId=\(broadcastId)", component: "EngagementManager")
+        var current = pollsByBroadcast[broadcastId] ?? []
+        if let idx = current.firstIndex(where: { $0.id == poll.id }) {
+            current[idx] = poll
+        } else {
+            current.append(poll)
+        }
+        pollsByBroadcast[broadcastId] = current
+        VioLogger.success("pollsByBroadcast[\(broadcastId)] updated: \(current.count) polls", component: "EngagementManager")
+    }
+
+    /// Add or update a contest received via WebSocket event
+    public func addOrUpdateContest(_ contest: Contest, broadcastId: String) {
+        VioLogger.debug("WS contest received: id=\(contest.id), broadcastId=\(broadcastId)", component: "EngagementManager")
+        var current = contestsByBroadcast[broadcastId] ?? []
+        if let idx = current.firstIndex(where: { $0.id == contest.id }) {
+            current[idx] = contest
+        } else {
+            current.append(contest)
+        }
+        contestsByBroadcast[broadcastId] = current
+        VioLogger.success("contestsByBroadcast[\(broadcastId)] updated: \(current.count) contests", component: "EngagementManager")
+    }
+
+}
+
 // MARK: - Poll Results Model
 
 public struct PollResults: Codable {
