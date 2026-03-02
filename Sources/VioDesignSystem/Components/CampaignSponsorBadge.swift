@@ -6,7 +6,7 @@
 //  Source of truth: VioConfiguration.sponsorConfig (section "sponsor" in /v1/campaigns/:id/config)
 //  - sponsorConfig.logoUrl    → logo shown in badge ("Sponset av Elkjøp")
 //  - sponsorConfig.avatarUrl  → small icon/avatar inside polls/contests (header icon)
-//  - sponsorConfig.primaryColor → badge background color
+//  - sponsorConfig.primaryColor → no longer used (logo without background)
 //
 
 import SwiftUI
@@ -44,13 +44,6 @@ public struct CampaignSponsorBadge: View {
         return nil
     }
     
-    private var badgeBackground: Color {
-        if let hex = config.sponsorConfig?.primaryColor {
-            return Color(hex: hex) ?? Color.clear
-        }
-        return Color.clear
-    }
-    
     private var sponsorLabel: String {
         let lang = Locale.current.languageCode ?? "en"
         return config.dynamicBrandConfig?.sponsorBadgeText?[lang]
@@ -85,8 +78,6 @@ public struct CampaignSponsorBadge: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
-                .background(badgeBackground.opacity(badgeBackground == .clear ? 0 : 0.15))
-                .cornerRadius(6)
             } else {
                 Rectangle()
                     .fill(colors.surfaceSecondary)

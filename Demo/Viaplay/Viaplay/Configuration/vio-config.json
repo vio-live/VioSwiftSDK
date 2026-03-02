@@ -1,16 +1,80 @@
 {
-    "apiKey": "viaplay_api_key_0c611e983b314ff8",
-    "environment": "development",
-    "campaigns": {
-        "restAPIBaseURL": "https://api-dev.vio.live",
-        "webSocketBaseURL": "https://api-dev.vio.live",
-        "autoDiscover": true
+  "apiKey": "viaplay_api_key_0c611e983b314ff8",
+  "environment": "development",
+  "theme": {
+    "name": "Elkjøp Theme",
+    "mode": "dark",
+    "lightColors": {
+      "primary": "#69A333",
+      "secondary": "#9933FF",
+      "background": "#FFFFFF",
+      "surface": "#F5F5F5",
+      "surfaceSecondary": "#E0E0E0",
+      "error": "#B00020",
+      "success": "#00C853",
+      "warning": "#FFB300",
+      "info": "#2196F3",
+      "textPrimary": "#000000",
+      "textSecondary": "#757575",
+      "textTertiary": "#9E9E9E",
+      "textOnPrimary": "#FFFFFF",
+      "border": "#E0E0E0",
+      "borderSecondary": "#BDBDBD",
+      "priceColor": "#69A333"
     },
-    "marketFallback": {
-        "countryCode": "NO",
-        "countryName": "Norway",
-        "currencyCode": "NOK",
-        "currencySymbol": "kr",
-        "phoneCode": "+47"
+    "darkColors": {
+      "primary": "#69A333",
+      "secondary": "#9933FF",
+      "background": "#1B1B25",
+      "surface": "#161B22",
+      "surfaceSecondary": "#21262D",
+      "error": "#CF6679",
+      "success": "#00E676",
+      "warning": "#FFD54F",
+      "info": "#64B5F6",
+      "textPrimary": "#FFFFFF",
+      "textSecondary": "#B3B3B3",
+      "textTertiary": "#808080",
+      "textOnPrimary": "#FFFFFF",
+      "border": "#21262D",
+      "borderSecondary": "#4A4A4A",
+      "priceColor": "#69A333"
     }
+  },
+  "ui": {
+    "enableAnimations": true,
+    "showProductBrands": true,
+    "showDiscountBadge": true,
+    "discountBadgeText": "-30%",
+    "enableHapticFeedback": true
+  },
+  "cart": {
+    "floatingCartPosition": "bottomRight",
+    "floatingCartDisplayMode": "iconOnly",
+    "floatingCartSize": "small",
+    "autoSaveCart": true,
+    "showCartNotifications": true,
+    "enableGuestCheckout": true,
+    "requirePhoneNumber": true,
+    "defaultShippingCountry": "NO",
+    "supportedPaymentMethods": ["stripe", "klarna", "vipps"]
+  },
+  "productDetail": {
+    "showNavigationTitle": false,
+    "imageFullWidth": true,
+    "imageCornerRadius": 0,
+    "imageHeight": 400
+  },
+  "marketFallback": {
+    "countryCode": "NO",
+    "countryName": "Norway",
+    "currencyCode": "NOK",
+    "currencySymbol": "kr",
+    "phoneCode": "+47"
+  },
+  "campaigns": {
+    "restAPIBaseURL": "https://api-dev.vio.live",
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "autoDiscover": true
+  }
 }
