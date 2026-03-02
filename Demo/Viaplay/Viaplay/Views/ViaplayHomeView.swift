@@ -164,7 +164,7 @@ struct ViaplayHomeView: View {
                                 .padding(.top, 24)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             VProductCarousel(
-                                componentId: "product-carousel-template",
+                                componentId: "6f6c5337-c721-471b-bff3-adc55a0349ef",
                                 layout: "compact",
                                 showSponsor: true,
                                 sponsorPosition: "topRight"
