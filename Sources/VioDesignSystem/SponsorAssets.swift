@@ -68,7 +68,7 @@ public struct SponsorAssets {
     
     /// Texto del badge localizado ("Sponset av" / "Sponsored by")
     public static var badgeText: String {
-        let lang = Locale.current.language.languageCode?.identifier ?? "en"
+        let lang = Locale.current.languageCode ?? "en"
         // sponsor.badgeText tiene prioridad, fallback a brand.sponsorBadgeText
         return VioConfiguration.shared.sponsorConfig?.badgeText?[lang]
             ?? VioConfiguration.shared.sponsorConfig?.badgeText?["en"]
