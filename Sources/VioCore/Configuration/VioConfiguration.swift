@@ -247,11 +247,20 @@ public class VioConfiguration: ObservableObject {
     /// Update dynamic brand configuration from backend
     public func updateSponsorConfig(_ config: SponsorConfig?) {
         self.sponsorConfig = config
-        VioLogger.debug("updateSponsorConfig: \(config?.name ?? "nil")", component: "VioConfiguration")
+        let logo = config?.logoUrl ?? "nil"
+        VioLogger.debug("updateSponsorConfig: name=\(config?.name ?? "nil"), logoUrl=\(logo)", component: "VioConfiguration")
+        if let url = config?.logoUrl, !url.isEmpty {
+            print("✅ [Vio] Sponsor config loaded from remote — logoUrl: \(url)")
+        }
     }
     
     public func updateDynamicBrandConfig(_ config: DynamicBrandConfig?) {
         self.dynamicBrandConfig = config
+        let logo = config?.logoUrl ?? "nil"
+        VioLogger.debug("updateDynamicBrandConfig: logoUrl=\(logo), iconUrl=\(config?.iconUrl ?? "nil")", component: "VioConfiguration")
+        if let url = config?.logoUrl, !url.isEmpty {
+            print("✅ [Vio] Brand config loaded from remote — logoUrl: \(url)")
+        }
         
         // Merge with static config if dynamic config has values
         if let dynamic = config {

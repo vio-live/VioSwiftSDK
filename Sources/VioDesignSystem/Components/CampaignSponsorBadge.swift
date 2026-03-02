@@ -34,8 +34,14 @@ public struct CampaignSponsorBadge: View {
     }
     
     private var logoUrl: URL? {
-        guard let s = config.sponsorConfig?.logoUrl, !s.isEmpty else { return nil }
-        return URL(string: s)
+        let sponsorLogo = config.sponsorConfig?.logoUrl
+        let brandLogo = config.dynamicBrandConfig?.logoUrl
+        let s = sponsorLogo ?? brandLogo
+        if let s = s, !s.isEmpty, let url = URL(string: s) {
+            return url
+        }
+        VioLogger.debug("CampaignSponsorBadge: no logo — sponsorConfig.logoUrl=\(sponsorLogo ?? "nil"), dynamicBrandConfig.logoUrl=\(brandLogo ?? "nil")", component: "CampaignSponsorBadge")
+        return nil
     }
     
     private var badgeBackground: Color {
@@ -46,7 +52,7 @@ public struct CampaignSponsorBadge: View {
     }
     
     private var sponsorLabel: String {
-        let lang = Locale.current.language.languageCode?.identifier ?? "en"
+        let lang = Locale.current.languageCode ?? "en"
         return config.dynamicBrandConfig?.sponsorBadgeText?[lang]
             ?? config.dynamicBrandConfig?.sponsorBadgeText?["en"]
             ?? text

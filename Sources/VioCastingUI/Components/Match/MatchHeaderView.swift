@@ -15,6 +15,8 @@ struct MatchHeaderView: View {
     let currentMinute: Int
     let onDismiss: () -> Void
     
+    @ObservedObject private var config = VioConfiguration.shared
+    
     var body: some View {
         VStack(spacing: 8) {
             // Sponsor and close button (same row)
@@ -25,8 +27,9 @@ struct MatchHeaderView: View {
                         .font(.system(size: 9, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
                     
-                    // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
-                    if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
+                    // Logo: sponsorConfig (sponsor section) o dynamicBrandConfig (brand section)
+                    let urlString = config.sponsorConfig?.logoUrl ?? config.dynamicBrandConfig?.logoUrl
+                    if let s = urlString, !s.isEmpty, let url = URL(string: s) {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:

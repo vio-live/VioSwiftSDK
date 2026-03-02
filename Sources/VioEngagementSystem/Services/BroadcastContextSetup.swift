@@ -78,9 +78,9 @@ public enum BroadcastContextSetup {
                       let id = data["id"] as? String,
                       let question = data["question"] as? String,
                       let optionsRaw = data["options"] as? [[String: Any]] else { return }
-                let options = optionsRaw.compactMap { opt -> PollOption? in
+                let options: [Poll.PollOption] = optionsRaw.compactMap { opt in
                     guard let text = opt["text"] as? String else { return nil }
-                    return PollOption(id: UUID().uuidString, text: text, imageUrl: opt["imageUrl"] as? String)
+                    return Poll.PollOption(id: UUID().uuidString, text: text)
                 }
                 let poll = Poll(id: id, broadcastId: broadcastId, question: question, options: options, isActive: true)
                 Task { await EngagementManager.shared.addOrUpdatePoll(poll, broadcastId: broadcastId) }
@@ -89,9 +89,10 @@ public enum BroadcastContextSetup {
                 guard let broadcastId = bid,
                       let data = json["data"] as? [String: Any],
                       let id = data["id"] as? String,
-                      let name = data["name"] as? String else { return }
+                      let name = data["name"] as? String ?? data["title"] as? String else { return }
                 let prize = data["prize"] as? String ?? ""
-                let contest = Contest(id: id, broadcastId: broadcastId, name: name, prize: prize, isActive: true)
+                let description = data["description"] as? String ?? ""
+                let contest = Contest(id: id, broadcastId: broadcastId, title: name, description: description, prize: prize, contestType: .quiz, isActive: true)
                 Task { await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId) }
             }
 

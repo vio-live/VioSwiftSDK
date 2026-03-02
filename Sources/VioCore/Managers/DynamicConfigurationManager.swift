@@ -65,7 +65,10 @@ public class DynamicConfigurationManager: ObservableObject {
             let ttl = TimeInterval(config.cache?.ttl ?? 300)
             campaignConfigCache[campaignId] = CachedConfig(data: config, ttl: ttl)
             
-            VioLogger.debug("Loaded campaign config from backend for campaignId: \(campaignId)", component: "DynamicConfigManager")
+            let sponsorLogo = config.sponsor?.logoUrl ?? "nil"
+            let brandLogo = config.brand?.logoUrl ?? "nil"
+            VioLogger.debug("Loaded campaign config for campaignId: \(campaignId) — sponsor.logoUrl=\(sponsorLogo), brand.logoUrl=\(brandLogo)", component: "DynamicConfigManager")
+            print("✅ [Vio] Campaign config loaded from remote (campaignId=\(campaignId)) — sponsor.logoUrl=\(sponsorLogo), brand.logoUrl=\(brandLogo)")
             return config
             
         } catch {

@@ -12,6 +12,8 @@ struct SponsorBanner: View {
     let logoName: String
     let text: String
     
+    @ObservedObject private var config = VioConfiguration.shared
+    
     init(logoName: String? = nil, text: String = "Sponset av") {
         self.logoName = logoName ?? DemoDataManager.shared.defaultLogo
         self.text = text
@@ -23,8 +25,9 @@ struct SponsorBanner: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundColor(.white.opacity(0.7))
             
-            // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
-            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
+            // Logo: sponsorConfig (sponsor section) o dynamicBrandConfig (brand section)
+            let urlString = config.sponsorConfig?.logoUrl ?? config.dynamicBrandConfig?.logoUrl
+            if let s = urlString, !s.isEmpty, let url = URL(string: s) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .empty:

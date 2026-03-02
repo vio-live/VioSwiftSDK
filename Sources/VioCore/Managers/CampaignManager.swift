@@ -33,16 +33,11 @@ public class CampaignManager: ObservableObject {
     public var onPollEventReceived: (([String: Any], String?) -> Void)?
     public var onContestEventReceived: (([String: Any], String?) -> Void)?
     
-    /// Call from VioEngagementSystem after setBroadcastContext to wire WS engagement callbacks
+    /// Call from VioEngagementSystem after setBroadcastContext.
+    /// Poll/contest events use static engagementPollHandler/engagementContestHandler (wired by EngagementManager).
+    /// Filtering uses currentBroadcastContext.broadcastId.
     public func setEngagementCallbacks(broadcastId: String) {
-        webSocketManager?.currentBroadcastId = broadcastId
-        webSocketManager?.onPollReceived = { [weak self] json, bid in
-            self?.onPollEventReceived?(json, bid)
-        }
-        webSocketManager?.onContestReceived = { [weak self] json, bid in
-            self?.onContestEventReceived?(json, bid)
-        }
-        VioLogger.debug("Engagement WS callbacks wired for broadcastId=\(broadcastId)", component: "CampaignManager")
+        VioLogger.debug("Engagement WS ready for broadcastId=\(broadcastId)", component: "CampaignManager")
     }
     private var cancellables = Set<AnyCancellable>()
     private var baseURL: String  // For REST API (GraphQL base URL)
@@ -163,7 +158,12 @@ public class CampaignManager: ObservableObject {
                 VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
             }
             if let sponsorConfig = config.sponsor {
+                VioLogger.debug("initializeCampaign: Applying sponsorConfig logoUrl=\(sponsorConfig.logoUrl ?? "nil")", component: "CampaignManager")
+                print("✅ [Vio] initializeCampaign: Applying sponsor from /v1/campaigns/:id/config — logoUrl=\(sponsorConfig.logoUrl ?? "nil")")
                 VioConfiguration.shared.updateSponsorConfig(sponsorConfig)
+            } else {
+                VioLogger.debug("initializeCampaign: No sponsor section in config", component: "CampaignManager")
+                print("⚠️ [Vio] initializeCampaign: No sponsor section in config")
             }
             if let engagementConfig = config.engagement {
                 VioConfiguration.shared.updateDynamicEngagementConfig(engagementConfig)
@@ -508,6 +508,14 @@ public class CampaignManager: ObservableObject {
             
             self.campaignState = campaign.currentState
             
+            // Fallback: if sponsorConfig not set from loadCampaignConfig, use campaignLogo from SDK config
+            if VioConfiguration.shared.sponsorConfig?.logoUrl == nil,
+               let logoUrl = campaign.campaignLogo, !logoUrl.isEmpty {
+                VioLogger.debug("fetchCampaignInfo: Using campaignLogo from SDK config: \(logoUrl)", component: "CampaignManager")
+                print("✅ [Vio] fetchCampaignInfo: Fallback to campaignLogo from /v1/sdk/config — \(logoUrl)")
+                VioConfiguration.shared.updateSponsorConfig(SponsorConfig(logoUrl: logoUrl))
+            }
+            
             // If campaign configuration changed, invalidate cache appropriately
             if campaignChanged {
                 // Check if logo specifically changed
@@ -706,6 +714,26 @@ public class CampaignManager: ObservableObject {
             
             // Set current campaign to first active campaign if available
             if let firstActiveCampaign = discoveredCampaigns.first(where: { $0.currentState == .active && $0.isPaused != true }) {
+                // Load full campaign config (sponsor, brand) for logo — discovery only returns campaignLogo
+                if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(
+                    campaignId: firstActiveCampaign.id,
+                    broadcastId: currentBroadcastContext?.broadcastId
+                ) {
+                    if let sponsorConfig = config.sponsor {
+                        VioLogger.debug("discoverCampaigns: Applying sponsorConfig logoUrl=\(sponsorConfig.logoUrl ?? "nil")", component: "CampaignManager")
+                        print("✅ [Vio] discoverCampaigns: Sponsor from /v1/campaigns/:id/config — logoUrl=\(sponsorConfig.logoUrl ?? "nil")")
+                        VioConfiguration.shared.updateSponsorConfig(sponsorConfig)
+                    }
+                    if let brandConfig = config.brand {
+                        VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
+                    }
+                } else if let logoUrl = firstActiveCampaign.campaignLogo, !logoUrl.isEmpty {
+                    // Fallback: use campaignLogo from discovery when config endpoint unavailable
+                    VioLogger.debug("discoverCampaigns: Using campaignLogo from discovery: \(logoUrl)", component: "CampaignManager")
+                    print("✅ [Vio] discoverCampaigns: Fallback to campaignLogo from /v1/sdk/campaigns — \(logoUrl)")
+                    VioConfiguration.shared.updateSponsorConfig(SponsorConfig(logoUrl: logoUrl))
+                }
+                
                 // Detect changes in campaign configuration
                 let existingCampaign = self.currentCampaign
                 let oldLogoUrl = existingCampaign?.campaignLogo

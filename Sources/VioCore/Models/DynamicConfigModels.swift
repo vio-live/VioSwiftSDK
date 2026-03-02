@@ -273,6 +273,7 @@ public struct DynamicLocalizationConfig: Codable {
         self.dateFormat = dateFormat
         self.timeFormat = timeFormat
         self.cache = cache
+        self.sponsor = sponsor
     }
 }
 

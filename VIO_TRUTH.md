@@ -4,6 +4,35 @@
 
 ---
 
+## 📝 CAMBIOS RECIENTES — Sponsor Logo (2026-03-02)
+
+### Problema resuelto
+- **EXC_BAD_ACCESS** al acceder a `campaignManager.currentCampaign?.campaignLogo` en varios componentes
+- Logos del sponsor no se mostraban (placeholder gris o logo POWER por defecto)
+
+### Solución implementada
+
+**1. Fuente única de verdad: `VioConfiguration.sponsorConfig`**
+- Todos los componentes leen el logo de `sponsorConfig?.logoUrl ?? dynamicBrandConfig?.logoUrl`
+- Nunca acceder a `campaignManager.currentCampaign?.campaignLogo` desde vistas (causaba crash)
+
+**2. Origen de los datos (prioridad):**
+| Origen | Cuándo |
+|--------|--------|
+| `GET /v1/campaigns/:id/config` → `sponsor.logoUrl` o `brand.logoUrl` | Config dinámico habilitado |
+| `GET /v1/sdk/config` → `campaignLogo` | Fallback en flujo legacy |
+| `GET /v1/sdk/campaigns` → `campaignLogo` en discovery | Fallback en auto-discovery |
+
+**3. Flujo auto-discovery:** Tras `discoverCampaigns`, se llama a `loadCampaignConfig` para cargar sponsor/brand. Si falla, se usa `campaignLogo` de la respuesta de discovery.
+
+**4. Componentes actualizados:** CampaignSponsorBadge, MatchHeaderView, SponsorBanner, LineupCard, VOfferBannerView, VCastingProductModal, VCastingContestModal, VProductStore, VProductSpotlight, VProductSlider, VProductCarousel, VProductBanner.
+
+**5. Reactividad:** `@ObservedObject private var config = VioConfiguration.shared` en vistas que muestran el logo, para que se actualicen cuando la config llega del backend.
+
+**6. Logs de debug:** `print("✅ [Vio] ...")` en VioConfiguration, DynamicConfigurationManager y CampaignManager para rastrear cuándo se carga la config remota. (Excepción temporal a la regla "nunca print()" — pueden removerse cuando el flujo esté validado.)
+
+---
+
 ## ⚠️ NOMENCLATURA — LEER PRIMERO
 
 | Nombre | Qué es | Estado |
