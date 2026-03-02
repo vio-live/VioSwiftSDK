@@ -258,7 +258,12 @@ struct SportDetailView: View {
                         .padding(.top, 24)
                         .frame(width: geometry.size.width)
                         
-                        // Products carousel from SDK (sponsor badge comes from VProductCarousel)
+                        // Product Banner — se muestra cuando el componente está activo en el dashboard
+                        VProductBanner(componentId: "product-banner-template")
+                            .padding(.top, 16)
+                            .frame(width: geometry.size.width)
+                        
+                        // Products carousel from SDK
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Produkter")
                                 .font(.system(size: 18, weight: .regular))
@@ -272,7 +277,7 @@ struct SportDetailView: View {
                                 sponsorPosition: "topRight"
                             )
                         }
-                        .padding(.top, 24)
+                        .padding(.top, 16)
                         .padding(.bottom, 100)
                         .frame(width: geometry.size.width)
                     }
