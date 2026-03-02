@@ -1,9 +1,16 @@
 {
-  "apiKey": "viaplay_api_key_0c611e983b314ff8",
-  "environment": "development",
-  "campaigns": {
-    "restAPIBaseURL": "https://api-dev.vio.live",
-    "webSocketBaseURL": "https://api-dev.vio.live",
-    "autoDiscover": true
-  }
+    "apiKey": "viaplay_api_key_0c611e983b314ff8",
+    "environment": "development",
+    "campaigns": {
+        "restAPIBaseURL": "https://api-dev.vio.live",
+        "webSocketBaseURL": "https://api-dev.vio.live",
+        "autoDiscover": true
+    },
+    "market": {
+        "countryCode": "NO",
+        "countryName": "Norway",
+        "currencyCode": "NOK",
+        "currencySymbol": "kr",
+        "phoneCode": "+47"
+    }
 }
