@@ -2,15 +2,16 @@
 //  CampaignSponsorBadge.swift
 //  VioDesignSystem
 //
-//  Displays campaign sponsor logo from backend.
+//  Displays campaign sponsor badge.
 //  Source of truth: VioConfiguration.sponsorConfig (section "sponsor" in /v1/campaigns/:id/config)
-//  Fallback: VioConfiguration.dynamicBrandConfig.logoUrl (section "brand")
+//  - sponsorConfig.logoUrl    → logo shown in badge ("Sponset av Elkjøp")
+//  - sponsorConfig.avatarUrl  → icon inside polls/contests (NOT used here)
+//  - sponsorConfig.primaryColor → badge background color
 //
 
 import SwiftUI
 import VioCore
 
-/// Reusable component for displaying campaign sponsor logo
 public struct CampaignSponsorBadge: View {
     let text: String
     let maxWidth: CGFloat?
@@ -32,16 +33,19 @@ public struct CampaignSponsorBadge: View {
         self.alignment = alignment
     }
     
-    // Sponsor logo URL: prefer sponsorConfig, fallback to dynamicBrandConfig
     private var logoUrl: URL? {
-        let urlString = config.sponsorConfig?.logoUrl ?? config.dynamicBrandConfig?.logoUrl
-        guard let s = urlString, !s.isEmpty else { return nil }
+        guard let s = config.sponsorConfig?.logoUrl, !s.isEmpty else { return nil }
         return URL(string: s)
     }
     
-    // Sponsor label text from backend or param
+    private var badgeBackground: Color {
+        if let hex = config.sponsorConfig?.primaryColor {
+            return Color(hex: hex) ?? Color.clear
+        }
+        return Color.clear
+    }
+    
     private var sponsorLabel: String {
-        // Use sponsorBadgeText from brand config if available (localized)
         let lang = Locale.current.language.languageCode?.identifier ?? "en"
         return config.dynamicBrandConfig?.sponsorBadgeText?[lang]
             ?? config.dynamicBrandConfig?.sponsorBadgeText?["en"]
@@ -67,6 +71,10 @@ public struct CampaignSponsorBadge: View {
                         .fill(colors.surfaceSecondary)
                         .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(badgeBackground.opacity(badgeBackground == .clear ? 0 : 0.15))
+                .cornerRadius(6)
             } else {
                 Rectangle()
                     .fill(colors.surfaceSecondary)
