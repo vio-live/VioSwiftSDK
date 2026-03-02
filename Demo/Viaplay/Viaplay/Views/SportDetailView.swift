@@ -258,8 +258,8 @@ struct SportDetailView: View {
                         .padding(.top, 24)
                         .frame(width: geometry.size.width)
                         
-                        // Product Banner — se muestra cuando el componente está activo en el dashboard
-                        VProductBanner(componentId: "product-banner-template")
+                        // Product Banner — locationId slot (backend maps to component)
+                        VProductBanner(locationId: "sport-detail-banner")
                             .padding(.top, 16)
                             .frame(width: geometry.size.width)
                         
@@ -271,7 +271,7 @@ struct SportDetailView: View {
                                 .padding(.horizontal, 16)
                             
                             VProductCarousel(
-                                componentId: "6f6c5337-c721-471b-bff3-adc55a0349ef",
+                                locationId: "sport-detail-carousel",
                                 layout: "compact",
                                 showSponsor: true,
                                 sponsorPosition: "topRight"

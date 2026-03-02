@@ -106,9 +106,11 @@ public struct VProductCarousel: View {
     
     // MARK: - Properties
     
-    /// Optional component ID to identify a specific component
-    /// If nil, uses the first matching component from the campaign
+    /// Optional component ID (legacy) — use locationId when possible
     private let componentId: String?
+    
+    /// Optional locationId slot (preferred) — e.g. "sport-detail-carousel"
+    private let locationId: String?
     
     // MARK: - Properties for Demo/Testing
     
@@ -140,11 +142,9 @@ public struct VProductCarousel: View {
     
     // MARK: - Initializer
     
-    public init(componentId: String? = nil, layout: String? = nil, showAddToCartButton: Bool = false, showSponsor: Bool = false, sponsorPosition: String? = nil, imageBackgroundColor: Color? = nil) {
-        // Optional component ID to identify a specific component
+    public init(componentId: String? = nil, locationId: String? = nil, layout: String? = nil, showAddToCartButton: Bool = false, showSponsor: Bool = false, sponsorPosition: String? = nil, imageBackgroundColor: Color? = nil) {
         self.componentId = componentId
-        // Optional layout override for demo/testing (e.g., "full", "compact", "horizontal")
-        // If nil, uses layout from backend config
+        self.locationId = locationId
         self.layout = layout
         self.showAddToCartButton = showAddToCartButton
         self.showSponsor = showSponsor
@@ -160,9 +160,12 @@ public struct VProductCarousel: View {
         VioColors.adaptive(for: colorScheme)
     }
     
-    /// Get active product carousel component from campaign
+    /// Get active product carousel component — locationId first, then componentId fallback
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_carousel", componentId: componentId)
+        if let lid = locationId {
+            return campaignManager.getActiveComponent(locationId: lid)
+        }
+        return campaignManager.getActiveComponent(type: "product_carousel", componentId: componentId)
     }
     
     /// Extract ProductCarouselConfig from component
@@ -1182,8 +1185,8 @@ public struct VProductCarousel: View {
                 print("⚠️ [VProductCarousel] loadProductsIfNeeded: config exists but updateCachedConfigIfNeeded did not set cachedConfig")
             }
         } else {
-            let compId = componentId ?? "nil"
-            print("📦 [VProductCarousel] loadProductsIfNeeded: NO CONFIG — componentId=\(compId), activeComponent=\(activeComponent?.id ?? "nil"), activeComponents.count=\(campaignManager.activeComponents.count), isCampaignActive=\(campaignManager.isCampaignActive)")
+            let slot = locationId ?? componentId ?? "nil"
+            print("📦 [VProductCarousel] loadProductsIfNeeded: NO CONFIG — slot=\(slot), activeComponent=\(activeComponent?.id ?? "nil"), activeComponents.count=\(campaignManager.activeComponents.count), isCampaignActive=\(campaignManager.isCampaignActive)")
             viewModel.products = []
         }
     }

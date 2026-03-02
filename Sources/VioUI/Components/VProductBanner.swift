@@ -206,9 +206,11 @@ public struct VProductBanner: View {
     
     // MARK: - Properties
     
-    /// Optional component ID to identify a specific component
-    /// If nil, uses the first matching component from the campaign
+    /// Optional component ID (legacy) — use locationId when possible
     private let componentId: String?
+    
+    /// Optional locationId slot (preferred) — e.g. "sport-detail-banner"
+    private let locationId: String?
     
     /// Whether to show sponsor badge
     private let showSponsor: Bool
@@ -232,8 +234,9 @@ public struct VProductBanner: View {
     
     // MARK: - Initializer
     
-    public init(componentId: String? = nil, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+    public init(componentId: String? = nil, locationId: String? = nil, showSponsor: Bool = false, sponsorPosition: String? = nil) {
         self.componentId = componentId
+        self.locationId = locationId
         self.showSponsor = showSponsor
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
@@ -244,9 +247,12 @@ public struct VProductBanner: View {
         VioColors.adaptive(for: colorScheme)
     }
     
-    /// Get active product banner component from campaign
+    /// Get active product banner component — locationId first, then componentId fallback
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_banner", componentId: componentId)
+        if let lid = locationId {
+            return campaignManager.getActiveComponent(locationId: lid)
+        }
+        return campaignManager.getActiveComponent(type: "product_banner", componentId: componentId)
     }
     
     /// Extract ProductBannerConfig from component

@@ -307,6 +307,7 @@ public class CampaignManager: ObservableObject {
     /// - Returns: Active component matching the type and optional componentId, or nil if not found
     /// Get active component by locationId slot (preferred — no hardcoded IDs in SDK)
     public func getActiveComponent(locationId: String) -> Component? {
+        guard isCampaignActive else { return nil }
         return activeComponents.first { $0.locationId == locationId && $0.isActive }
     }
     
@@ -689,6 +690,7 @@ public class CampaignManager: ObservableObject {
                                 name: componentItem.name,
                                 config: componentConfig,
                                 status: componentItem.status,
+                                locationId: componentItem.locationId,
                                 broadcastContext: componentItem.broadcastContext
                             )
                             allComponents.append(component)

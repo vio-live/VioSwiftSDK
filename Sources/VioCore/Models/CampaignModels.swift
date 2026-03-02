@@ -434,6 +434,7 @@ internal struct CampaignsDiscoveryResponse: Codable {
             let id: String
             let type: String
             let name: String
+            let locationId: String?  // Slot e.g. "sport-detail-banner" — Replit adds to /v1/sdk/campaigns serializer
             let broadcastContext: BroadcastContext?
             @available(*, deprecated, renamed: "broadcastContext")
             var matchContext: BroadcastContext? { broadcastContext }
@@ -445,10 +446,10 @@ internal struct CampaignsDiscoveryResponse: Codable {
                 id = try container.decode(String.self, forKey: .id)
                 type = try container.decode(String.self, forKey: .type)
                 name = try container.decode(String.self, forKey: .name)
+                locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
                 config = try container.decode([String: AnyCodable].self, forKey: .config)
                 status = try container.decodeIfPresent(String.self, forKey: .status)
                 
-                // Try broadcastContext first, fallback to matchContext for backward compatibility
                 if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
                     self.broadcastContext = broadcastContext
                 } else {
@@ -461,6 +462,7 @@ internal struct CampaignsDiscoveryResponse: Codable {
                 try container.encode(id, forKey: .id)
                 try container.encode(type, forKey: .type)
                 try container.encode(name, forKey: .name)
+                try container.encodeIfPresent(locationId, forKey: .locationId)
                 try container.encode(config, forKey: .config)
                 try container.encodeIfPresent(status, forKey: .status)
                 try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
@@ -470,8 +472,9 @@ internal struct CampaignsDiscoveryResponse: Codable {
                 case id
                 case type
                 case name
+                case locationId
                 case broadcastContext
-                case matchContext  // For backward compatibility decoding
+                case matchContext
                 case config
                 case status
             }
@@ -680,7 +683,7 @@ public struct Component: Codable, Identifiable {
         let jsonData = try JSONSerialization.data(withJSONObject: configToUse.mapValues { $0.value })
         self.config = try JSONDecoder().decode(ComponentConfig.self, from: jsonData)
         
-        // Decode broadcastContext from response if available
+        self.locationId = nil  // ComponentResponse (legacy API) doesn't have locationId
         self.broadcastContext = response.broadcastContext
     }
     
@@ -693,7 +696,7 @@ public struct Component: Codable, Identifiable {
         name = try container.decode(String.self, forKey: .name)
         config = try container.decode(ComponentConfig.self, forKey: .config)
         status = try container.decodeIfPresent(String.self, forKey: .status)
-        // Try broadcastContext first, fallback to matchContext for backward compatibility
+        locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
             self.broadcastContext = broadcastContext
         } else {
@@ -710,6 +713,7 @@ public struct Component: Codable, Identifiable {
         try container.encode(name, forKey: .name)
         try container.encode(config, forKey: .config)
         try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(locationId, forKey: .locationId)
         try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
     }
     
@@ -719,8 +723,9 @@ public struct Component: Codable, Identifiable {
         case name
         case config
         case status
+        case locationId
         case broadcastContext
-        case matchContext  // For backward compatibility decoding
+        case matchContext
         case component
     }
 }
