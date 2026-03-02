@@ -5,7 +5,7 @@
 //  Displays campaign sponsor badge.
 //  Source of truth: VioConfiguration.sponsorConfig (section "sponsor" in /v1/campaigns/:id/config)
 //  - sponsorConfig.logoUrl    → logo shown in badge ("Sponset av Elkjøp")
-//  - sponsorConfig.avatarUrl  → icon inside polls/contests (NOT used here)
+//  - sponsorConfig.avatarUrl  → small icon/avatar inside polls/contests (header icon)
 //  - sponsorConfig.primaryColor → badge background color
 //
 
@@ -58,11 +58,36 @@ public struct CampaignSponsorBadge: View {
             ?? text
     }
     
+    private var avatarUrl: URL? {
+        let urlString = config.sponsorConfig?.avatarUrl ?? config.dynamicBrandConfig?.iconUrl
+        guard let s = urlString, !s.isEmpty else { return nil }
+        return URL(string: s)
+    }
+    
     public var body: some View {
         let colors = VioColors.adaptive(for: colorScheme)
         
-        VStack(alignment: alignment, spacing: 2) {
-            Text(sponsorLabel)
+        HStack(spacing: 6) {
+            // Small sponsor avatar (sponsor.avatarUrl) — icon inside polls/contests
+            if let url = avatarUrl {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    case .failure, .empty:
+                        EmptyView()
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+                .frame(width: 20, height: 20)
+                .clipShape(Circle())
+            }
+            
+            VStack(alignment: alignment, spacing: 2) {
+                Text(sponsorLabel)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(colors.textSecondary)
             
@@ -85,6 +110,7 @@ public struct CampaignSponsorBadge: View {
                 Rectangle()
                     .fill(colors.surfaceSecondary)
                     .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+            }
             }
         }
     }

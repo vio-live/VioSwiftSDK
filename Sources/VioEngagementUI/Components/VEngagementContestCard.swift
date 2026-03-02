@@ -146,10 +146,46 @@ public struct VEngagementContestCard: View {
         let effectiveBrand = VioConfiguration.shared.effectiveBrandConfiguration
         let displayBrandName = brandName ?? effectiveBrand.name
         let displayBrandIcon: String? = brandIcon ?? effectiveBrand.iconAsset
+        // sponsor.avatarUrl (remote) takes precedence over iconAsset (local)
+        let sponsorAvatarUrl = VioConfiguration.shared.sponsorConfig?.avatarUrl
+            ?? VioConfiguration.shared.dynamicBrandConfig?.iconUrl
         
         return HStack(spacing: VioSpacing.xs) {
-            // Brand icon - use dynamic config if available
-            if let iconAsset = displayBrandIcon {
+            // Brand/Sponsor icon: sponsor.avatarUrl (remote) or iconAsset (local)
+            if let urlString = sponsorAvatarUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    case .failure, .empty:
+                        if let iconAsset = displayBrandIcon {
+                            Image(iconAsset)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } else {
+                            Image(systemName: "trophy.fill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 20, height: 20)
+                        }
+                    @unknown default:
+                        if let iconAsset = displayBrandIcon {
+                            Image(iconAsset)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } else {
+                            Image(systemName: "trophy.fill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 20, height: 20)
+                        }
+                    }
+                }
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+            } else if let iconAsset = displayBrandIcon {
                 Image(iconAsset)
                     .resizable()
                     .aspectRatio(contentMode: .fit)

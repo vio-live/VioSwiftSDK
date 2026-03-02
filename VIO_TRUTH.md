@@ -31,6 +31,17 @@
 
 **6. Logs de debug:** `print("✅ [Vio] ...")` en VioConfiguration, DynamicConfigurationManager y CampaignManager para rastrear cuándo se carga la config remota. (Excepción temporal a la regla "nunca print()" — pueden removerse cuando el flujo esté validado.)
 
+### sponsor.avatarUrl — Engagement Demo (2026-02-28)
+
+**Componentes conectados:**
+| Componente | Uso |
+|------------|-----|
+| **VEngagementProductGridCard** | Icono del header: `sponsorConfig?.avatarUrl ?? dynamicBrandConfig?.iconUrl` con AsyncImage; fallback a `iconAsset` si no hay URL |
+| **VEngagementContestCard** | Mismo patrón en el icono del header |
+| **CampaignSponsorBadge** | Avatar circular (20×20) a la izquierda de "Sponset av" cuando existe `avatarUrl` o `iconUrl` — usado en polls y otros |
+
+**Origen de datos:** `sponsor.avatarUrl` de `GET /v1/campaigns/:id/config`; fallback `brand.iconUrl` de dynamicBrandConfig.
+
 ---
 
 ## ⚠️ NOMENCLATURA — LEER PRIMERO
