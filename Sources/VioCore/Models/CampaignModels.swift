@@ -622,6 +622,7 @@ public struct Component: Codable, Identifiable {
     public let name: String
     public let config: ComponentConfig
     public let status: String?  // "active" or "inactive"
+    public let locationId: String?  // Slot identifier e.g. "sport-detail-banner"
     public let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware components
     
     public init(
@@ -630,6 +631,7 @@ public struct Component: Codable, Identifiable {
         name: String,
         config: ComponentConfig,
         status: String? = nil,
+        locationId: String? = nil,
         broadcastContext: BroadcastContext? = nil
     ) {
         self.id = id
@@ -637,6 +639,7 @@ public struct Component: Codable, Identifiable {
         self.name = name
         self.config = config
         self.status = status
+        self.locationId = locationId
         self.broadcastContext = broadcastContext
     }
     

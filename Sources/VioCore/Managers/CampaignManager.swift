@@ -305,6 +305,11 @@ public class CampaignManager: ObservableObject {
     ///   - type: Component type (e.g., "product_spotlight", "product_carousel")
     ///   - componentId: Optional component ID to identify a specific component. If nil, returns the first matching component.
     /// - Returns: Active component matching the type and optional componentId, or nil if not found
+    /// Get active component by locationId slot (preferred — no hardcoded IDs in SDK)
+    public func getActiveComponent(locationId: String) -> Component? {
+        return activeComponents.first { $0.locationId == locationId && $0.isActive }
+    }
+    
     public func getActiveComponent(type: String, componentId: String? = nil) -> Component? {
         guard isCampaignActive else { return nil }
         
