@@ -29,25 +29,11 @@ struct TimelinePollCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header (same style as other cards)
             HStack(spacing: 8) {
-                // Avatar with initials
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.purple, Color.purple.opacity(0.7)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 32, height: 32)
-                    
-                    Text("AS")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(.white)
-                }
+                // Sponsor avatar from backend (sponsor.avatarUrl)
+                SponsorAvatarView(size: 32)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(VioConfiguration.shared.effectiveBrandConfiguration.name) Avstemning")
+                    Text("\(SponsorAssets.name) Avstemning")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                     

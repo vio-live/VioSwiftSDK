@@ -122,8 +122,8 @@ struct TweetCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.96, green: 0.08, blue: 0.42),
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.3)
+                                    SponsorAssets.primaryColor,
+                                    SponsorAssets.primaryColor.opacity(0.3)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -132,7 +132,7 @@ struct TweetCard: View {
                         )
                 )
                 .shadow(
-                    color: Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.2),
+                    color: SponsorAssets.primaryColor.opacity(0.2),
                     radius: 8,
                     x: 0,
                     y: 4
