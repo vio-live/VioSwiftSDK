@@ -3,7 +3,7 @@
 //  Viaplay
 //
 //  Reusable component for displaying campaign sponsor logo
-//  Uses CampaignManager to get the logo dynamically
+//  Uses VioConfiguration.dynamicBrandConfig.logoUrl (set by DynamicConfigurationManager)
 //
 
 import SwiftUI
@@ -14,8 +14,6 @@ struct CampaignSponsorBadge: View {
     let maxWidth: CGFloat?
     let maxHeight: CGFloat
     let alignment: HorizontalAlignment
-    
-    @StateObject private var campaignManager = CampaignManager.shared
     
     init(
         text: String = "Sponset av",
@@ -35,19 +33,27 @@ struct CampaignSponsorBadge: View {
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(.white.opacity(0.8))
             
-            // Logo from backend: brand.logoUrl (CampaignConfig) o campaignLogo (campañas)
-            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl ?? campaignManager.currentCampaign?.campaignLogo,
+            // Logo from backend: brand.logoUrl only (evita EXC_BAD_ACCESS en campaignManager.currentCampaign?.campaignLogo)
+            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl,
                let url = URL(string: urlString) {
-                CachedAsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: maxWidth, maxHeight: maxHeight)
-                } placeholder: {
-                    Image(systemName: "photo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+                    case .failure, .empty:
+                        Image(systemName: "photo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+                    @unknown default:
+                        Image(systemName: "photo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+                    }
                 }
             } else {
                 Image(systemName: "photo")

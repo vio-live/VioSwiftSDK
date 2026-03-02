@@ -16,7 +16,6 @@ struct LineupCard: View {
     let teamColor: Color
     let isHome: Bool
     
-    @StateObject private var campaignManager = CampaignManager.shared
     @State private var showFieldView = true  // Default to field view
     @State private var reactionCounts: [String: Int]
     @State private var userReactions: Set<String> = []
@@ -106,8 +105,8 @@ struct LineupCard: View {
                         .font(.system(size: 8, weight: .medium))
                         .foregroundColor(.white.opacity(0.6))
                     
-                    // Campaign logo from CampaignManager
-                    if let logoUrl = campaignManager.currentCampaign?.campaignLogo, let url = URL(string: logoUrl) {
+                    // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
+                    if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:

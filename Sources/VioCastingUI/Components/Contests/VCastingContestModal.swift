@@ -13,7 +13,6 @@ struct CastingContestModal: View {
     let contest: CastingContestEvent
     let onDismiss: () -> Void
     
-    @StateObject private var campaignManager = CampaignManager.shared
     @State private var currentQuestionIndex = 0
     @State private var selectedAnswers: [Int: Int] = [:] // questionIndex: optionIndex
     @State private var showPhoneInput = false
@@ -74,9 +73,9 @@ struct CastingContestModal: View {
             VStack(spacing: 0) {
                 // Header with logo
                 HStack {
-                    // Campaign logo
-                    if let logoUrl = campaignManager.currentCampaign?.campaignLogo {
-                        AsyncImage(url: URL(string: logoUrl)) { phase in
+                    // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
+                    if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:
                                 ProgressView()

@@ -222,9 +222,9 @@ public struct VProductSlider: View {
         return true
     }
     
-    /// Get campaign logo URL from current campaign
+    /// Get campaign logo URL from VioConfiguration (evita EXC_BAD_ACCESS en campaignManager.currentCampaign?.campaignLogo)
     private var campaignLogoUrl: String? {
-        campaignManager.currentCampaign?.campaignLogo
+        VioConfiguration.shared.dynamicBrandConfig?.logoUrl
     }
     
     /// Should show sponsor badge

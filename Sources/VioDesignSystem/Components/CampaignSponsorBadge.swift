@@ -3,7 +3,7 @@
 //  VioDesignSystem
 //
 //  Reusable component for displaying campaign sponsor logo
-//  Uses CampaignManager to get the logo dynamically
+//  Uses VioConfiguration.dynamicBrandConfig.logoUrl (set by DynamicConfigurationManager)
 //
 
 import SwiftUI
@@ -17,7 +17,6 @@ public struct CampaignSponsorBadge: View {
     let maxHeight: CGFloat
     let alignment: HorizontalAlignment
     
-    @StateObject private var campaignManager = CampaignManager.shared
     @Environment(\.colorScheme) private var colorScheme
     
     public init(
@@ -40,8 +39,8 @@ public struct CampaignSponsorBadge: View {
                 .font(.system(size: 9, weight: .medium))
                 .foregroundColor(colors.textSecondary)
             
-            // Campaign logo from CampaignManager with caching
-            if let logoUrl = campaignManager.currentCampaign?.campaignLogo, let url = URL(string: logoUrl) {
+            // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS en campaignManager.currentCampaign?.campaignLogo)
+            if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
                 CachedAsyncImage(url: url) { image in
                     image
                         .resizable()

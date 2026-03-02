@@ -334,8 +334,6 @@ public class EngagementManager: ObservableObject {
         
         pollResults[pollId] = updatedResults
     }
-}
-
 
     // MARK: - WebSocket-driven updates
 

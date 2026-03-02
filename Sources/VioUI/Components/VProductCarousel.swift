@@ -249,9 +249,9 @@ public struct VProductCarousel: View {
         viewModel.isMarketUnavailable
     }
     
-    /// Get campaign logo URL from current campaign
+    /// Get campaign logo URL from VioConfiguration (evita EXC_BAD_ACCESS en campaignManager.currentCampaign?.campaignLogo)
     private var campaignLogoUrl: String? {
-        campaignManager.currentCampaign?.campaignLogo
+        VioConfiguration.shared.dynamicBrandConfig?.logoUrl
     }
     
     

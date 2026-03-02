@@ -13,8 +13,6 @@ struct CastingProductModal: View {
     let productEvent: CastingProductEvent
     let onDismiss: () -> Void
     
-    @StateObject private var campaignManager = CampaignManager.shared
-    
     var body: some View {
         ZStack {
             // Background
@@ -32,9 +30,9 @@ struct CastingProductModal: View {
         VStack(spacing: 0) {
             // Header with logo aligned to left
             HStack(alignment: .center) {
-                // Campaign logo - aligned to left
-                if let logoUrl = campaignManager.currentCampaign?.campaignLogo {
-                    AsyncImage(url: URL(string: logoUrl)) { phase in
+                // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
+                if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
                         switch phase {
                         case .empty:
                             ProgressView()

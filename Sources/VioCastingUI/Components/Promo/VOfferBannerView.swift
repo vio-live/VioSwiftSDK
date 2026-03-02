@@ -14,8 +14,6 @@ public struct VOfferBannerView: View {
     let title: String
     let subtitle: String?
     
-    @StateObject private var campaignManager = CampaignManager.shared
-    
     init(
         title: String = "Ukens tilbud",
         subtitle: String? = "Se denne ukes beste tilbud"
@@ -33,8 +31,8 @@ public struct VOfferBannerView: View {
             HStack(alignment: .center, spacing: 16) {
                 // Left column: Logo, title, subtitle, countdown
                 VStack(alignment: .leading, spacing: 4) {
-                    // Campaign logo from CampaignManager
-                    if let logoUrl = campaignManager.currentCampaign?.campaignLogo, let url = URL(string: logoUrl) {
+                    // Logo from VioConfiguration.dynamicBrandConfig (evita EXC_BAD_ACCESS)
+                    if let urlString = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, let url = URL(string: urlString) {
                         AsyncImage(url: url) { phase in
                             switch phase {
                             case .empty:
