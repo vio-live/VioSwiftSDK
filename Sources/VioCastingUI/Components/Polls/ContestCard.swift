@@ -47,25 +47,15 @@ struct ContestCard: View {
                 // Avatar with trophy
                 ZStack {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.96, green: 0.08, blue: 0.42),
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.7)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                        .fill(Color.clear)
                         )
-                        .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(.white)
+                        .frame(width: 0, height: 0)
                 }
+                // Sponsor avatar from backend
+                SponsorAvatarView(size: 32)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(VioConfiguration.shared.effectiveBrandConfiguration.name) Konkurranse")
+                    Text("\(SponsorAssets.name) Konkurranse")
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                     
