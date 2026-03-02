@@ -10,7 +10,6 @@
 import SwiftUI
 import VioCore
 
-@MainActor
 public struct SponsorAssets {
     
     // MARK: - Assets
