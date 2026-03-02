@@ -202,7 +202,7 @@ GET  /health                          → health check
 
 ---
 
-## ⚠️ BUG CONOCIDO — Memory leak loadEngagement (2026-03-02)
+## 🏗️ ARQUITECTURA ENGAGEMENT — WebSocket-driven (decisión 2026-03-02)
 
 **Síntoma:** Al entrar a Real Madrid - Barcelona, la RAM sube de forma continua hasta tener que cerrar la app.
 
@@ -235,3 +235,24 @@ GET  /health                          → health check
 ---
 
 _Actualizado: 2026-03-02 · Viobot_
+
+---
+
+## 🏗️ ARQUITECTURA ENGAGEMENT — WebSocket-driven (decisión 2026-03-02)
+
+**Decisión:** El engagement (polls/contests) se recibe 100% via WebSocket. NO via HTTP fetch.
+
+**Por qué:** loadEngagement() causaba RAM spike — nueva instancia BackendEngagementRepository en cada re-render + 3 requests @MainActor en paralelo.
+
+**Arquitectura definitiva:**
+```
+/ws/:campaignId
+├── campaign_ended, sponsor, product → campaign level ✅ ya funciona
+└── poll { broadcastId }, contest { broadcastId }, score { broadcastId } → broadcast level ⏳ pendiente #160/#161
+```
+
+**Estado actual:** loadEngagement() comentado en BroadcastContextSetup.swift.
+
+**Tareas:**
+- Trello #160 — Backend: añadir broadcastId a eventos WS
+- Trello #161 — SDK: CampaignWebSocketManager maneja poll/contest/score
