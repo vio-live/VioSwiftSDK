@@ -34,13 +34,16 @@ public class ProductService {
         let config = VioConfiguration.shared
         
         guard let baseURL = URL(string: config.environment.graphQLURL) else {
-            throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(config.environment.graphQLURL)")
+            let msg = "Invalid GraphQL URL: \(config.environment.graphQLURL)"
+            print("⚠️ [ProductService] getSdkClient: \(msg)")
+            throw ProductServiceError.invalidConfiguration(msg)
         }
         
         // Commerce apiKey viene de integrations.commerce.apiKey (backend campaign config)
-        // NUNCA hardcodear — siempre desde el config remoto
         guard let commerceApiKey = config.dynamicCommerceConfig?.apiKey, !commerceApiKey.isEmpty else {
-            throw ProductServiceError.invalidConfiguration("Commerce API key not configured. Check integrations.commerce.apiKey in campaign config.")
+            let msg = "Commerce API key not configured. Check integrations.commerce.apiKey in campaign config."
+            print("⚠️ [ProductService] getSdkClient: \(msg) (dynamicCommerceConfig=\(config.dynamicCommerceConfig != nil))")
+            throw ProductServiceError.invalidConfiguration(msg)
         }
         
         let client = SdkClient(baseUrl: baseURL, apiKey: commerceApiKey)

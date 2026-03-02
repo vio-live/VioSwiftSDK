@@ -184,6 +184,7 @@ public struct VProductCarousel: View {
     private func updateCachedConfigIfNeeded() {
         guard let config = config else {
             if cachedConfig != nil {
+                print("📦 [VProductCarousel] config=nil → clearing cachedConfig")
                 cachedConfig = nil
                 currentConfigId = nil
             }
@@ -201,20 +202,18 @@ public struct VProductCarousel: View {
         if currentConfigId != newConfigId {
             cachedConfig = CachedConfig(config: config, layoutOverride: layout)
             currentConfigId = newConfigId
+            print("📦 [VProductCarousel] cachedConfig updated: productIds=\(config.productIds.isEmpty ? "all" : config.productIds.joined(separator: ",")), layout=\(effectiveLayout)")
         }
     }
     
     /// Should show component
     private var shouldShow: Bool {
         // Check SDK availability
-        guard VioConfiguration.shared.shouldUseSDK else {
-            return false
-        }
+        guard VioConfiguration.shared.shouldUseSDK else { return false }
         
         // Check campaign state
         let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
         guard campaignId > 0 else {
-            // No campaign configured - show component if config exists (legacy behavior)
             return config != nil
         }
         
@@ -224,8 +223,6 @@ public struct VProductCarousel: View {
             return false
         }
         
-        // Component must exist and be active
-        // Also check if config can be extracted (component might exist but config decoding failed)
         return activeComponent?.isActive == true && config != nil
     }
     
@@ -1149,24 +1146,22 @@ public struct VProductCarousel: View {
     }
     
     private func handleCampaignStateChange() {
-        // Update cached config first
         updateCachedConfigIfNeeded()
-        
         if shouldShow {
             loadProductsIfNeeded()
         } else {
+            print("📦 [VProductCarousel] handleCampaignStateChange: shouldShow=false, clearing products")
             stopAutoScroll()
             viewModel.products = []
         }
     }
     
     private func handleComponentChange() {
-        // Update cached config first
         updateCachedConfigIfNeeded()
-        
         if shouldShow {
             loadProductsIfNeeded()
         } else {
+            print("📦 [VProductCarousel] handleComponentChange: shouldShow=false (activeComponent=\(activeComponent?.id ?? "nil"), config=\(config != nil))")
             stopAutoScroll()
             viewModel.products = []
         }
@@ -1176,15 +1171,19 @@ public struct VProductCarousel: View {
     private func loadProductsIfNeeded() {
         // If we have cached config, load products immediately
         if let cachedConfig = cachedConfig {
+            print("📦 [VProductCarousel] loadProductsIfNeeded: has cachedConfig, loading (productIds=\(cachedConfig.productIds.isEmpty ? "all" : cachedConfig.productIds.map { String($0) }.joined(separator: ",")))")
             loadProducts(with: cachedConfig)
         } else if config != nil {
-            // Config exists but cachedConfig not created yet - update cache and load
+            print("📦 [VProductCarousel] loadProductsIfNeeded: config exists, updating cache")
             updateCachedConfigIfNeeded()
             if let cachedConfig = cachedConfig {
                 loadProducts(with: cachedConfig)
+            } else {
+                print("⚠️ [VProductCarousel] loadProductsIfNeeded: config exists but updateCachedConfigIfNeeded did not set cachedConfig")
             }
         } else {
-            // No config yet - clear products and wait
+            let compId = componentId ?? "nil"
+            print("📦 [VProductCarousel] loadProductsIfNeeded: NO CONFIG — componentId=\(compId), activeComponent=\(activeComponent?.id ?? "nil"), activeComponents.count=\(campaignManager.activeComponents.count), isCampaignActive=\(campaignManager.isCampaignActive)")
             viewModel.products = []
         }
     }
@@ -1283,44 +1282,52 @@ class VProductCarouselViewModel: ObservableObject {
     
     func loadProducts(productIds: [Int], currency: String, country: String) async {
         guard VioConfiguration.shared.shouldUseSDK else {
+            print("⚠️ [VProductCarousel] loadProducts: shouldUseSDK=false → market unavailable")
             isMarketUnavailable = true
             isLoading = false
             return
         }
         
-        guard !isLoading else { return }
+        guard !isLoading else {
+            return
+        }
         
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
+        print("📦 [VProductCarousel] loadProducts: START (ids=\(productIds.isEmpty ? "all" : productIds.map { String($0) }.joined(separator: ",")), currency=\(currency), country=\(country))")
         
-        // Determine if we should load all products or filtered
         let idsToUse: [Int]? = productIds.isEmpty ? nil : productIds
         
         do {
-            // Use ProductService to load products
             products = try await ProductService.shared.loadProducts(
                 productIds: idsToUse,
                 currency: currency,
                 country: country
             )
             
+            print("📦 [VProductCarousel] loadProducts: SUCCESS count=\(products.count)")
             if products.isEmpty {
-                // No products found - will show empty state
+                print("📦 [VProductCarousel] loadProducts: empty result")
             }
             
         } catch ProductServiceError.invalidConfiguration(let message) {
+            print("⚠️ [VProductCarousel] loadProducts: invalidConfiguration - \(message)")
             errorMessage = message
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
+                print("⚠️ [VProductCarousel] loadProducts: sdkError NOT_FOUND/404 → market unavailable")
                 isMarketUnavailable = true
                 errorMessage = nil
             } else {
+                print("⚠️ [VProductCarousel] loadProducts: sdkError - \(error.message)")
                 errorMessage = error.message
             }
         } catch ProductServiceError.networkError(let error) {
+            print("⚠️ [VProductCarousel] loadProducts: networkError - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         } catch {
+            print("⚠️ [VProductCarousel] loadProducts: error - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
         

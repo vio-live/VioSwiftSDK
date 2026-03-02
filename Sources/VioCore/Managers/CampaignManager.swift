@@ -727,6 +727,11 @@ public class CampaignManager: ObservableObject {
                     if let brandConfig = config.brand {
                         VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
                     }
+                    if let commerceConfig = config.integrations?.commerce {
+                        VioConfiguration.shared.updateDynamicCommerceConfig(commerceConfig)
+                        let keyPreview = (commerceConfig.apiKey?.isEmpty ?? true) ? "empty" : "...\(String(commerceConfig.apiKey?.suffix(6) ?? ""))"
+                        print("✅ [Vio] discoverCampaigns: Commerce config applied (apiKey=\(keyPreview))")
+                    }
                 } else if let logoUrl = firstActiveCampaign.campaignLogo, !logoUrl.isEmpty {
                     // Fallback: use campaignLogo from discovery when config endpoint unavailable
                     VioLogger.debug("discoverCampaigns: Using campaignLogo from discovery: \(logoUrl)", component: "CampaignManager")
@@ -790,6 +795,7 @@ public class CampaignManager: ObservableObject {
             CacheManager.shared.saveComponents(self.activeComponents)
             
             VioLogger.debug("discoverCampaigns: \(discoveredCampaigns.count) campaigns, \(self.activeComponents.count) components", component: "CampaignManager")
+            print("📦 [VioProducts] discoverCampaigns: \(discoveredCampaigns.count) campaigns, \(self.activeComponents.count) components (product_carousel: \(self.activeComponents.filter { $0.type == "product_carousel" }.count))")
             
         } catch {
             VioLogger.error("Failed to discover campaigns: \(error)", component: "CampaignManager")
