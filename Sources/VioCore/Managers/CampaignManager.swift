@@ -1361,5 +1361,7 @@ extension Notification.Name {
     public static let componentStatusChanged = Notification.Name("VioComponentStatusChanged")
     public static let componentConfigUpdated = Notification.Name("VioComponentConfigUpdated")
     public static let campaignLogoChanged = Notification.Name("VioCampaignLogoChanged")
+    /// Posted when dynamic commerce config changes (integrations.commerce) — ProductService clears cache
+    public static let commerceConfigDidChange = Notification.Name("VioCommerceConfigDidChange")
 }
 

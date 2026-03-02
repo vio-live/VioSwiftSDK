@@ -13,7 +13,15 @@ public class ProductService {
     private var cachedSdkClient: SdkClient?
     private let sdkClientQueue = DispatchQueue(label: "com.vio.productsdk")
     
-    private init() {}
+    private init() {
+        NotificationCenter.default.addObserver(
+            forName: .commerceConfigDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearCache()
+        }
+    }
     
     // MARK: - SDK Client Management
     
