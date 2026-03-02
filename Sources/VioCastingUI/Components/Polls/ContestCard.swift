@@ -45,12 +45,6 @@ struct ContestCard: View {
             // Header
             HStack(spacing: 8) {
                 // Avatar with trophy
-                ZStack {
-                    Circle()
-                        .fill(Color.clear)
-                        )
-                        .frame(width: 0, height: 0)
-                }
                 // Sponsor avatar from backend
                 SponsorAvatarView(size: 32)
                 
