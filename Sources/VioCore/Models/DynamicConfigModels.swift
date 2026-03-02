@@ -73,6 +73,7 @@ public struct SponsorConfig: Codable {
     public let avatarUrl: String?
     public let primaryColor: String?
     public let secondaryColor: String?
+    public let badgeText: [String: String]?
     
     public init(
         id: Int? = nil,
@@ -80,7 +81,8 @@ public struct SponsorConfig: Codable {
         logoUrl: String? = nil,
         avatarUrl: String? = nil,
         primaryColor: String? = nil,
-        secondaryColor: String? = nil
+        secondaryColor: String? = nil,
+        badgeText: [String: String]? = nil
     ) {
         self.id = id
         self.name = name
@@ -88,6 +90,7 @@ public struct SponsorConfig: Codable {
         self.avatarUrl = avatarUrl
         self.primaryColor = primaryColor
         self.secondaryColor = secondaryColor
+        self.badgeText = badgeText
     }
 }
 
