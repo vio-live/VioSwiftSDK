@@ -25,6 +25,7 @@ class VProductSliderViewModel: ObservableObject {
     ///   - country: Country code for shipping (defaults to US)
     ///   - forceRefresh: Force reload even if already loaded
     func loadProducts(
+        productIds: [Int]? = nil,
         categoryId: Int? = nil,
         currency: String = "USD",
         country: String = "US",
@@ -71,9 +72,9 @@ class VProductSliderViewModel: ObservableObject {
                     country: country
                 )
             } else {
-                // Load all products from channel
+                // Load specific products by ID if provided, otherwise load all from channel
                 loadedProducts = try await ProductService.shared.loadProducts(
-                    productIds: nil,
+                    productIds: productIds,
                     currency: currency,
                     country: country
                 )
