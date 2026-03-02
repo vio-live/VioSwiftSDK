@@ -24,6 +24,12 @@ public class CampaignWebSocketManager: ObservableObject {
     public var onComponentConfigUpdated: ((ComponentConfigUpdatedEvent) -> Void)?
     public var onConnectionStatusChanged: ((Bool) -> Void)?
     
+    // MARK: - Engagement Handlers (set by VioEngagementSystem to bridge modules)
+    /// Receives raw poll JSON Data + broadcastId. Wired by EngagementManager at init.
+    public static var engagementPollHandler: ((_ pollData: Data, _ broadcastId: String) -> Void)?
+    /// Receives raw contest JSON Data + broadcastId. Wired by EngagementManager at init.
+    public static var engagementContestHandler: ((_ contestData: Data, _ broadcastId: String) -> Void)?
+    
     // MARK: - Initialization
     public init(campaignId: Int, baseURL: String) {
         self.campaignId = campaignId
@@ -215,40 +221,42 @@ public class CampaignWebSocketManager: ObservableObject {
                 
             
             case "poll":
-                VioLogger.debug("WS poll event received", component: "CampaignWebSocket")
-                let activeBroadcastId = await CampaignManager.shared.currentBroadcastContext?.broadcastId
-                guard let broadcastId = (json["broadcastId"] as? String) ?? activeBroadcastId else {
-                    VioLogger.warning("poll event missing broadcastId", component: "CampaignWebSocket")
+                let broadcastId = json["broadcastId"] as? String
+                    ?? (json["data"] as? [String: Any])?["broadcastId"] as? String
+                
+                guard let broadcastId = broadcastId else {
+                    VioLogger.warning("poll event missing broadcastId — ignored", component: "CampaignWebSocket")
                     break
                 }
-                if let data = json["data"] as? [String: Any],
-                   let id = data["id"] as? String,
-                   let question = data["question"] as? String,
-                   let optionsRaw = data["options"] as? [[String: Any]] {
-                    let options = optionsRaw.compactMap { opt -> PollOption? in
-                        guard let text = opt["text"] as? String else { return nil }
-                        return PollOption(id: UUID().uuidString, text: text, imageUrl: opt["imageUrl"] as? String)
-                    }
-                    let poll = Poll(id: id, broadcastId: broadcastId, question: question, options: options, isActive: true)
-                    await EngagementManager.shared.addOrUpdatePoll(poll, broadcastId: broadcastId)
-                    VioLogger.success("Poll \(id) added to broadcastId: \(broadcastId)", component: "CampaignWebSocket")
+                
+                guard broadcastId == CampaignManager.shared.currentBroadcastContext?.broadcastId else {
+                    VioLogger.debug("poll event ignored — broadcastId \(broadcastId) ≠ current context", component: "CampaignWebSocket")
+                    break
                 }
-
+                
+                let pollPayload = json["data"] as? [String: Any] ?? json
+                let pollData = try JSONSerialization.data(withJSONObject: pollPayload)
+                CampaignWebSocketManager.engagementPollHandler?(pollData, broadcastId)
+                VioLogger.success("Forwarded poll event for broadcastId: \(broadcastId)", component: "CampaignWebSocket")
+                
             case "contest":
-                VioLogger.debug("WS contest event received", component: "CampaignWebSocket")
-                let contestBroadcastId = await CampaignManager.shared.currentBroadcastContext?.broadcastId
-                guard let broadcastId = (json["broadcastId"] as? String) ?? contestBroadcastId else {
-                    VioLogger.warning("contest event missing broadcastId", component: "CampaignWebSocket")
+                let broadcastId = json["broadcastId"] as? String
+                    ?? (json["data"] as? [String: Any])?["broadcastId"] as? String
+                
+                guard let broadcastId = broadcastId else {
+                    VioLogger.warning("contest event missing broadcastId — ignored", component: "CampaignWebSocket")
                     break
                 }
-                if let data = json["data"] as? [String: Any],
-                   let id = data["id"] as? String,
-                   let name = data["name"] as? String {
-                    let prize = data["prize"] as? String ?? ""
-                    let contest = Contest(id: id, broadcastId: broadcastId, name: name, prize: prize, isActive: true)
-                    await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId)
-                    VioLogger.success("Contest \(id) added to broadcastId: \(broadcastId)", component: "CampaignWebSocket")
+                
+                guard broadcastId == CampaignManager.shared.currentBroadcastContext?.broadcastId else {
+                    VioLogger.debug("contest event ignored — broadcastId \(broadcastId) ≠ current context", component: "CampaignWebSocket")
+                    break
                 }
+                
+                let contestPayload = json["data"] as? [String: Any] ?? json
+                let contestData = try JSONSerialization.data(withJSONObject: contestPayload)
+                CampaignWebSocketManager.engagementContestHandler?(contestData, broadcastId)
+                VioLogger.success("Forwarded contest event for broadcastId: \(broadcastId)", component: "CampaignWebSocket")
 
             default:
                 VioLogger.warning("Unknown event type: \(eventType)", component: "CampaignWebSocket")

@@ -70,9 +70,33 @@ public enum BroadcastContextSetup {
             }
             await campaignManager.setBroadcastContext(broadcastContext)
 
-            print("⬡ [VioInit] STEP 5 — Loading engagement (polls, contests, chat)")
-            // await EngagementManager.shared.loadEngagement(for: broadcastContext, useBackend: true) // Comentado para debug RAM
-            print("✅ [VioInit] STEP 5 — Engagement loaded. Overlay should be visible.")
+            // Wire WebSocket callbacks for polls/contests (WebSocket-driven engagement)
+            campaignManager.setEngagementCallbacks(broadcastId: broadcastId)
+            campaignManager.onPollEventReceived = { json, bid in
+                guard let broadcastId = bid,
+                      let data = json["data"] as? [String: Any],
+                      let id = data["id"] as? String,
+                      let question = data["question"] as? String,
+                      let optionsRaw = data["options"] as? [[String: Any]] else { return }
+                let options = optionsRaw.compactMap { opt -> PollOption? in
+                    guard let text = opt["text"] as? String else { return nil }
+                    return PollOption(id: UUID().uuidString, text: text, imageUrl: opt["imageUrl"] as? String)
+                }
+                let poll = Poll(id: id, broadcastId: broadcastId, question: question, options: options, isActive: true)
+                Task { await EngagementManager.shared.addOrUpdatePoll(poll, broadcastId: broadcastId) }
+            }
+            campaignManager.onContestEventReceived = { json, bid in
+                guard let broadcastId = bid,
+                      let data = json["data"] as? [String: Any],
+                      let id = data["id"] as? String,
+                      let name = data["name"] as? String else { return }
+                let prize = data["prize"] as? String ?? ""
+                let contest = Contest(id: id, broadcastId: broadcastId, name: name, prize: prize, isActive: true)
+                Task { await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId) }
+            }
+
+            print("⬡ [VioInit] STEP 5 — WebSocket-driven engagement active (no HTTP fetch)")
+            print("✅ [VioInit] STEP 5 — Setup complete. Waiting for WS events.")
             return
         }
 

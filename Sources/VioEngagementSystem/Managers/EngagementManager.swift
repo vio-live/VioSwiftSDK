@@ -35,8 +35,6 @@ public class EngagementManager: ObservableObject {
     
     // MARK: - Initialization
     private init() {
-        // Initialize repository based on demo mode configuration
-        // Check dynamic config first, then fallback to static config
         let config = VioConfiguration.shared
         let effectiveConfig = config.effectiveEngagementConfiguration
         
@@ -45,6 +43,38 @@ public class EngagementManager: ObservableObject {
         } else {
             self.repository = BackendEngagementRepository()
         }
+        
+        registerWebSocketHandlers()
+    }
+    
+    /// Bridge CampaignWebSocketManager → EngagementManager across module boundaries.
+    /// Static handlers are set once; the WS manager calls them for every filtered event.
+    private func registerWebSocketHandlers() {
+        CampaignWebSocketManager.engagementPollHandler = { [weak self] pollData, broadcastId in
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            guard let poll = try? decoder.decode(Poll.self, from: pollData) else {
+                VioLogger.error("Failed to decode poll from WS data", component: "EngagementManager")
+                return
+            }
+            Task { @MainActor in
+                self?.addOrUpdatePoll(poll, broadcastId: broadcastId)
+            }
+        }
+        
+        CampaignWebSocketManager.engagementContestHandler = { [weak self] contestData, broadcastId in
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            guard let contest = try? decoder.decode(Contest.self, from: contestData) else {
+                VioLogger.error("Failed to decode contest from WS data", component: "EngagementManager")
+                return
+            }
+            Task { @MainActor in
+                self?.addOrUpdateContest(contest, broadcastId: broadcastId)
+            }
+        }
+        
+        VioLogger.debug("WebSocket engagement handlers registered", component: "EngagementManager")
     }
     
     /// Reload repository if configuration changed (e.g., dynamic config updated)
@@ -199,6 +229,32 @@ public class EngagementManager: ObservableObject {
     }
     
     // Note: MatchContext is a typealias of BroadcastContext, so the methods above automatically work for MatchContext
+    
+    // MARK: - WebSocket-driven engagement (Trello #161)
+    
+    /// Insert or replace a poll received via WebSocket for a given broadcast.
+    public func addOrUpdatePoll(_ poll: Poll, broadcastId: String) {
+        var polls = pollsByBroadcast[broadcastId] ?? []
+        if let idx = polls.firstIndex(where: { $0.id == poll.id }) {
+            polls[idx] = poll
+        } else {
+            polls.append(poll)
+        }
+        pollsByBroadcast[broadcastId] = polls
+        VioLogger.debug("addOrUpdatePoll: \(poll.id) for broadcast \(broadcastId) — total \(polls.count)", component: "EngagementManager")
+    }
+    
+    /// Insert or replace a contest received via WebSocket for a given broadcast.
+    public func addOrUpdateContest(_ contest: Contest, broadcastId: String) {
+        var contests = contestsByBroadcast[broadcastId] ?? []
+        if let idx = contests.firstIndex(where: { $0.id == contest.id }) {
+            contests[idx] = contest
+        } else {
+            contests.append(contest)
+        }
+        contestsByBroadcast[broadcastId] = contests
+        VioLogger.debug("addOrUpdateContest: \(contest.id) for broadcast \(broadcastId) — total \(contests.count)", component: "EngagementManager")
+    }
     
     /// Update poll results from WebSocket event
     public func updatePollResults(pollId: String, results: PollResults) {

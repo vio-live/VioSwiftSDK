@@ -28,6 +28,22 @@ public class CampaignManager: ObservableObject {
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
+    
+    // Engagement callbacks — set by VioEngagementSystem to avoid circular dependency
+    public var onPollEventReceived: (([String: Any], String?) -> Void)?
+    public var onContestEventReceived: (([String: Any], String?) -> Void)?
+    
+    /// Call from VioEngagementSystem after setBroadcastContext to wire WS engagement callbacks
+    public func setEngagementCallbacks(broadcastId: String) {
+        webSocketManager?.currentBroadcastId = broadcastId
+        webSocketManager?.onPollReceived = { [weak self] json, bid in
+            self?.onPollEventReceived?(json, bid)
+        }
+        webSocketManager?.onContestReceived = { [weak self] json, bid in
+            self?.onContestEventReceived?(json, bid)
+        }
+        VioLogger.debug("Engagement WS callbacks wired for broadcastId=\(broadcastId)", component: "CampaignManager")
+    }
     private var cancellables = Set<AnyCancellable>()
     private var baseURL: String  // For REST API (GraphQL base URL)
     private var isInitializing = false  // Flag to prevent multiple simultaneous initializations
