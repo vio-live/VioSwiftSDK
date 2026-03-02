@@ -29,9 +29,13 @@ public class ProductService {
             throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(config.environment.graphQLURL)")
         }
         
-        let apiKey = config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey
+        // Commerce apiKey viene de integrations.commerce.apiKey (backend campaign config)
+        // NUNCA hardcodear — siempre desde el config remoto
+        guard let commerceApiKey = config.dynamicCommerceConfig?.apiKey, !commerceApiKey.isEmpty else {
+            throw ProductServiceError.invalidConfiguration("Commerce API key not configured. Check integrations.commerce.apiKey in campaign config.")
+        }
         
-        let client = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+        let client = SdkClient(baseUrl: baseURL, apiKey: commerceApiKey)
         cachedSdkClient = client
         
         VioLogger.debug("Created SDK client", component: "ProductService")

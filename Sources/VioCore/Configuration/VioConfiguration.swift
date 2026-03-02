@@ -302,6 +302,8 @@ public class VioConfiguration: ObservableObject {
     /// Commerce = ex-Reachu (ecommerce). Key used for checkout, product catalog (graph-ql-dev.vio.live)
     public func updateDynamicCommerceConfig(_ config: DynamicCommerceConfig?) {
         self.dynamicCommerceConfig = config
+        // Invalidar cache del SdkClient — el apiKey puede haber cambiado entre campañas
+        ProductService.shared.clearCache()
     }
     
     /// Update dynamic localization configuration from backend
