@@ -6,7 +6,7 @@
         "webSocketBaseURL": "https://api-dev.vio.live",
         "autoDiscover": true
     },
-    "market": {
+    "marketFallback": {
         "countryCode": "NO",
         "countryName": "Norway",
         "currencyCode": "NOK",
