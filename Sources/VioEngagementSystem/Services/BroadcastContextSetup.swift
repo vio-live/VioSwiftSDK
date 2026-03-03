@@ -86,13 +86,17 @@ public enum BroadcastContextSetup {
                 Task { await EngagementManager.shared.addOrUpdatePoll(poll, broadcastId: broadcastId) }
             }
             campaignManager.onContestEventReceived = { json, bid in
+                // Support both flat and nested formats from backend
+                let payload = json["data"] as? [String: Any] ?? json
                 guard let broadcastId = bid,
-                      let data = json["data"] as? [String: Any],
-                      let id = data["id"] as? String,
-                      let name = data["name"] as? String ?? data["title"] as? String else { return }
-                let prize = data["prize"] as? String ?? ""
-                let description = data["description"] as? String ?? ""
-                let contest = Contest(id: id, broadcastId: broadcastId, title: name, description: description, prize: prize, contestType: .quiz, isActive: true)
+                      let id = payload["id"] as? String,
+                      let name = payload["name"] as? String ?? payload["title"] as? String else { return }
+                let prize = payload["prize"] as? String ?? ""
+                let description = payload["description"] as? String ?? ""
+                let imageUrl = payload["imageUrl"] as? String
+                let contestTypeStr = payload["contestType"] as? String ?? "quiz"
+                let contestType: Contest.ContestType = contestTypeStr.lowercased() == "giveaway" ? .giveaway : .quiz
+                let contest = Contest(id: id, broadcastId: broadcastId, title: name, description: description, prize: prize, contestType: contestType, imageUrl: imageUrl, isActive: true)
                 Task { await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId) }
             }
 

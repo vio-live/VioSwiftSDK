@@ -355,6 +355,7 @@ public struct CastingContestEvent: TimelineEvent {
     public let description: String
     public let prize: String
     public let contestType: ContestType
+    public let imageUrl: String?
     public let metadata: [String: String]?
     public let broadcastContext: BroadcastContext?
 

@@ -1108,8 +1108,9 @@ public struct DemoDataConfiguration {
             public let prize: String
             public let contestType: String
             public let imageAsset: String
+            public let imageUrl: String?
             
-            public init(id: String, videoTimestamp: Int, title: String, description: String, prize: String, contestType: String, imageAsset: String) {
+            public init(id: String, videoTimestamp: Int, title: String, description: String, prize: String, contestType: String, imageAsset: String, imageUrl: String? = nil) {
                 self.id = id
                 self.videoTimestamp = videoTimestamp
                 self.title = title
@@ -1117,6 +1118,7 @@ public struct DemoDataConfiguration {
                 self.prize = prize
                 self.contestType = contestType
                 self.imageAsset = imageAsset
+                self.imageUrl = imageUrl
             }
         }
         

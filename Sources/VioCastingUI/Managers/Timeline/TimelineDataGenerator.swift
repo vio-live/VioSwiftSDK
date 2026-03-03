@@ -232,6 +232,7 @@ public struct TimelineDataGenerator {
                 description: c.description,
                 prize: c.prize,
                 contestType: contestType,
+                imageUrl: c.imageUrl,
                 metadata: ["imageAsset": c.imageAsset],
                 broadcastContext: nil
             )))
@@ -275,6 +276,7 @@ public struct TimelineDataGenerator {
                 description: c.description,
                 prize: c.prize,
                 contestType: contestType,
+                imageUrl: c.imageUrl,
                 metadata: ["imageAsset": c.imageAsset],
                 broadcastContext: nil
             )))
@@ -1406,6 +1408,7 @@ public struct TimelineDataGenerator {
             description: "Participa y gana premios exclusivos",
             prize: "1.000€ en productos",
             contestType: .quiz,
+            imageUrl: nil,
             metadata: ["imageAsset": "contest_prize_giftcard"],
             broadcastContext: nil
         )))

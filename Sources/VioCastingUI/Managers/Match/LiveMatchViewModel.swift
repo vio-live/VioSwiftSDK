@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import VioEngagementSystem
 
 // MARK: - Match Tab Enum
 public enum MatchTab: String, CaseIterable {
@@ -51,6 +52,7 @@ public class LiveMatchViewModel: ObservableObject {
 
     public let timeline: UnifiedTimelineManager
     private var timelineCancellable: AnyCancellable?
+    private var engagementCancellable: AnyCancellable?
 
     public let chatManager: ChatManager
     public let matchSimulation: MatchSimulationManager
@@ -88,6 +90,31 @@ public class LiveMatchViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
+            }
+
+        // Observe backend contests from EngagementManager and inject into timeline
+        self.engagementCancellable = EngagementManager.shared.$contestsByBroadcast
+            .receive(on: RunLoop.main)
+            .sink { [weak self] contestsByBroadcast in
+                guard let self = self else { return }
+                let broadcastId = self.match.contentId ?? ""
+                guard !broadcastId.isEmpty,
+                      let contests = contestsByBroadcast[broadcastId] else { return }
+                for contest in contests {
+                    let contestType: CastingContestEvent.ContestType = contest.contestType == .giveaway ? .giveaway : .quiz
+                    let event = CastingContestEvent(
+                        id: contest.id,
+                        videoTimestamp: 0, // live — show immediately at top
+                        title: contest.title,
+                        description: contest.description,
+                        prize: contest.prize,
+                        contestType: contestType,
+                        imageUrl: contest.imageUrl,
+                        metadata: nil,
+                        broadcastContext: contest.broadcastContext
+                    )
+                    self.timeline.addOrUpdateEvent(AnyTimelineEvent(event))
+                }
             }
     }
 

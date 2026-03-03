@@ -204,6 +204,7 @@ public struct Contest: Codable, Identifiable {
     public let broadcastStartTime: Date?
     
     public let isActive: Bool
+    public let imageUrl: String?
     public let broadcastContext: BroadcastContext?
     
     public init(
@@ -218,6 +219,7 @@ public struct Contest: Codable, Identifiable {
         videoStartTime: Int? = nil,
         videoEndTime: Int? = nil,
         broadcastStartTime: Date? = nil,
+        imageUrl: String? = nil,
         isActive: Bool = true,
         broadcastContext: BroadcastContext? = nil
     ) {
@@ -233,6 +235,7 @@ public struct Contest: Codable, Identifiable {
         self.videoEndTime = videoEndTime
         self.broadcastStartTime = broadcastStartTime
         self.isActive = isActive
+        self.imageUrl = imageUrl
         self.broadcastContext = broadcastContext
     }
     
