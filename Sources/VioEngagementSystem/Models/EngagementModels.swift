@@ -278,6 +278,7 @@ public struct Contest: Codable, Identifiable {
         }
         
         isActive = try container.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
         
         // Try broadcastContext first, fallback to matchContext
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
@@ -301,6 +302,7 @@ public struct Contest: Codable, Identifiable {
         try container.encodeIfPresent(videoEndTime, forKey: .videoEndTime)
         try container.encodeIfPresent(broadcastStartTime, forKey: .broadcastStartTime)
         try container.encode(isActive, forKey: .isActive)
+        try container.encodeIfPresent(imageUrl, forKey: .imageUrl)
         try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
     }
     
@@ -319,6 +321,7 @@ public struct Contest: Codable, Identifiable {
         case broadcastStartTime
         case matchStartTime  // For backward compatibility decoding
         case isActive
+        case imageUrl
         case broadcastContext
         case matchContext  // For backward compatibility decoding
     }
@@ -352,6 +355,7 @@ public struct Contest: Codable, Identifiable {
         self.videoEndTime = videoEndTime
         self.broadcastStartTime = matchStartTime
         self.isActive = isActive
+        self.imageUrl = nil
         self.broadcastContext = matchContext
     }
     
