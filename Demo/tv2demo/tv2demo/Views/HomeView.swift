@@ -90,8 +90,11 @@ struct HomeView: View {
                                 }
                                 .padding(.horizontal, TV2Theme.Spacing.md)
                                 
-                                // Products carousel
-                                VProductCarousel(componentId: "bad51b3b-c4cf-445f-b15a-f9a630f40db0", layout: "compact")  
+                                // Product banner — sport-home-banner slot
+                                VProductBanner(locationId: "sport-home-banner")
+                                
+                                // Products carousel — sport-home-carousel slot
+                                VProductCarousel(locationId: "sport-home-carousel", layout: "compact")
                                 //VProductSlider(
                                     //title: "",
                                     //layout: .cards,

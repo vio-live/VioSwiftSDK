@@ -283,16 +283,11 @@ struct MatchDetailView: View {
                             }
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             
-                            // Products carousel
-                            VProductCarousel(componentId: "bad51b3b-c4cf-445f-b15a-f9a630f40db0", layout: "compact")  
-                            //VProductSlider(
-                                //title: "",
-                                //layout: .cards,
-                                //maxItems: 6,
-                                //currency: cartManager.currency,
-                                //country: cartManager.country
-                            //)
-                            //.environmentObject(cartManager)
+                            // Product banner — sport-detail-banner slot
+                            VProductBanner(locationId: "sport-detail-banner")
+                            
+                            // Products carousel — sport-detail-carousel slot
+                            VProductCarousel(locationId: "sport-detail-carousel", layout: "compact")
                         }
                         .padding(.top, TV2Theme.Spacing.lg)
                         .padding(.bottom, TV2Theme.Spacing.xl)
