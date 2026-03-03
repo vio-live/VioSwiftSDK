@@ -163,7 +163,7 @@ extension TV2Match {
         ]
     )
     
-    static let mockMatches: [Match] = [
+    static let mockMatches: [TV2Match] = [
         barcelonaPSG,
         dortmundAtletico,
         TV2Match(
