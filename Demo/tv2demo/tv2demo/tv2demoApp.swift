@@ -55,9 +55,19 @@ struct tv2demoApp: App {
             guard let campaignId = await CampaignManager.shared.activeCampaigns.first?.id else { return }
             print("⬡ [VioInit] STEP 2 — GET /v1/campaigns/\(campaignId)/config")
             if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(campaignId: campaignId, broadcastId: nil) {
+                if let brandConfig = config.brand {
+                    VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
+                }
+                if let sponsorConfig = config.sponsor {
+                    VioConfiguration.shared.updateSponsorConfig(sponsorConfig)
+                }
+                if let commerceConfig = config.integrations?.commerce {
+                    VioConfiguration.shared.updateDynamicCommerceConfig(commerceConfig)
+                }
                 let brandName = config.brand?.name ?? "nil"
+                let logoUrl = config.brand?.logoUrl ?? config.sponsor?.logoUrl ?? "nil"
                 let commerceEnabled = config.integrations?.commerce?.enabled ?? false
-                print("✅ [VioInit] STEP 2 — brand=\(brandName) commerce=\(commerceEnabled)")
+                print("✅ [VioInit] STEP 2 — brand=\(brandName) logoUrl=\(String(logoUrl.prefix(60))) commerce=\(commerceEnabled)")
             } else {
                 print("❌ [VioInit] STEP 2 — Failed to load campaign config")
             }

@@ -19,8 +19,12 @@ Al entrar a Real Madrid - Barcelona, la RAM sube sin parar. **Causa confirmada:*
 - URLs event-streamer eliminadas ✅
 - integrations.commerce parseado ✅
 - Tipio eliminado completamente ✅
+- **BroadcastContextSetup cierra el loop** ✅ (flujo contentId → broadcastId → WebSocket)
+- **Logo Elkjøp en CampaignSponsorBadge** ✅ (ViaplayApp + tv2demoApp aplican loadCampaignConfig → updateDynamicBrandConfig/updateSponsorConfig)
+- **vio-config.json** ✅ (apiKey única, campaigns con restAPIBaseURL)
+- **Demo legacy Barcelona-PSG** ✅ (flujo estático intacto, matchContentId nil → hasEngagement: false)
 
-## 🔴 Hacer ahora — el backend está listo, cerrar el loop en UI
+## 🔴 Hacer ahora — verificación manual
 
 ### Datos de test confirmados
 ```
@@ -61,7 +65,7 @@ NO debe caer al fallback de DemoDataManager.
 Solo una apiKey. Sin campaignAdminApiKey ni campaignApiKey.
 
 ### 4. Confirmar que demo legacy Barcelona-PSG sigue funcionando
-La demo estática (campaignId: 28) no debe romperse.
+La demo estática (campaignId: 28) no debe romperse. **Código verificado:** SportDetailView usa Match.barcelonaPSG para Barcelona-PSG; matchContentId devuelve nil para ese partido (barcelona-psg-2025-02-12 no existe en backend).
 
 ## ⏸ Deferido
 - AnalyticsManager.swift:45 trackAutomaticEvents error — después del lunes
