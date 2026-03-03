@@ -94,22 +94,17 @@ public struct VCastingContestCard: View {
             
             // Contest image — backend URL takes priority, fallback to local asset
             if let imageUrl = contest.imageUrl, let url = URL(string: imageUrl) {
-                CachedAsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 140)
-                            .clipped()
-                            .cornerRadius(8)
-                    case .failure, .empty:
-                        Color.white.opacity(0.05)
-                            .frame(maxWidth: .infinity, minHeight: 60)
-                            .cornerRadius(8)
-                    @unknown default:
-                        EmptyView()
-                    }
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity, minHeight: 140, maxHeight: 140)
+                        .clipped()
+                        .cornerRadius(8)
+                } placeholder: {
+                    Color.white.opacity(0.05)
+                        .frame(maxWidth: .infinity, minHeight: 60)
+                        .cornerRadius(8)
                 }
                 .padding(.vertical, 4)
             } else if let imageAsset = contest.metadata?["imageAsset"] {
