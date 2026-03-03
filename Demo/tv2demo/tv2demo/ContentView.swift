@@ -8,8 +8,8 @@
 import SwiftUI
 import VioUI
 import VioCore
-import VioLiveUI
-import VioLiveShow
+// import VioLiveUI  // Not available as package product
+// import VioLiveShow  // Not available as package product
 import AVFoundation
 
 struct ContentView: View {
@@ -63,17 +63,11 @@ struct ContentView: View {
 // MARK: - Live Stream Overlay
 
 struct LiveStreamGlobalOverlay: View {
-    @ObservedObject private var liveShowManager = LiveShowManager.shared
     @EnvironmentObject private var cartManager: CartManager
     
     var body: some View {
-        ZStack {
-            // Full screen LiveShow overlay
-            if liveShowManager.isLiveShowVisible {
-                VLiveShowFullScreenOverlay()
-                    .environmentObject(cartManager)
-            }
-        }
+        // LiveShow modules not available — casting demo uses LiveMatchView instead
+        EmptyView()
     }
 }
 
