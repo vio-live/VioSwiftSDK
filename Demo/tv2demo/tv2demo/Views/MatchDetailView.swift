@@ -359,7 +359,7 @@ struct MatchDetailView: View {
 
 // MARK: - Team Card Component
 struct TeamCard: View {
-    let team: Team
+    let team: TV2Team
     
     var body: some View {
         VStack(spacing: TV2Theme.Spacing.sm) {
