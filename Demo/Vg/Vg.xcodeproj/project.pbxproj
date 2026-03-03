@@ -603,7 +603,7 @@
 /* Begin XCLocalSwiftPackageReference section */
 		D0A5AD662EB3F99E00A8D4B5 /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../VioSwiftSDK;
+			relativePath = "../..";
 		};
 /* End XCLocalSwiftPackageReference section */
 

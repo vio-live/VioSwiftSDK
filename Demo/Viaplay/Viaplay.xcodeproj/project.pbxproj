@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		17B2324E2EAF952300EBA3F8 /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = 17B2324D2EAF952300EBA3F8 /* VioComplete */; };
-		17B235522EB0FE3900EBA3F8 /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = 17B235512EB0FE3900EBA3F8 /* VioComplete */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,7 +57,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				17B2324E2EAF952300EBA3F8 /* VioComplete in Frameworks */,
-				17B235522EB0FE3900EBA3F8 /* VioComplete in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,7 +118,6 @@
 			name = Viaplay;
 			packageProductDependencies = (
 				17B2324D2EAF952300EBA3F8 /* VioComplete */,
-				17B235512EB0FE3900EBA3F8 /* VioComplete */,
 			);
 			productName = Viaplay;
 			productReference = 17B22E832EAF800F00EBA3F8 /* Viaplay.app */;
@@ -205,7 +202,7 @@
 			mainGroup = 17B22E7A2EAF800F00EBA3F8;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */,
+				17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17B22E842EAF800F00EBA3F8 /* Products */;
@@ -596,19 +593,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */ = {
+		17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../VioSwiftSDK;
+			relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		17B2324D2EAF952300EBA3F8 /* VioComplete */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = VioComplete;
-		};
-		17B235512EB0FE3900EBA3F8 /* VioComplete */ = {
-			isa = XCSwiftPackageProductDependency;
+			package = 17B2324C2EAF952300EBA3F8 /* XCLocalSwiftPackageReference "../.." */;
 			productName = VioComplete;
 		};
 /* End XCSwiftPackageProductDependency section */
