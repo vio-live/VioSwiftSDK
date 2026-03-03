@@ -1,0 +1,219 @@
+{
+  "_comment": "Static demo data configuration for Viaplay demo. This data can be replaced with backend data or moved to vio-config.json in the future.",
+  "version": "1.0.0",
+  "brand": {
+    "_comment": "Brand name and icon - single source for demo consistency. Overrides vio-config when present.",
+    "name": "Elkjøp",
+    "iconAsset": "avatar_el"
+  },
+  "assets": {
+    "_comment": "Image asset names used as fallbacks throughout the demo",
+    "defaultLogo": "default_logo",
+    "defaultAvatar": "avatar_el",
+    "backgroundImages": {
+      "footballField": "football_field_bg",
+      "mainBackground": "bg-main",
+      "sportDetail": "bg",
+      "sportDetailImage": "img1"
+    },
+    "brandAssets": {
+      "icon": "icon ",
+      "logo": "logo"
+    },
+    "contestAssets": {
+      "giftCard": "contest_prize_giftcard",
+      "championsLeagueTickets": "contest_prize_tickets"
+    }
+  },
+  "demoUsers": {
+    "_comment": "Demo usernames for chat and social features",
+    "defaultUsername": "Usuario",
+    "chatUsernames": [
+      {
+        "name": "Angelo",
+        "color": "#F5145A"
+      },
+      {
+        "name": "ElkjøpFan",
+        "color": "#69A333"
+      },
+      {
+        "name": "ChampionsFan",
+        "color": "#9933FF"
+      },
+      {
+        "name": "TechLover",
+        "color": "#00CED1"
+      }
+    ],
+    "socialAccounts": [
+      {
+        "name": "Elkjøp Norge",
+        "handle": "@ElkjøpNorge",
+        "verified": true
+      },
+      {
+        "name": "Viaplay Sport",
+        "handle": "@ViaplaySport",
+        "verified": true
+      }
+    ]
+  },
+  "productMappings": {
+    "_comment": "Product ID to URL mappings. In production, these should come from Product objects or backend",
+    "408895": {
+      "name": "Samsung 75\" QN85F Neo QLED 4K MiniLED Smart TV (2025)",
+      "productUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/tv-og-tilbehor/tv/samsung-85-qn85f-neo-qled-4k-miniled-smart-tv-2025/906394",
+      "checkoutUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/tv-og-tilbehor/tv/samsung-85-qn85f-neo-qled-4k-miniled-smart-tv-2025/906394"
+    },
+    "408896": {
+      "name": "Samsung 5.1.2ch HW-Q810F lydplanke (sort)",
+      "productUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/hoyttalere-og-hi-fi/lydplanke/samsung-312ch-hw-q610f-lydplanke-sort/908701",
+      "checkoutUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/hoyttalere-og-hi-fi/lydplanke/samsung-312ch-hw-q610f-lydplanke-sort/908701"
+    }
+  },
+  "eventIds": {
+    "_comment": "Event IDs used in timeline. Should be generated dynamically or come from backend",
+    "contestQuiz": "casting-contest-quiz",
+    "contestGiveaway": "casting-contest-giveaway",
+    "productCombo": "casting-product-combo",
+    "tweetHalftime1": "tweet-halftime-1",
+    "tweetHalftime2": "tweet-halftime-2"
+  },
+  "matchDefaults": {
+    "_comment": "Default match values. Should come from Match model or backend",
+    "broadcastIdMappings": {
+      "barcelona-psg": "barcelona-psg-2025-01-23"
+    },
+    "defaultScore": 3
+  },
+  "offerBanner": {
+    "_comment": "Offer banner countdown values. Should be calculated from campaign expiration date",
+    "countdown": {
+      "days": 2,
+      "hours": 1,
+      "minutes": 59,
+      "seconds": 47
+    },
+    "title": "Ukens tilbud",
+    "subtitle": "Se denne ukes beste tilbud",
+    "discountText": "Opp til 30%",
+    "buttonText": "Se alle tilbud"
+  },
+  "timelineEvents": {
+    "_comment": "Static timeline event data. In production, this should come from backend or be generated dynamically",
+    "castingContests": [
+      {
+        "id": "casting-contest-quiz",
+        "videoTimestamp": 2700,
+        "title": "Elkjøp Konkurranse",
+        "description": "Delta og vinn et gavekort på 5000kr ved å svare på et lite quiz",
+        "prize": "Gavekort på 5000kr",
+        "contestType": "quiz",
+        "imageAsset": "contest_prize_giftcard"
+      },
+      {
+        "id": "casting-contest-giveaway",
+        "videoTimestamp": 2750,
+        "title": "Elkjøp Konkurranse",
+        "description": "Delta og vinn to billetter til Champions League",
+        "prize": "To billetter til Champions League",
+        "contestType": "giveaway",
+        "imageAsset": "contest_prize_tickets"
+      }
+    ],
+    "castingProducts": [
+      {
+        "id": "casting-product-combo",
+        "videoTimestamp": 2700,
+        "productId": "408895",
+        "productIds": [
+          "408896"
+        ],
+        "title": "Spesialtilbud på TV og Lyd",
+        "description": "Ikke gå glipp av denne muligheten - 25% rabatt kun under kampen"
+      }
+    ]
+  },
+  "carouselCards": {
+    "items": [
+      {
+        "imageUrl": "img1",
+        "time": "TONIGHT 20:00",
+        "logo": "LA LIGA",
+        "title": "Real Madrid - Barcelona",
+        "subtitle": "La Liga | 12. runde"
+      },
+      {
+        "imageUrl": "img1",
+        "time": "TONIGHT 21:30",
+        "logo": "PREMIER LEAGUE",
+        "title": "Manchester United - Chelsea",
+        "subtitle": "Premier League | 12. runde"
+      },
+      {
+        "imageUrl": "img1",
+        "time": "TOMORROW 19:00",
+        "logo": "PREMIER LEAGUE",
+        "title": "Liverpool - Arsenal",
+        "subtitle": "Premier League | 12. runde"
+      }
+    ]
+  },
+  "liveCards": {
+    "items": [
+      {
+        "logo": "UEFA",
+        "logoIcon": "star.fill",
+        "title": "Barcelona - PSG",
+        "subtitle": "Champions League",
+        "time": "15:00",
+        "backgroundImage": "bg"
+      },
+      {
+        "logo": "CHALLENGE TOUR",
+        "logoIcon": "globe",
+        "title": "Rolex Grand",
+        "subtitle": "European Challenge",
+        "time": "12:00",
+        "backgroundImage": "img1"
+      }
+    ]
+  },
+  "sportClips": {
+    "items": [
+      {
+        "imageUrl": "img1",
+        "time": "00:51",
+        "title": "Haaland ofret sitt for å redde City-poeng",
+        "subtitle": "PREMIER LEAGUE | 2K. OKTOBER",
+        "isLarge": false
+      },
+      {
+        "imageUrl": "img1",
+        "time": "00:53",
+        "title": "Jørgen Strand Larsen scoring i Premier League",
+        "subtitle": "PREMIER LEAGUE",
+        "isLarge": false
+      }
+    ]
+  },
+  "matches": {
+    "items": [
+      {
+        "broadcastId": "barcelona-psg-2025-01-23",
+        "title": "Barcelona - PSG",
+        "subtitle": "UEFA Champions League",
+        "imageUrl": "img1",
+        "isLive": true
+      },
+      {
+        "broadcastId": "real-madrid-barcelona-2025-01-24",
+        "title": "Real Madrid - Barcelona",
+        "subtitle": "La Liga",
+        "imageUrl": "img1",
+        "isLive": false
+      }
+    ]
+  }
+}

@@ -1,5 +1,7 @@
 import SwiftUI
 import VioUI
+import VioCore
+import VioCastingUI
 
 struct MatchDetailView: View {
     let match: Match
@@ -7,6 +9,7 @@ struct MatchDetailView: View {
     @EnvironmentObject var cartManager: CartManager
     @StateObject private var castingManager = CastingManager.shared
     @State private var showVideoPlayer = false
+    @State private var showLiveMatchView = false
     @State private var showCastDeviceSelection = false
     @State private var showCastingView = false
     @State private var selectedTab: TabItem = .home
@@ -168,6 +171,24 @@ struct MatchDetailView: View {
                         }
                         .padding(.horizontal, TV2Theme.Spacing.md)
                         
+                        // Casting Demo button — Vio engagement experience
+                        Button(action: { showLiveMatchView = true }) {
+                            HStack(spacing: TV2Theme.Spacing.sm) {
+                                Image(systemName: "tv.and.mediabox")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Casting Demo")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, TV2Theme.Spacing.sm)
+                            .background(
+                                Capsule()
+                                    .fill(Color(hex: "#A891FF").opacity(0.85))
+                            )
+                        }
+                        .padding(.horizontal, TV2Theme.Spacing.md)
+                        
                         // Description
                         Text("Fra \(match.venue), Dortmund og kampen mellom \(match.homeTeam.name) og \(match.awayTeam.name) i \(match.competition).")
                             .font(.system(size: 14, weight: .regular))
@@ -283,6 +304,34 @@ struct MatchDetailView: View {
             // Bottom Tab Bar
             BottomTabBar(selectedTab: $selectedTab)
             }
+        }
+        .fullScreenCover(isPresented: $showLiveMatchView) {
+            let sdkMatch = VioCastingUI.Match(
+                homeTeam: VioCastingUI.Team(
+                    name: match.homeTeam.name,
+                    shortName: match.homeTeam.shortName,
+                    logo: match.homeTeam.logo
+                ),
+                awayTeam: VioCastingUI.Team(
+                    name: match.awayTeam.name,
+                    shortName: match.awayTeam.shortName,
+                    logo: match.awayTeam.logo
+                ),
+                title: match.title,
+                subtitle: match.subtitle,
+                competition: match.competition,
+                venue: match.venue,
+                commentator: match.commentator,
+                isLive: true,
+                backgroundImage: match.backgroundImage,
+                availability: .available,
+                relatedContent: [],
+                campaignLogo: match.campaignLogo
+            )
+            let sessionContext: VioSessionContext? = match.contentId.map {
+                VioSessionContext(contentId: $0, country: match.country)
+            }
+            LiveMatchView(match: sdkMatch, onDismiss: { showLiveMatchView = false }, sessionContext: sessionContext)
         }
         .navigationBarHidden(true)
         .fullScreenCover(isPresented: $showVideoPlayer) {

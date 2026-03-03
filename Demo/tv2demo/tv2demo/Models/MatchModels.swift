@@ -15,6 +15,8 @@ struct Match: Identifiable {
     let availability: MatchAvailability
     let relatedContent: [RelatedTeam]
     let campaignLogo: String?
+    let contentId: String?
+    let country: String
     
     init(
         homeTeam: Team,
@@ -28,7 +30,9 @@ struct Match: Identifiable {
         backgroundImage: String,
         availability: MatchAvailability,
         relatedContent: [RelatedTeam] = [],
-        campaignLogo: String? = nil
+        campaignLogo: String? = nil,
+        contentId: String? = nil,
+        country: String = "NO"
     ) {
         self.homeTeam = homeTeam
         self.awayTeam = awayTeam
@@ -42,6 +46,8 @@ struct Match: Identifiable {
         self.availability = availability
         self.relatedContent = relatedContent
         self.campaignLogo = campaignLogo
+        self.contentId = contentId
+        self.country = country
     }
 }
 
@@ -107,9 +113,9 @@ extension Match {
         competition: "UEFA Champions League",
         venue: "Camp Nou",
         commentator: "Magnus Drivenes",
-        isLive: false,
+        isLive: true,
         backgroundImage: "barcelona_psg_bg",
-        availability: .upcoming(date: "Kommer 12. november"),
+        availability: .available,
         relatedContent: [
             RelatedTeam(
                 team: Team(name: "FC Barcelona", shortName: "Barcelona", logo: "barcelona_logo"),
@@ -120,7 +126,9 @@ extension Match {
                 description: nil
             )
         ],
-        campaignLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Adidas_logo.png/800px-Adidas_logo.png"
+        campaignLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Adidas_logo.png/800px-Adidas_logo.png",
+        contentId: "real-madrid-barcelona-2025-01-24",
+        country: "NO"
     )
     
     // Keep old match for reference

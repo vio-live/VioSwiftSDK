@@ -1,7 +1,7 @@
 {
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
-  "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+  "apiKey": "viaplay_api_key_0c611e983b314ff8",
   "environment": "development",
   "theme": {
     "name": "TV2 Dark Theme",
@@ -93,7 +93,12 @@
     "enableGuestCheckout": true,
     "requirePhoneNumber": true,
     "defaultShippingCountry": "NO",
-    "supportedPaymentMethods": ["stripe", "klarna", "vipps", "paypal"]
+    "supportedPaymentMethods": [
+      "stripe",
+      "klarna",
+      "vipps",
+      "paypal"
+    ]
   },
   "productDetail": {
     "showNavigationTitle": false,
@@ -106,15 +111,7 @@
     "countryName": "Norway",
     "currencyCode": "NOK",
     "currencySymbol": "kr",
-    "phoneCode": "+47",
-    "flag": "https://flagcdn.com/w320/no.png"
-  },
-  "liveShow": {
-    "campaignId": 3,
-    "tipio": {
-      "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
-      "baseUrl": "https://stg-dev-microservices.tipioapp.com"
-    }
+    "phoneCode": "+47"
   },
   "localization": {
     "defaultLanguage": "no",
@@ -135,15 +132,33 @@
   },
   "_cartOptions": {
     "_comment": "Available options for cart configuration",
-    "floatingCartPosition": ["topLeft", "topCenter", "topRight", "centerLeft", "centerRight", "bottomLeft", "bottomCenter", "bottomRight"],
-    "floatingCartDisplayMode": ["iconOnly", "minimal", "compact", "full"],
+    "floatingCartPosition": [
+      "topLeft",
+      "topCenter",
+      "topRight",
+      "centerLeft",
+      "centerRight",
+      "bottomLeft",
+      "bottomCenter",
+      "bottomRight"
+    ],
+    "floatingCartDisplayMode": [
+      "iconOnly",
+      "minimal",
+      "compact",
+      "full"
+    ],
     "floatingCartDisplayModeDescription": {
       "iconOnly": "Circle icon with badge only (smallest)",
       "minimal": "Icon + item count",
       "compact": "Icon + item count + price",
       "full": "Icon + item count + price + arrow (complete)"
     },
-    "floatingCartSize": ["small", "medium", "large"],
+    "floatingCartSize": [
+      "small",
+      "medium",
+      "large"
+    ],
     "floatingCartSizeDescription": {
       "small": "Compact size with title3 icon",
       "medium": "Standard size with title2 icon",
@@ -152,7 +167,11 @@
   },
   "_productDetailOptions": {
     "_comment": "Available options for product detail modal configuration",
-    "modalHeight": ["full", "half", "threeQuarters"],
+    "modalHeight": [
+      "full",
+      "half",
+      "threeQuarters"
+    ],
     "modalHeightDescription": {
       "full": "Modal takes full screen height",
       "half": "Modal takes half screen height (50%)",
@@ -162,14 +181,21 @@
     "imageCornerRadius": "Number - Corner radius for product images (0 for square edges)",
     "imageHeight": "Number (optional) - Fixed height for product images in pixels (e.g., 380). If not set, uses default heights (240 for single image, 300 for gallery)",
     "showImageGallery": "Boolean - true: show thumbnail gallery for multiple images, false: hide gallery thumbnails and page indicators",
-    "headerStyle": ["standard", "compact"],
+    "headerStyle": [
+      "standard",
+      "compact"
+    ],
     "headerStyleDescription": {
       "standard": "Normal header with standard spacing",
       "compact": "Reduced header height for more content space"
     },
     "enableImageZoom": "Boolean - true: allow pinch-to-zoom on product images, false: disable zoom",
     "showNavigationTitle": "Boolean - true: show 'Product Details' navigation title, false: hide title for immersive view",
-    "closeButtonStyle": ["navigationBar", "overlayTopLeft", "overlayTopRight"],
+    "closeButtonStyle": [
+      "navigationBar",
+      "overlayTopLeft",
+      "overlayTopRight"
+    ],
     "closeButtonStyleDescription": {
       "navigationBar": "Standard close button in navigation bar (default)",
       "overlayTopLeft": "Floating close button on top left corner of image",
@@ -177,6 +203,10 @@
     },
     "showDescription": "Boolean - true: show product description section, false: hide description",
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
+  },
+  "campaigns": {
+    "restAPIBaseURL": "https://api-dev.vio.live",
+    "webSocketBaseURL": "https://api-dev.vio.live",
+    "autoDiscover": true
   }
 }
-
