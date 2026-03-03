@@ -5,7 +5,7 @@ import VioCore
 /// Vista que se muestra cuando el casting está activo
 /// Permite controlar el video y ver los overlays mientras se castea
 struct CastingActiveView: View {
-    let match: Match
+    let match: TV2Match
     @StateObject private var castingManager = CastingManager.shared
     @StateObject private var webSocketManager = WebSocketManager()
     @StateObject private var chatManager = ChatManager()
@@ -606,7 +606,7 @@ struct CastingActiveView: View {
 }
 
 #Preview {
-    CastingActiveView(match: Match.barcelonaPSG)
+    CastingActiveView(match: TV2Match.barcelonaPSG)
         .environmentObject(CartManager())
 }
 

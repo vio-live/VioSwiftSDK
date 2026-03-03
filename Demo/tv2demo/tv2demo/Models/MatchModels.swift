@@ -1,10 +1,10 @@
 import Foundation
 
 // MARK: - Match
-struct Match: Identifiable {
+struct TV2Match: Identifiable {
     let id = UUID()
-    let homeTeam: Team
-    let awayTeam: Team
+    let homeTeam: TV2Team
+    let awayTeam: TV2Team
     let title: String
     let subtitle: String
     let competition: String
@@ -12,15 +12,15 @@ struct Match: Identifiable {
     let commentator: String?
     let isLive: Bool
     let backgroundImage: String
-    let availability: MatchAvailability
-    let relatedContent: [RelatedTeam]
+    let availability: TV2MatchAvailability
+    let relatedContent: [TV2RelatedTeam]
     let campaignLogo: String?
     let contentId: String?
     let country: String
     
     init(
-        homeTeam: Team,
-        awayTeam: Team,
+        homeTeam: TV2Team,
+        awayTeam: TV2Team,
         title: String,
         subtitle: String,
         competition: String,
@@ -28,8 +28,8 @@ struct Match: Identifiable {
         commentator: String? = nil,
         isLive: Bool = false,
         backgroundImage: String,
-        availability: MatchAvailability,
-        relatedContent: [RelatedTeam] = [],
+        availability: TV2MatchAvailability,
+        relatedContent: [TV2RelatedTeam] = [],
         campaignLogo: String? = nil,
         contentId: String? = nil,
         country: String = "NO"
@@ -52,7 +52,7 @@ struct Match: Identifiable {
 }
 
 // MARK: - Team
-struct Team: Identifiable {
+struct TV2Team: Identifiable {
     let id = UUID()
     let name: String
     let shortName: String
@@ -60,7 +60,7 @@ struct Team: Identifiable {
 }
 
 // MARK: - Match Availability
-enum MatchAvailability {
+enum TV2MatchAvailability {
     case available
     case availableUntil(date: String)
     case upcoming(date: String)
@@ -89,21 +89,21 @@ enum MatchAvailability {
 }
 
 // MARK: - Related Team
-struct RelatedTeam: Identifiable {
+struct TV2RelatedTeam: Identifiable {
     let id = UUID()
-    let team: Team
+    let team: TV2Team
     let description: String?
 }
 
 // MARK: - Mock Data
-extension Match {
-    static let barcelonaPSG = Match(
-        homeTeam: Team(
+extension TV2Match {
+    static let barcelonaPSG = TV2Match(
+        homeTeam: TV2Team(
             name: "FC Barcelona",
             shortName: "Barcelona",
             logo: "barcelona_logo"
         ),
-        awayTeam: Team(
+        awayTeam: TV2Team(
             name: "Paris Saint-Germain",
             shortName: "PSG",
             logo: "psg_logo"
@@ -117,12 +117,12 @@ extension Match {
         backgroundImage: "barcelona_psg_bg",
         availability: .available,
         relatedContent: [
-            RelatedTeam(
-                team: Team(name: "FC Barcelona", shortName: "Barcelona", logo: "barcelona_logo"),
+            TV2RelatedTeam(
+                team: TV2Team(name: "FC Barcelona", shortName: "Barcelona", logo: "barcelona_logo"),
                 description: nil
             ),
-            RelatedTeam(
-                team: Team(name: "Paris Saint-Germain", shortName: "PSG", logo: "psg_logo"),
+            TV2RelatedTeam(
+                team: TV2Team(name: "Paris Saint-Germain", shortName: "PSG", logo: "psg_logo"),
                 description: nil
             )
         ],
@@ -132,13 +132,13 @@ extension Match {
     )
     
     // Keep old match for reference
-    static let dortmundAtletico = Match(
-        homeTeam: Team(
+    static let dortmundAtletico = TV2Match(
+        homeTeam: TV2Team(
             name: "Borussia Dortmund",
             shortName: "Dortmund",
             logo: "bvb_logo"
         ),
-        awayTeam: Team(
+        awayTeam: TV2Team(
             name: "Athletic Club",
             shortName: "Athletic",
             logo: "athletic_logo"
@@ -152,12 +152,12 @@ extension Match {
         backgroundImage: "dortmund_bg",
         availability: .availableUntil(date: "ett år"),
         relatedContent: [
-            RelatedTeam(
-                team: Team(name: "Borussia Dortmund", shortName: "BVB", logo: "bvb_logo"),
+            TV2RelatedTeam(
+                team: TV2Team(name: "Borussia Dortmund", shortName: "BVB", logo: "bvb_logo"),
                 description: nil
             ),
-            RelatedTeam(
-                team: Team(name: "Athletic Club", shortName: "Athletic", logo: "athletic_logo"),
+            TV2RelatedTeam(
+                team: TV2Team(name: "Athletic Club", shortName: "Athletic", logo: "athletic_logo"),
                 description: nil
             )
         ]
@@ -166,9 +166,9 @@ extension Match {
     static let mockMatches: [Match] = [
         barcelonaPSG,
         dortmundAtletico,
-        Match(
-            homeTeam: Team(name: "Manchester City", shortName: "City", logo: "city_logo"),
-            awayTeam: Team(name: "Real Madrid", shortName: "Madrid", logo: "madrid_logo"),
+        TV2Match(
+            homeTeam: TV2Team(name: "Manchester City", shortName: "City", logo: "city_logo"),
+            awayTeam: TV2Team(name: "Real Madrid", shortName: "Madrid", logo: "madrid_logo"),
             title: "Man City - Real Madrid",
             subtitle: "UEFA Champions League • Fotball",
             competition: "UEFA Champions League",

@@ -4,7 +4,7 @@ import VioCore
 import VioCastingUI
 
 struct MatchDetailView: View {
-    let match: Match
+    let match: TV2Match
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var cartManager: CartManager
     @StateObject private var castingManager = CastingManager.shared
@@ -306,13 +306,13 @@ struct MatchDetailView: View {
             }
         }
         .fullScreenCover(isPresented: $showLiveMatchView) {
-            let sdkMatch = VioCastingUI.Match(
-                homeTeam: VioCastingUI.Team(
+            let sdkMatch = Match(
+                homeTeam: Team(
                     name: match.homeTeam.name,
                     shortName: match.homeTeam.shortName,
                     logo: match.homeTeam.logo
                 ),
-                awayTeam: VioCastingUI.Team(
+                awayTeam: Team(
                     name: match.awayTeam.name,
                     shortName: match.awayTeam.shortName,
                     logo: match.awayTeam.logo
@@ -324,7 +324,7 @@ struct MatchDetailView: View {
                 commentator: match.commentator,
                 isLive: true,
                 backgroundImage: match.backgroundImage,
-                availability: .available,
+                availability: MatchAvailability.available,
                 relatedContent: [],
                 campaignLogo: match.campaignLogo
             )
@@ -381,6 +381,6 @@ struct TeamCard: View {
 }
 
 #Preview {
-    MatchDetailView(match: Match.barcelonaPSG)
+    MatchDetailView(match: TV2Match.barcelonaPSG)
 }
 

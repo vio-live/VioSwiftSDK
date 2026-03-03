@@ -43,7 +43,7 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showCastingView) {
             if castingManager.isCasting {
-                CastingActiveView(match: Match.barcelonaPSG)
+                CastingActiveView(match: TV2Match.barcelonaPSG)
                     .environmentObject(cartManager)
             }
         }

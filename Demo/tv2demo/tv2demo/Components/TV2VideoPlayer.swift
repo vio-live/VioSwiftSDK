@@ -8,7 +8,7 @@ import VioUI
 /// TV2 Video Player with casting support
 /// Simulates a live streaming experience with AirPlay/Chromecast capability
 struct TV2VideoPlayer: View {
-    let match: Match
+    let match: TV2Match
     let onDismiss: () -> Void
     
     @StateObject private var playerViewModel = VideoPlayerViewModel()
@@ -878,7 +878,7 @@ struct CustomVideoPlayerView: UIViewRepresentable {
 // MARK: - Preview
 #Preview {
     TV2VideoPlayer(
-        match: Match.dortmundAtletico,
+        match: TV2Match.dortmundAtletico,
         onDismiss: {}
     )
 }
