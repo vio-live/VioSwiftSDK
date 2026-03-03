@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 /// Manager para conexión WebSocket con servidor de eventos
-/// URL: wss://event-streamer-angelo100.replit.app/ws/3
+/// URL: wss://api-dev.vio.live/ws/35
 class WebSocketManager: NSObject, ObservableObject {
     @Published var isConnected = false
     @Published var currentPoll: PollEventData?
@@ -23,7 +23,7 @@ class WebSocketManager: NSObject, ObservableObject {
             return
         }
         
-        let url = URL(string: "wss://event-streamer-angelo100.replit.app/ws/3")!
+        let url = URL(string: "wss://api-dev.vio.live/ws/35")!
         webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
         isConnected = true

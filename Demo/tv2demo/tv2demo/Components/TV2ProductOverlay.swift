@@ -655,8 +655,8 @@ struct TV2TwoProductsOverlay: View {
 // MARK: - Previews
 
 #Preview("Single Product") {
-    let baseURL = URL(string: "https://api-ecom.vio.live/graphql")!
-    let sdk = SdkClient(baseUrl: baseURL, apiKey: "DEMO_KEY")
+    let baseURL = URL(string: "https://graph-ql-dev.vio.live/graphql")!
+    let sdk = SdkClient(baseUrl: baseURL, apiKey: VioConfiguration.shared.apiKey)
     
     ZStack {
         Color.black.ignoresSafeArea()
