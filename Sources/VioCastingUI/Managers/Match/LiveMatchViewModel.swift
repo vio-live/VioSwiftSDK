@@ -113,7 +113,9 @@ public class LiveMatchViewModel: ObservableObject {
                         metadata: nil,
                         broadcastContext: contest.broadcastContext
                     )
-                    self.timeline.addOrUpdateEvent(AnyTimelineEvent(event))
+                    // Remove existing event with same id before adding updated one
+                    self.timeline.removeEvent(id: event.id)
+                    self.timeline.addEvent(event)
                 }
             }
     }
