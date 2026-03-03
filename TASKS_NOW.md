@@ -1,4 +1,10 @@
-# TASKS_NOW — VioSwiftSDK · Última actualización: 2026-03-02
+# TASKS_NOW — VioSwiftSDK · Última actualización: 2026-03-03
+
+## 📋 Workspace / Setup (verificado)
+- **ViaplayWorkspace.xcworkspace**: Incluye Viaplay + tv2demo. Abrir este workspace para ambos demos.
+- **Referencias de paquete**: Viaplay y tv2demo usan `../..` + referencia explícita a VioComplete. Vg sin cambios.
+- **NO tocar**: TimelineDataGenerator.swift, demo-static-data.json (ambos demos), flujo estático Barcelona-PSG.
+- El timeline demo funciona 100% offline desde datos estáticos. WebSocket y BroadcastContextSetup son capas separadas encima.
 
 ## 🔴 BUG CRÍTICO — Memory leak loadEngagement (pendiente resolver)
 Al entrar a Real Madrid - Barcelona, la RAM sube sin parar. **Causa confirmada:** `EngagementManager.shared.loadEngagement()`.
