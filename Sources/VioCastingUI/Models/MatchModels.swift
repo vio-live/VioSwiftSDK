@@ -21,6 +21,7 @@ public struct Match: Identifiable {
     public let availability: MatchAvailability
     public let relatedContent: [RelatedTeam]
     public let campaignLogo: String?
+    public let contentId: String?
 
     public init(
         id: UUID = UUID(),
@@ -35,7 +36,8 @@ public struct Match: Identifiable {
         backgroundImage: String,
         availability: MatchAvailability,
         relatedContent: [RelatedTeam],
-        campaignLogo: String?
+        campaignLogo: String?,
+        contentId: String? = nil
     ) {
         self.id = id
         self.homeTeam = homeTeam
@@ -50,6 +52,7 @@ public struct Match: Identifiable {
         self.availability = availability
         self.relatedContent = relatedContent
         self.campaignLogo = campaignLogo
+        self.contentId = contentId
     }
 }
 
