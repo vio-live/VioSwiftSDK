@@ -127,7 +127,7 @@ extension TV2Match {
             )
         ],
         campaignLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Adidas_logo.png/800px-Adidas_logo.png",
-        contentId: "real-madrid-barcelona-2025-01-24",
+        contentId: "barcelona-psg-2025-01-23",
         country: "NO"
     )
     
