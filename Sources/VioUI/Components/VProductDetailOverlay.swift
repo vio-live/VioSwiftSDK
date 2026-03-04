@@ -646,6 +646,14 @@ public struct VProductDetailOverlay: View {
                 .fill(VioColors.border.opacity(0.3))
                 .frame(height: 0.5)
             
+            // Apple Pay button (above main CTA)
+            VApplePayButton(
+                productName: product.title,
+                priceNOK: Double(currentPriceWithTaxes) / 100.0
+            )
+            .padding(.horizontal, VioSpacing.lg)
+            .padding(.top, VioSpacing.sm)
+
             // Full-width sexy button
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
