@@ -23,7 +23,12 @@ public class ApplePayManager: NSObject, ObservableObject {
 
     // MARK: - Device Support
     public var isApplePayAvailable: Bool {
-        PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks)
+        #if targetEnvironment(simulator)
+        // Simulator always shows Apple Pay button for demo purposes
+        return true
+        #else
+        return PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks)
+        #endif
     }
 
     // MARK: - Initiate Payment
