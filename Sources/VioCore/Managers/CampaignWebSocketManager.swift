@@ -243,13 +243,15 @@ public class CampaignWebSocketManager: ObservableObject {
                 let broadcastId = json["broadcastId"] as? String
                     ?? (json["data"] as? [String: Any])?["broadcastId"] as? String
                 
+                print("🔵 [WS] contest event received — broadcastId=\(broadcastId ?? \"nil\") currentContext=\(CampaignManager.shared.currentBroadcastContext?.broadcastId ?? \"nil\")")
+                
                 guard let broadcastId = broadcastId else {
-                    VioLogger.warning("contest event missing broadcastId — ignored", component: "CampaignWebSocket")
+                    print("🔴 [WS] contest event missing broadcastId — ignored")
                     break
                 }
                 
                 guard broadcastId == CampaignManager.shared.currentBroadcastContext?.broadcastId else {
-                    VioLogger.debug("contest event ignored — broadcastId \(broadcastId) ≠ current context", component: "CampaignWebSocket")
+                    print("🔴 [WS] contest ignored — \(broadcastId) ≠ \(CampaignManager.shared.currentBroadcastContext?.broadcastId ?? \"nil\")")
                     break
                 }
                 
