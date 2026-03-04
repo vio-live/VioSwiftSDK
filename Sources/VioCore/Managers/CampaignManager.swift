@@ -292,14 +292,12 @@ public class CampaignManager: ObservableObject {
         // Check if component type is active
         let component = activeComponents.first { $0.type == type }
         
-        // If we have a currentBroadcastContext, verify component belongs to it
-        if let context = currentBroadcastContext {
-            guard let componentBroadcastId = component?.broadcastContext?.broadcastId else {
-                // Component without broadcastContext should not be shown when context is active
-                return false
-            }
+        // If we have a currentBroadcastContext, only filter components that have a broadcastContext set
+        // Components without broadcastContext are campaign-level and always show
+        if let context = currentBroadcastContext,
+           let componentBroadcastId = component?.broadcastContext?.broadcastId {
             guard componentBroadcastId == context.broadcastId else {
-                // Component belongs to different broadcast
+                // Component belongs to a different broadcast — hide
                 return false
             }
         }
