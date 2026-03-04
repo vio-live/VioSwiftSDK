@@ -321,7 +321,8 @@ struct MatchDetailView: View {
                 backgroundImage: match.backgroundImage,
                 availability: MatchAvailability.available,
                 relatedContent: [],
-                campaignLogo: match.campaignLogo
+                campaignLogo: match.campaignLogo,
+                contentId: match.contentId
             )
             let sessionContext: VioSessionContext? = match.contentId.map {
                 VioSessionContext(contentId: $0, country: match.country)
