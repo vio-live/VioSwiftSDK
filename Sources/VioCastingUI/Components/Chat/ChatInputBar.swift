@@ -7,6 +7,7 @@
 
 import SwiftUI
 import VioCore
+import VioDesignSystem
 
 struct ChatInputBar: View {
     @Binding var messageText: String

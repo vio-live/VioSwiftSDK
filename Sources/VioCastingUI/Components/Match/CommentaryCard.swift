@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import VioDesignSystem
 struct CommentaryCard: View {
     let commentary: CommentaryEvent
     

@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import VioCore
+import VioDesignSystemimport VioCore
 
 struct AdminCommentCard: View {
     let comment: AdminCommentEvent

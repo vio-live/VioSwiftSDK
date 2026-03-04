@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import VioDesignSystem
 struct ReactionButton: View {
     let emoji: String
     let count: Int

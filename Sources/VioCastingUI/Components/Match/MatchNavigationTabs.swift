@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import VioCore
+import VioDesignSystemimport VioCore
 
 struct MatchNavigationTabs: View {
     @Binding var selectedTab: MatchTab

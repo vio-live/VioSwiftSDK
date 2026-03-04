@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import VioDesignSystem
 struct VideoTimelineControl: View {
     let currentMinute: Int
     let liveMinute: Int  // NEW: Real live position

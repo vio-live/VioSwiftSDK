@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import VioCore
+import VioDesignSystemimport VioCore
 import VioEngagementUI
 
 struct AllContentFeed: View {

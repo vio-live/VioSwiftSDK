@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import VioDesignSystem
 struct AnnouncementCard: View {
     let announcement: AnnouncementEvent
     
