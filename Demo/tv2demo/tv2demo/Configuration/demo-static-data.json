@@ -60,7 +60,6 @@
     ]
   },
   "productMappings": {
-    "_comment": "Product ID to URL mappings. In production, these should come from Product objects or backend",
     "408895": {
       "name": "Samsung 85\" QN85F Neo QLED 4K MiniLED Smart TV (2025)",
       "productUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/tv-og-tilbehor/tv/samsung-85-qn85f-neo-qled-4k-miniled-smart-tv-2025/906394",
