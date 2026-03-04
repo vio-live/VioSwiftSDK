@@ -12,7 +12,7 @@ public struct CheckoutConfig: Codable {
     }
 
     /// Default: Apple Pay if available, fallback to Stripe
-    public static let `default` = CheckoutConfig(paymentMethods: [.applePay, .stripe])
+    public static let `default` = CheckoutConfig(paymentMethods: [.applePay])
 
     public var hasApplePay: Bool { paymentMethods.contains(.applePay) }
     public var hasKlarna: Bool { paymentMethods.contains(.klarna) }

@@ -28,34 +28,22 @@ public struct VPaymentSheet: View {
 
     public var body: some View {
         VStack(spacing: 10) {
-            // Apple Pay — shown first if enabled
-            if config.hasApplePay {
-                VApplePayButton(
-                    productName: productName,
-                    productImageUrl: productImageUrl,
-                    priceNOK: priceNOK,
-                    onPaymentComplete: onPaymentComplete
-                )
-            }
+            // Apple Pay — siempre visible (default y cuando backend lo incluye)
+            VApplePayButton(
+                productName: productName,
+                productImageUrl: productImageUrl,
+                priceNOK: priceNOK,
+                onPaymentComplete: onPaymentComplete
+            )
 
-            // Klarna — if enabled
+            // Klarna — solo si el backend lo habilita explícitamente
             if config.hasKlarna {
                 klarnaButton
             }
 
-            // Vipps — if enabled
+            // Vipps — solo si el backend lo habilita explícitamente
             if config.hasVipps {
                 vippsButton
-            }
-
-            // Fallback: if no methods configured, show Apple Pay by default
-            if !config.hasApplePay && !config.hasKlarna && !config.hasVipps {
-                VApplePayButton(
-                    productName: productName,
-                    productImageUrl: productImageUrl,
-                    priceNOK: priceNOK,
-                    onPaymentComplete: onPaymentComplete
-                )
             }
         }
     }
