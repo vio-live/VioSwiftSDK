@@ -91,7 +91,7 @@ struct HomeView: View {
                                 .padding(.horizontal, TV2Theme.Spacing.md)
                                 
                                 // Product banner — sport-home-banner slot
-                                VProductBanner(locationId: "sport-home-banner")
+                                // VProductBanner(locationId: "sport-home-banner") // hidden for demo
                                 
                                 // Products carousel — sport-home-carousel slot
                                 VProductCarousel(locationId: "sport-home-carousel", layout: "compact")
