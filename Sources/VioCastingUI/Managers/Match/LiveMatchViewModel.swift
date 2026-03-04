@@ -102,6 +102,7 @@ public class LiveMatchViewModel: ObservableObject {
                 let broadcastId = CampaignManager.shared.currentBroadcastContext?.broadcastId
                     ?? self.match.contentId
                     ?? ""
+                print("🎯 [LiveMatchVM] engagementCancellable fired — broadcastId=\(broadcastId) contests=\(contestsByBroadcast[broadcastId]?.count ?? 0)")
                 guard !broadcastId.isEmpty,
                       let contests = contestsByBroadcast[broadcastId] else { return }
                 for contest in contests {

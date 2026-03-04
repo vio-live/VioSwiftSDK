@@ -32,6 +32,8 @@ public enum BroadcastContextSetup {
         }
         isSettingUp = true
         defer { isSettingUp = false }
+        
+        print("⬡ [VioInit] BroadcastContextSetup.setup — contentId=\(sessionContext.contentId ?? "nil") country=\(sessionContext.country ?? "nil")")
 
         let config = VioConfiguration.shared
         let autoDiscover = config.campaignConfiguration.autoDiscover
@@ -97,6 +99,7 @@ public enum BroadcastContextSetup {
                 let contestTypeStr = payload["contestType"] as? String ?? "quiz"
                 let contestType: Contest.ContestType = contestTypeStr.lowercased() == "giveaway" ? .giveaway : .quiz
                 let contest = Contest(id: id, broadcastId: broadcastId, title: name, description: description, prize: prize, contestType: contestType, imageUrl: imageUrl, isActive: true)
+                print("🎯 [VioInit] contest received: id=\(id) broadcastId=\(broadcastId) imageUrl=\(imageUrl ?? \"nil\")")
                 Task { await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId) }
             }
 
