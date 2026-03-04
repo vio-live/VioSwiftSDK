@@ -44,6 +44,7 @@ public struct VProductDetailOverlay: View {
     }
     
     // MARK: - State
+    @ObservedObject private var vioConfig = VioConfiguration.shared
     @State private var selectedImageIndex = 0
     @State private var isAddingToCart = false
     @State private var showCheckmark = false
@@ -657,7 +658,7 @@ public struct VProductDetailOverlay: View {
             .padding(.top, VioSpacing.sm)
 
             // Standard CTA — oculto si el backend tiene Apple Pay activo
-            if !VioConfiguration.shared.checkoutConfig.hasApplePay {
+            if !vioConfig.checkoutConfig.hasApplePay {
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
