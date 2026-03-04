@@ -51,7 +51,7 @@ public struct VApplePayButton: View {
         }
     }
 
-    // MARK: - Apple Pay Button (PKPaymentButton style)
+    // MARK: - Apple Pay Button
     private var applePayButton: some View {
         Button(action: initiatePayment) {
             HStack(spacing: 8) {
@@ -69,10 +69,11 @@ public struct VApplePayButton: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color.black)
+            .background(Color(red: 0.44, green: 0.0, blue: 1.0)) // #7000FF
             .cornerRadius(12)
         }
         .disabled(applePayManager.isProcessing)
+        .preferredColorScheme(.dark)
     }
 
     private var unavailableView: some View {

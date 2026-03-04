@@ -646,16 +646,16 @@ public struct VProductDetailOverlay: View {
                 .fill(VioColors.border.opacity(0.3))
                 .frame(height: 0.5)
             
-            // Apple Pay button (above main CTA)
+            // Apple Pay button — full width, replaces standard CTA in demo
             VApplePayButton(
                 productName: product.title,
                 priceNOK: Double(currentPriceWithTaxes) / 100.0
             )
             .padding(.horizontal, VioSpacing.lg)
-            .padding(.top, VioSpacing.sm)
+            .padding(.vertical, VioSpacing.sm)
 
-            // Full-width sexy button
-            Button(action: addToCart) {
+            // Standard CTA hidden in apple-pay-demo
+            if false { Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
                     if showCheckmark {
@@ -712,6 +712,7 @@ public struct VProductDetailOverlay: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCheckmark)
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
+            } // end if false
             .background(VioColors.surface.opacity(0.95))
         }
     }
