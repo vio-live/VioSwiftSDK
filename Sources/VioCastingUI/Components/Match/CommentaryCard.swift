@@ -36,7 +36,7 @@ struct CommentaryCard: View {
             // Commentary text
             Text(commentary.text)
                 .font(.system(size: 14))
-                .foregroundColor(commentary.isHighlighted ? Color(red: 0.96, green: 0.08, blue: 0.42) : .white.opacity(0.9))
+                .foregroundColor(commentary.isHighlighted ? VioColors.primary : .white.opacity(0.9))
                 .fontWeight(commentary.isHighlighted ? .semibold : .regular)
                 .fixedSize(horizontal: false, vertical: true)
             
@@ -47,7 +47,7 @@ struct CommentaryCard: View {
     
     private func iconColor(for type: CommentaryEvent.CommentaryType) -> Color {
         switch type {
-        case .goal: return Color(red: 0.96, green: 0.08, blue: 0.42)
+        case .goal: return VioColors.primary
         case .chance: return .orange
         case .card: return .yellow
         case .substitution: return .cyan

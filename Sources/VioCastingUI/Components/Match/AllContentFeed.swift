@@ -206,12 +206,12 @@ struct AllContentFeed: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.2))
+                        .fill(VioColors.primary.opacity(0.2))
                         .frame(width: 40, height: 40)
                     
                     Image(systemName: "soccerball.circle.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                        .foregroundColor(VioColors.primary)
                 }
                 
                 Text("Kampen starter snart")
@@ -232,7 +232,7 @@ struct AllContentFeed: View {
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
-                            Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.15),
+                            VioColors.primary.opacity(0.15),
                             Color.white.opacity(0.05)
                         ]),
                         startPoint: .topLeading,
@@ -241,7 +241,7 @@ struct AllContentFeed: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.3), lineWidth: 1)
+                        .stroke(VioColors.primary.opacity(0.3), lineWidth: 1)
                 )
         )
     }

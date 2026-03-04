@@ -37,7 +37,7 @@ struct AdminCommentCard: View {
                 if comment.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 14))
-                        .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                        .foregroundColor(VioColors.primary)
                 }
             }
             
@@ -50,10 +50,10 @@ struct AdminCommentCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.15))
+                .fill(VioColors.primary.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.3), lineWidth: 1)
+                        .stroke(VioColors.primary.opacity(0.3), lineWidth: 1)
                 )
         )
     }

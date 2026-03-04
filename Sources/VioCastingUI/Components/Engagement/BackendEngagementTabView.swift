@@ -192,7 +192,7 @@ private struct BackendPollCard: View {
                             if selectedOption == option.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 18))
-                                    .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                                    .foregroundColor(VioColors.primary)
                             }
                         }
                         .padding(.horizontal, 14)
@@ -201,7 +201,7 @@ private struct BackendPollCard: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(
                                     selectedOption == option.id
-                                        ? Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.3)
+                                        ? VioColors.primary.opacity(0.3)
                                         : Color.white.opacity(0.08)
                                 )
                         )

@@ -110,8 +110,8 @@ struct FinalStatsCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.4),
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.1)
+                                    VioColors.primary.opacity(0.4),
+                                    VioColors.primary.opacity(0.1)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing

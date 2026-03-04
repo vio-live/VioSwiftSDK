@@ -253,7 +253,7 @@ struct TimelineScrubber: View {
                     
                     // Progress track
                     Rectangle()
-                        .fill(Color(red: 0.96, green: 0.08, blue: 0.42))
+                        .fill(VioColors.primary)
                         .frame(width: geometry.size.width * progress, height: 4)
                         .cornerRadius(2)
                     

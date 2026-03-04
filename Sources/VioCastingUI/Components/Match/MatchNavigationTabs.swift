@@ -48,7 +48,7 @@ private struct MatchTabButton: View {
                     .font(.system(size: 22, weight: .regular))
                     .foregroundStyle(
                         isSelected 
-                        ? Color(red: 0.96, green: 0.08, blue: 0.42) 
+                        ? VioColors.primary 
                         : Color.white.opacity(0.6)
                     )
                 

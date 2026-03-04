@@ -100,7 +100,7 @@ public struct VCastingVideoPlayer: View {
                                 Color.black.opacity(0.9)
                                 
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: Color(red: 0.96, green: 0.08, blue: 0.42)))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: VioColors.primary))
                                     .scaleEffect(2.0)
                             }
                             .transition(.opacity)
@@ -397,7 +397,7 @@ public struct VCastingVideoPlayer: View {
                             .frame(height: 4)
                         
                         Rectangle()
-                            .fill(Color(red: 0.96, green: 0.08, blue: 0.42))
+                            .fill(VioColors.primary)
                             .frame(width: progressGeometry.size.width * playerViewModel.progress, height: 4)
                     }
                 }
@@ -463,7 +463,7 @@ public struct VCastingVideoPlayer: View {
     private var liveBadge: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(Color(red: 0.96, green: 0.08, blue: 0.42))
+                .fill(VioColors.primary)
                 .frame(width: 8, height: 8)
                 .scaleEffect(1.2)
                 .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: playerViewModel.isPlaying)

@@ -60,7 +60,7 @@ struct ShareHighlightModal: View {
                             icon: "square.and.arrow.up.fill",
                             title: "Del på sosiale medier",
                             subtitle: "Facebook, X, Instagram",
-                            color: Color(red: 0.96, green: 0.08, blue: 0.42),
+                            color: VioColors.primary,
                             action: {
                                 showShareSheet = true
                             }

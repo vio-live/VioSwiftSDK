@@ -325,14 +325,14 @@ private struct CompactReactionButton: View {
                 Capsule()
                     .fill(
                         isSelected 
-                        ? Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.25)
+                        ? VioColors.primary.opacity(0.25)
                         : Color.white.opacity(0.06)
                     )
                     .overlay(
                         Capsule()
                             .stroke(
                                 isSelected 
-                                ? Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.4)
+                                ? VioColors.primary.opacity(0.4)
                                 : Color.clear,
                                 lineWidth: 0.5
                             )

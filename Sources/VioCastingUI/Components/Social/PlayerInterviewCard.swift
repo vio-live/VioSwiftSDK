@@ -28,7 +28,7 @@ struct PlayerInterviewCard: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [Color(red: 0.96, green: 0.08, blue: 0.42), Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.7)],
+                                colors: [VioColors.primary, VioColors.primary.opacity(0.7)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -76,7 +76,7 @@ struct PlayerInterviewCard: View {
             HStack(alignment: .top, spacing: 8) {
                 Text("\"")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                    .foregroundColor(VioColors.primary)
                     .offset(y: -4)
                 
                 Text(quote)
@@ -96,8 +96,8 @@ struct PlayerInterviewCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.3),
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.1)
+                                    VioColors.primary.opacity(0.3),
+                                    VioColors.primary.opacity(0.1)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing

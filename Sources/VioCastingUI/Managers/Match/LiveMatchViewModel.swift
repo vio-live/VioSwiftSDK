@@ -256,7 +256,7 @@ public class LiveMatchViewModel: ObservableObject {
         let message = ChatMessage(
             username: "Angelo",
             text: text,
-            usernameColor: Color(red: 0.96, green: 0.08, blue: 0.42),
+            usernameColor: VioColors.primary,
             likes: 0,
             timestamp: Date(),
             videoTimestamp: timeline.currentVideoTime

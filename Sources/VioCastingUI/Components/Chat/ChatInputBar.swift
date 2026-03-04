@@ -20,7 +20,7 @@ struct ChatInputBar: View {
         messageText: Binding<String>,
         isFocused: FocusState<Bool>.Binding,
         currentUserInitial: String = "A",
-        currentUserColor: Color = Color(red: 0.96, green: 0.08, blue: 0.42),
+        currentUserColor: Color = VioColors.primary,
         onSend: @escaping () -> Void,
         onLike: @escaping () -> Void = {}
     ) {

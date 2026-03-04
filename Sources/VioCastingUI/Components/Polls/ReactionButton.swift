@@ -67,14 +67,14 @@ struct ReactionButton: View {
                 Capsule()
                     .fill(
                         isSelected 
-                        ? Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.25)
+                        ? VioColors.primary.opacity(0.25)
                         : Color.white.opacity(0.08)
                     )
                     .overlay(
                         Capsule()
                             .stroke(
                                 isSelected 
-                                ? Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.5)
+                                ? VioColors.primary.opacity(0.5)
                                 : Color.clear,
                                 lineWidth: 1
                             )

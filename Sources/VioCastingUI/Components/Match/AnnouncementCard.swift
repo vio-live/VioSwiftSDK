@@ -17,12 +17,12 @@ struct AnnouncementCard: View {
                 // Use sport icons instead of emojis
                 ZStack {
                     Circle()
-                        .fill(Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.2))
+                        .fill(VioColors.primary.opacity(0.2))
                         .frame(width: 32, height: 32)
                     
                     Image(systemName: eventIcon(for: announcement.title))
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                        .foregroundColor(VioColors.primary)
                 }
                 
                 Text(cleanTitle(announcement.title))
@@ -46,7 +46,7 @@ struct AnnouncementCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color(red: 0.96, green: 0.08, blue: 0.42))
+                        .background(VioColors.primary)
                         .cornerRadius(8)
                 }
             }

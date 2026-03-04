@@ -102,7 +102,7 @@ struct ContestCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "gift.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(Color(red: 0.96, green: 0.08, blue: 0.42))
+                    .foregroundColor(VioColors.primary)
                 
                 Text("Premie: \(prize)")
                     .font(.system(size: 13))
@@ -183,7 +183,7 @@ struct ContestCard: View {
                         .fill(
                             hasParticipated 
                             ? Color.white.opacity(0.1)
-                            : Color(red: 0.96, green: 0.08, blue: 0.42)
+                            : VioColors.primary
                         )
                 )
             }
@@ -198,8 +198,8 @@ struct ContestCard: View {
                         .stroke(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.4),
-                                    Color(red: 0.96, green: 0.08, blue: 0.42).opacity(0.1)
+                                    VioColors.primary.opacity(0.4),
+                                    VioColors.primary.opacity(0.1)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
