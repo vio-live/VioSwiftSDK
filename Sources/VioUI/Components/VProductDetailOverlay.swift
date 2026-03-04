@@ -714,6 +714,8 @@ public struct VProductDetailOverlay: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCheckmark)
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
+            .hidden()
+            .frame(height: 0)
             .background(VioColors.surface.opacity(0.95))
         }
     }
