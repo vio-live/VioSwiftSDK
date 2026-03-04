@@ -199,10 +199,7 @@ public class CampaignManager: ObservableObject {
     public func setBroadcastContext(_ context: BroadcastContext) async {
         VioLogger.debug("setBroadcastContext: broadcastId=\(context.broadcastId)", component: "CampaignManager")
         
-        // Clear components from previous context
-        self.activeComponents.removeAll()
-        
-        // Set new context
+        // Set new context (do NOT clear activeComponents — carousel would reload unnecessarily)
         self.currentBroadcastContext = context
         
         // Reconnect WebSocket to get fresh snapshot with correct broadcastId filter
