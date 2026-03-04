@@ -132,22 +132,16 @@ public class LiveMatchViewModel: ObservableObject {
         if useTimelineSync {
             loadTimelineData()
 
-            // Barcelona-PSG: start at 45' so halftime events (competitions, products, stats) are visible immediately
-            if match.title.contains("Barcelona") && match.title.contains("PSG") {
-                let halftimeStart: TimeInterval = 2700  // 45'
-                timeline.liveVideoTime = halftimeStart
-                timeline.currentVideoTime = halftimeStart
-                selectedMinute = 45
-            } else {
-                timeline.liveVideoTime = -900
-                timeline.currentVideoTime = -900
-            }
+            // Start at 0' — user controls position via slider
+            timeline.liveVideoTime = TimeInterval(90 * 60)  // mark full match as "live" so slider shows full range
+            timeline.currentVideoTime = 0
+            selectedMinute = 0
 
             updateScoresFromTimeline()
 
-            chatManager.startSimulation(withTimeline: true)
+            chatManager.loadMessagesFromTimeline()
             matchSimulation.startSimulation()
-            startTimelinePlayback()
+            // Don't auto-advance — user controls timeline via slider
         } else {
             chatManager.startSimulation(withTimeline: false)
             matchSimulation.startSimulation()
