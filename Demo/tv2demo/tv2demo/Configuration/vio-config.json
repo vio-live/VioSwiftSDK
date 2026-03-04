@@ -208,5 +208,23 @@
     "restAPIBaseURL": "https://api-dev.vio.live",
     "webSocketBaseURL": "https://api-dev.vio.live",
     "autoDiscover": true
+  },
+  "productMappings": {
+    "408841": {
+      "productId": "408841",
+      "checkoutUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408841/fc-barcelona-dri-fit-jersey-short-sleeve-stadium-home"
+    },
+    "408874": {
+      "productId": "408874",
+      "checkoutUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408874/paris-saint-germain-hjemmedrakt-2025-26"
+    },
+    "408895": {
+      "productId": "408895",
+      "checkoutUrl": "https://www.elkjop.no/product/tv-og-lyd/tv/408895/samsung-75-qn85f-neo-qled-4k-mini-led-smart-tv-2025"
+    },
+    "408896": {
+      "productId": "408896",
+      "checkoutUrl": "https://www.elkjop.no/product/tv-og-lyd/lydplanke/408896/samsung-hw-q61mf-lydplanke-med-subwoofer-2025"
+    }
   }
 }
