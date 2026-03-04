@@ -99,7 +99,8 @@ public enum BroadcastContextSetup {
                 let contestTypeStr = payload["contestType"] as? String ?? "quiz"
                 let contestType: Contest.ContestType = contestTypeStr.lowercased() == "giveaway" ? .giveaway : .quiz
                 let contest = Contest(id: id, broadcastId: broadcastId, title: name, description: description, prize: prize, contestType: contestType, imageUrl: imageUrl, isActive: true)
-                print("🎯 [VioInit] contest received: id=\(id) broadcastId=\(broadcastId) imageUrl=\(imageUrl ?? \"nil\")")
+                let imgDebug = imageUrl ?? "nil"
+                print("🎯 [VioInit] contest received: id=\(id) broadcastId=\(broadcastId) imageUrl=\(imgDebug)")
                 Task { await EngagementManager.shared.addOrUpdateContest(contest, broadcastId: broadcastId) }
             }
 
