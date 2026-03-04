@@ -14,22 +14,12 @@ public struct VApplePayConfirmationSheet: View {
     @State private var appeared = false
 
     public var body: some View {
-        ZStack {
-            // Dimmed background
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .onTapGesture { onDismiss() }
-
-            VStack(spacing: 0) {
-                Spacer()
-
-                // Sheet
-                VStack(spacing: 0) {
+        VStack(spacing: 0) {
                     // Handle
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color.white.opacity(0.3))
                         .frame(width: 40, height: 4)
-                        .padding(.top, 12)
+                        .padding(.top, 16)
                         .padding(.bottom, 20)
 
                     // Success icon
@@ -158,10 +148,6 @@ public struct VApplePayConfirmationSheet: View {
                     RoundedRectangle(cornerRadius: 28)
                         .fill(Color(red: 0.08, green: 0.08, blue: 0.12))
                 )
-                .offset(y: appeared ? 0 : 400)
-                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: appeared)
-            }
-        }
         .onAppear { appeared = true }
     }
 

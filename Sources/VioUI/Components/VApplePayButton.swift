@@ -39,7 +39,7 @@ public struct VApplePayButton: View {
                 break
             }
         }
-        .fullScreenCover(isPresented: $showConfirmation) {
+        .sheet(isPresented: $showConfirmation) {
             VApplePayConfirmationSheet(
                 productName: productName,
                 productImageUrl: productImageUrl,
@@ -49,7 +49,10 @@ public struct VApplePayButton: View {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
             }
-            .background(Color.clear)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.hidden)
+            .presentationBackground(Color(red: 0.08, green: 0.08, blue: 0.12))
+            .presentationCornerRadius(28)
         }
         .alert("Betaling feilet", isPresented: $showError) {
             Button("OK") { applePayManager.paymentResult = nil }
