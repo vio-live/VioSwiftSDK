@@ -49,10 +49,7 @@ public struct VApplePayButton: View {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.hidden)
-            .presentationBackground(Color(red: 0.08, green: 0.08, blue: 0.12))
-            .presentationCornerRadius(28)
+            .applyIfAvailable()
         }
         .alert("Betaling feilet", isPresented: $showError) {
             Button("OK") { applePayManager.paymentResult = nil }
@@ -105,6 +102,27 @@ public struct VApplePayButton: View {
                 priceNOK: priceNOK,
                 cartManager: cartManager
             )
+        }
+    }
+}
+
+
+// MARK: - iOS version-gated sheet modifiers
+private extension View {
+    @ViewBuilder
+    func applyIfAvailable() -> some View {
+        if #available(iOS 16.4, *) {
+            self
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(Color(red: 0.08, green: 0.08, blue: 0.12))
+                .presentationCornerRadius(28)
+        } else if #available(iOS 16.0, *) {
+            self
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+        } else {
+            self
         }
     }
 }
