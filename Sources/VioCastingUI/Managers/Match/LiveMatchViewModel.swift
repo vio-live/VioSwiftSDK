@@ -7,6 +7,7 @@ import Foundation
 import SwiftUI
 import Combine
 import VioEngagementSystem
+import VioCore
 
 // MARK: - Match Tab Enum
 public enum MatchTab: String, CaseIterable {
@@ -97,7 +98,10 @@ public class LiveMatchViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] contestsByBroadcast in
                 guard let self = self else { return }
-                let broadcastId = self.match.contentId ?? ""
+                // Use the resolved broadcastId (from contentId validation), fallback to contentId
+                let broadcastId = CampaignManager.shared.currentBroadcastContext?.broadcastId
+                    ?? self.match.contentId
+                    ?? ""
                 guard !broadcastId.isEmpty,
                       let contests = contestsByBroadcast[broadcastId] else { return }
                 for contest in contests {
