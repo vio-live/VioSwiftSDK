@@ -656,9 +656,9 @@ public struct VProductDetailOverlay: View {
             .padding(.horizontal, VioSpacing.lg)
             .padding(.top, VioSpacing.sm)
 
-            // Standard CTA — hidden, replaced by VPaymentSheet
-            EmptyView()
-            /*
+            // Standard CTA — shown only if backend has NOT configured paymentMethods
+            // (i.e. fallback for clients not using Commerce/Apple Pay)
+            if VioConfiguration.shared.checkoutConfig.paymentMethods.isEmpty {
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
@@ -717,7 +717,7 @@ public struct VProductDetailOverlay: View {
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
             .background(VioColors.surface.opacity(0.95))
-            */
+            } // end if paymentMethods.isEmpty
         }
     }
     
