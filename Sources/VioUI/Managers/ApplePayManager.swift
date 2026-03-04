@@ -1,4 +1,5 @@
 import Foundation
+import Contacts
 import PassKit
 import SwiftUI
 import VioCore
@@ -67,6 +68,25 @@ public class ApplePayManager: NSObject, ObservableObject {
         request.currencyCode = "NOK"
         // Request name, email, phone and shipping address from the user's Apple Pay wallet
         request.requiredShippingContactFields = [.name, .emailAddress, .phoneNumber, .postalAddress]
+
+        // Pre-fill demo contact (Simulator / demo mode)
+        #if targetEnvironment(simulator)
+        let demoContact = PKContact()
+        var demoName = PersonNameComponents()
+        demoName.givenName = "Angelo"
+        demoName.familyName = "Sepulveda"
+        demoContact.name = demoName
+        demoContact.emailAddress = "angelo@vio.live"
+        demoContact.phoneNumber = CNPhoneNumber(stringValue: "+47 900 00 000")
+        let demoAddress = CNMutablePostalAddress()
+        demoAddress.street = "Karl Johans gate 1"
+        demoAddress.city = "Oslo"
+        demoAddress.postalCode = "0154"
+        demoAddress.isoCountryCode = "NO"
+        demoAddress.country = "Norway"
+        demoContact.postalAddress = demoAddress
+        request.shippingContact = demoContact
+        #endif
         request.paymentSummaryItems = [
             PKPaymentSummaryItem(
                 label: productName,
