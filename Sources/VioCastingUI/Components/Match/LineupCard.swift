@@ -7,7 +7,8 @@
 //
 
 import SwiftUI
-import VioDesignSystemimport VioCore
+import VioDesignSystem
+import VioCore
 
 struct LineupCard: View {
     let teamName: String
