@@ -656,7 +656,9 @@ public struct VProductDetailOverlay: View {
             .padding(.horizontal, VioSpacing.lg)
             .padding(.top, VioSpacing.sm)
 
-            // Full-width CTA (fallback / add to cart)
+            // Standard CTA — hidden, replaced by VPaymentSheet
+            EmptyView()
+            /*
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
@@ -714,9 +716,8 @@ public struct VProductDetailOverlay: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCheckmark)
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
-            .hidden()
-            .frame(height: 0)
             .background(VioColors.surface.opacity(0.95))
+            */
         }
     }
     
