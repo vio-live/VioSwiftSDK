@@ -655,7 +655,7 @@ public struct VProductDetailOverlay: View {
             .padding(.vertical, VioSpacing.sm)
 
             // Standard CTA hidden in apple-pay-demo
-            if false { Button(action: addToCart) {
+            Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
                     if showCheckmark {
@@ -712,9 +712,10 @@ public struct VProductDetailOverlay: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCheckmark)
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
-            } // end if false
-            .background(VioColors.surface.opacity(0.95))
+            .hidden()
+            .frame(height: 0)
         }
+        .background(VioColors.surface.opacity(0.95))
     }
     
     // MARK: - Actions
