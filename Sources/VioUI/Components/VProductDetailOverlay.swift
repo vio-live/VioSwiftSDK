@@ -646,7 +646,17 @@ public struct VProductDetailOverlay: View {
                 .fill(VioColors.border.opacity(0.3))
                 .frame(height: 0.5)
             
-            // Full-width sexy button
+            // Payment sheet — Apple Pay / Klarna / Vipps según config del backend
+            VPaymentSheet(
+                productName: product.title,
+                productImageUrl: product.images.first?.url,
+                priceNOK: Double(currentPriceWithTaxes),
+                onPaymentComplete: { onDismiss?() }
+            )
+            .padding(.horizontal, VioSpacing.lg)
+            .padding(.top, VioSpacing.sm)
+
+            // Full-width CTA (fallback / add to cart)
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
                     // Icon
