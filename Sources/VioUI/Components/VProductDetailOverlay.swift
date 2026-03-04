@@ -650,7 +650,8 @@ public struct VProductDetailOverlay: View {
             VApplePayButton(
                 productName: product.title,
                 productImageUrl: product.images.first?.url,
-                priceNOK: Double(currentPriceWithTaxes)
+                priceNOK: Double(currentPriceWithTaxes),
+                onPaymentComplete: { onDismiss() }
             )
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)

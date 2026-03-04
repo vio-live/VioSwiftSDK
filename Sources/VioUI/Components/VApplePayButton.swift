@@ -8,16 +8,18 @@ public struct VApplePayButton: View {
     let productName: String
     let productImageUrl: String?
     let priceNOK: Double
+    let onPaymentComplete: (() -> Void)?
 
     @StateObject private var applePayManager = ApplePayManager.shared
     @State private var showConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
 
-    public init(productName: String, productImageUrl: String? = nil, priceNOK: Double) {
+    public init(productName: String, productImageUrl: String? = nil, priceNOK: Double, onPaymentComplete: (() -> Void)? = nil) {
         self.productName = productName
         self.productImageUrl = productImageUrl
         self.priceNOK = priceNOK
+        self.onPaymentComplete = onPaymentComplete
     }
 
     public var body: some View {
@@ -48,6 +50,10 @@ public struct VApplePayButton: View {
             ) {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
+                // Small delay so the sheet animates out before closing product
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    onPaymentComplete?()
+                }
             }
             .applyIfAvailable()
         }
