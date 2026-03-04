@@ -651,7 +651,7 @@ public struct VProductDetailOverlay: View {
                 productName: product.title,
                 productImageUrl: product.images.first?.url,
                 priceNOK: Double(currentPriceWithTaxes),
-                onPaymentComplete: { onDismiss() }
+                onPaymentComplete: { onDismiss?() }
             )
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
