@@ -211,19 +211,23 @@
   },
   "productMappings": {
     "408841": {
-      "productId": "408841",
+      "name": "FC Barcelona Dri-Fit Jersey",
+      "productUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408841/fc-barcelona-dri-fit-jersey-short-sleeve-stadium-home",
       "checkoutUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408841/fc-barcelona-dri-fit-jersey-short-sleeve-stadium-home"
     },
     "408874": {
-      "productId": "408874",
+      "name": "Paris Saint-Germain Hjemmedrakt",
+      "productUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408874/paris-saint-germain-hjemmedrakt-2025-26",
       "checkoutUrl": "https://www.elkjop.no/product/sport-og-fritid/fotball/fotballdrakter/408874/paris-saint-germain-hjemmedrakt-2025-26"
     },
     "408895": {
-      "productId": "408895",
+      "name": "Samsung 75\" Neo QLED 4K TV",
+      "productUrl": "https://www.elkjop.no/product/tv-og-lyd/tv/408895/samsung-75-qn85f-neo-qled-4k-mini-led-smart-tv-2025",
       "checkoutUrl": "https://www.elkjop.no/product/tv-og-lyd/tv/408895/samsung-75-qn85f-neo-qled-4k-mini-led-smart-tv-2025"
     },
     "408896": {
-      "productId": "408896",
+      "name": "Samsung HW-Q61MF Lydplanke",
+      "productUrl": "https://www.elkjop.no/product/tv-og-lyd/lydplanke/408896/samsung-hw-q61mf-lydplanke-med-subwoofer-2025",
       "checkoutUrl": "https://www.elkjop.no/product/tv-og-lyd/lydplanke/408896/samsung-hw-q61mf-lydplanke-med-subwoofer-2025"
     }
   }
