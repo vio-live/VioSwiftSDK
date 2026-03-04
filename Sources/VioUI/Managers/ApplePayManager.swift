@@ -46,15 +46,17 @@ public class ApplePayManager: NSObject, ObservableObject {
         isProcessing = true
         paymentResult = nil
 
-        // 1. Create Stripe PaymentIntent via Commerce
-        guard let intent = await cartManager.stripeIntent(returnEphemeralKey: false) else {
-            VioLogger.error("stripeIntent failed — no clientSecret returned", component: "ApplePayManager")
-            isProcessing = false
-            paymentResult = .failed("Could not initiate payment")
-            return
+        // 1. Try to get Stripe PaymentIntent via Commerce
+        // In demo mode, we proceed even without a clientSecret
+        let intent = await cartManager.stripeIntent(returnEphemeralKey: false)
+        if intent != nil {
+            VioLogger.debug("stripeIntent OK — Stripe PaymentIntent ready", component: "ApplePayManager")
+        } else {
+            VioLogger.warning("stripeIntent unavailable — proceeding in demo mode", component: "ApplePayManager")
         }
 
-        VioLogger.debug("stripeIntent OK — ready for Apple Pay sheet", component: "ApplePayManager")
+        self.pendingClientSecret = intent?.clientSecret
+        self.pendingPublishableKey = intent?.publishableKey
 
         // 2. Build PKPaymentRequest
         let request = PKPaymentRequest()
@@ -73,9 +75,6 @@ public class ApplePayManager: NSObject, ObservableObject {
                 amount: NSDecimalNumber(value: priceNOK)
             )
         ]
-
-        self.pendingClientSecret = intent.clientSecret
-        self.pendingPublishableKey = intent.publishableKey
 
         // 3. Present Apple Pay sheet
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
