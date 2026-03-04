@@ -649,6 +649,7 @@ public struct VProductDetailOverlay: View {
             // Apple Pay button — full width, replaces standard CTA in demo
             VApplePayButton(
                 productName: product.title,
+                productImageUrl: product.images.first?.url,
                 priceNOK: Double(currentPriceWithTaxes)
             )
             .padding(.horizontal, VioSpacing.lg)

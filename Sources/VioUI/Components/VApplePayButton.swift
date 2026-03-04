@@ -3,19 +3,20 @@ import PassKit
 import VioCore
 
 /// Apple Pay button for Vio product checkout
-/// Drop-in replacement for the "Kjøp" button in VProductDetailOverlay
 public struct VApplePayButton: View {
 
     let productName: String
+    let productImageUrl: String?
     let priceNOK: Double
 
     @StateObject private var applePayManager = ApplePayManager.shared
-    @State private var showSuccess = false
+    @State private var showConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
 
-    public init(productName: String, priceNOK: Double) {
+    public init(productName: String, productImageUrl: String? = nil, priceNOK: Double) {
         self.productName = productName
+        self.productImageUrl = productImageUrl
         self.priceNOK = priceNOK
     }
 
@@ -24,14 +25,13 @@ public struct VApplePayButton: View {
             if applePayManager.isApplePayAvailable {
                 applePayButton
             } else {
-                // Fallback: standard buy button if Apple Pay not available
                 unavailableView
             }
         }
         .onChange(of: applePayManager.paymentResult) { result in
             switch result {
             case .success:
-                showSuccess = true
+                showConfirmation = true
             case .failed(let msg):
                 errorMessage = msg
                 showError = true
@@ -39,10 +39,17 @@ public struct VApplePayButton: View {
                 break
             }
         }
-        .alert("Betaling godkjent ✅", isPresented: $showSuccess) {
-            Button("OK") { applePayManager.paymentResult = nil }
-        } message: {
-            Text("Din ordre for \(productName) er bekreftet.")
+        .fullScreenCover(isPresented: $showConfirmation) {
+            VApplePayConfirmationSheet(
+                productName: productName,
+                productImageUrl: productImageUrl,
+                priceNOK: priceNOK,
+                contact: applePayManager.capturedContact
+            ) {
+                showConfirmation = false
+                applePayManager.paymentResult = nil
+            }
+            .background(Color.clear)
         }
         .alert("Betaling feilet", isPresented: $showError) {
             Button("OK") { applePayManager.paymentResult = nil }
@@ -88,8 +95,6 @@ public struct VApplePayButton: View {
 
     // MARK: - Action
     private func initiatePayment() {
-        // CartManager needs to exist — use shared instance
-        // In production this would use the active CartManager from the view hierarchy
         let cartManager = CartManager()
         Task {
             await applePayManager.pay(
