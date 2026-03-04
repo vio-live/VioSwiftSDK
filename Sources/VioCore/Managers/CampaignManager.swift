@@ -205,6 +205,13 @@ public class CampaignManager: ObservableObject {
         // Set new context
         self.currentBroadcastContext = context
         
+        // Reconnect WebSocket to get fresh snapshot with correct broadcastId filter
+        if let manager = webSocketManager {
+            VioLogger.debug("setBroadcastContext: reconnecting WS for new broadcastId snapshot", component: "CampaignManager")
+            manager.disconnect()
+            await manager.connect()
+        }
+        
         // Load engagement config for this broadcast
         if let engagementConfig = await DynamicConfigurationManager.shared.loadEngagementConfig(broadcastId: context.broadcastId) {
             VioConfiguration.shared.updateDynamicEngagementConfig(engagementConfig)

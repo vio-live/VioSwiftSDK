@@ -65,6 +65,8 @@ public enum BroadcastContextSetup {
             )
             sessionContext.configure(broadcastContext: broadcastContext, useBackendEngagement: true)
 
+            // Wire WebSocket callbacks BEFORE connecting — avoids race condition with initial snapshot
+            campaignManager.setEngagementCallbacks(broadcastId: broadcastId)
             print("⬡ [VioInit] STEP 4 — Connecting WebSocket /ws/\(campaignManager.activeCampaigns.first?.id ?? -1)")
             // Skip discoverCampaigns if already done at launch (activeCampaigns already loaded)
             if autoDiscover && campaignManager.activeCampaigns.isEmpty {
@@ -72,8 +74,6 @@ public enum BroadcastContextSetup {
             }
             await campaignManager.setBroadcastContext(broadcastContext)
 
-            // Wire WebSocket callbacks for polls/contests (WebSocket-driven engagement)
-            campaignManager.setEngagementCallbacks(broadcastId: broadcastId)
             campaignManager.onPollEventReceived = { json, bid in
                 guard let broadcastId = bid,
                       let data = json["data"] as? [String: Any],
