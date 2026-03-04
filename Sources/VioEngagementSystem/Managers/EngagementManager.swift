@@ -63,12 +63,15 @@ public class EngagementManager: ObservableObject {
         }
         
         CampaignWebSocketManager.engagementContestHandler = { [weak self] contestData, broadcastId in
+            let jsonStr = String(data: contestData, encoding: .utf8) ?? "?"
+            print("🔵 [EngagementManager] engagementContestHandler called broadcastId=\(broadcastId) json=\(jsonStr.prefix(200))")
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             guard let contest = try? decoder.decode(Contest.self, from: contestData) else {
-                VioLogger.error("Failed to decode contest from WS data", component: "EngagementManager")
+                print("🔴 [EngagementManager] Failed to decode contest. json=\(jsonStr.prefix(300))")
                 return
             }
+            print("🟢 [EngagementManager] Contest decoded: id=\(contest.id) broadcastId=\(contest.broadcastId)")
             Task { @MainActor in
                 self?.addOrUpdateContest(contest, broadcastId: broadcastId)
             }
