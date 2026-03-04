@@ -7,8 +7,8 @@
     "name": "TV2 Dark Theme",
     "mode": "dark",
     "lightColors": {
-      "primary": "#7B5FFF",
-      "secondary": "#E893CF",
+      "primary": "#9870C8",
+      "secondary": "#B89BE0",
       "background": "#FFFFFF",
       "surface": "#F5F5F5",
       "surfaceSecondary": "#E0E0E0",
@@ -24,8 +24,8 @@
       "borderSecondary": "#BDBDBD"
     },
     "darkColors": {
-      "primary": "#7B5FFF",
-      "secondary": "#E893CF",
+      "primary": "#9870C8",
+      "secondary": "#B89BE0",
       "background": "#16001A",
       "surface": "#2B2438",
       "surfaceSecondary": "#3D3450",

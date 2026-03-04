@@ -11,7 +11,7 @@ struct TV2Theme {
         static let surfaceLight = Color(hex: "#3D3450")
         
         // Brand colors
-        static let primary = Color(hex: "#7B5FFF")
+        static let primary = Color(hex: "#9870C8")
         static let secondary = Color(hex: "#E893CF")
         static let accent = Color(hex: "#00D9FF")
         
