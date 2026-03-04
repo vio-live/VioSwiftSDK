@@ -11,6 +11,11 @@ public struct VApplePayConfirmationSheet: View {
     let contact: PKContact?
     let onDismiss: () -> Void
 
+    // Sponsor logo pulled from CampaignManager
+    private var sponsorLogoUrl: String? {
+        VioConfiguration.shared.sponsorConfig?.logoUrl
+    }
+
     @State private var appeared = false
 
     public var body: some View {
@@ -32,6 +37,21 @@ public struct VApplePayConfirmationSheet: View {
                             .foregroundColor(Color(red: 0.44, green: 0.0, blue: 1.0))
                     }
                     .padding(.bottom, 16)
+
+                    // Sponsor logo (top right of success icon)
+                    if let logoStr = sponsorLogoUrl, let logoUrl = URL(string: logoStr) {
+                        HStack {
+                            Spacer()
+                            AsyncImage(url: logoUrl) { phase in
+                                if case .success(let img) = phase {
+                                    img.resizable().aspectRatio(contentMode: .fit)
+                                } else { EmptyView() }
+                            }
+                            .frame(height: 22)
+                            .padding(.trailing, 20)
+                            .padding(.bottom, 4)
+                        }
+                    }
 
                     Text("Betaling godkjent")
                         .font(.system(size: 22, weight: .bold))
