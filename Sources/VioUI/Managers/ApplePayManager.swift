@@ -65,6 +65,8 @@ public class ApplePayManager: NSObject, ObservableObject {
         request.merchantCapabilities = merchantCapabilities
         request.countryCode = "NO"
         request.currencyCode = "NOK"
+        // Request name, email, phone and shipping address from the user's Apple Pay wallet
+        request.requiredShippingContactFields = [.name, .emailAddress, .phoneNumber, .postalAddress]
         request.paymentSummaryItems = [
             PKPaymentSummaryItem(
                 label: productName,
@@ -91,6 +93,9 @@ public class ApplePayManager: NSObject, ObservableObject {
     // MARK: - Private
     private var pendingClientSecret: String?
     private var pendingPublishableKey: String?
+
+    // Captured from Apple Pay sheet
+    public private(set) var capturedContact: PKContact? = nil
 }
 
 // MARK: - PKPaymentAuthorizationControllerDelegate
@@ -101,6 +106,15 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
         didAuthorizePayment payment: PKPayment,
         handler completion: @escaping (PKPaymentAuthorizationResult) -> Void
     ) {
+        // Capture buyer info from Apple Pay wallet
+        capturedContact = payment.shippingContact
+        if let contact = payment.shippingContact {
+            let name = [contact.name?.givenName, contact.name?.familyName]
+                .compactMap { $0 }.joined(separator: " ")
+            let email = contact.emailAddress ?? "—"
+            let phone = contact.phoneNumber?.stringValue ?? "—"
+            VioLogger.debug("Apple Pay contact — name: \(name), email: \(email), phone: \(phone)", component: "ApplePayManager")
+        }
         VioLogger.debug("Apple Pay authorized — confirming with backend", component: "ApplePayManager")
 
         Task { @MainActor in
@@ -140,12 +154,31 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
             return true
         }
 
+        // Build buyer info from captured contact
+        var buyerInfo: [String: Any] = [:]
+        if let contact = capturedContact {
+            buyerInfo["name"] = [contact.name?.givenName, contact.name?.familyName]
+                .compactMap { $0 }.joined(separator: " ")
+            buyerInfo["email"] = contact.emailAddress ?? ""
+            buyerInfo["phone"] = contact.phoneNumber?.stringValue ?? ""
+            if let addr = contact.postalAddress {
+                buyerInfo["address"] = [
+                    "street": addr.street,
+                    "city": addr.city,
+                    "state": addr.state,
+                    "postalCode": addr.postalCode,
+                    "country": addr.isoCountryCode
+                ]
+            }
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "clientSecret": clientSecret,
-            "applePayToken": paymentToken.paymentData.base64EncodedString()
+            "applePayToken": paymentToken.paymentData.base64EncodedString(),
+            "buyer": buyerInfo
         ])
 
         do {
