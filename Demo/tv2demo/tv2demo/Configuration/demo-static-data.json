@@ -60,16 +60,25 @@
     ]
   },
   "productMappings": {
-    "_comment": "Product ID to URL mappings. In production, these should come from Product objects or backend",
+    "408841": {
+      "name": "FC Barcelona Dri-Fit Jersey",
+      "productUrl": "https://www.elkjop.no/product/408841",
+      "checkoutUrl": "https://www.elkjop.no/product/408841"
+    },
+    "408874": {
+      "name": "Paris Saint-Germain Hjemmedrakt",
+      "productUrl": "https://www.elkjop.no/product/408874",
+      "checkoutUrl": "https://www.elkjop.no/product/408874"
+    },
     "408895": {
-      "name": "Samsung 75\" QN85F Neo QLED 4K MiniLED Smart TV (2025)",
-      "productUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/tv-og-tilbehor/tv/samsung-85-qn85f-neo-qled-4k-miniled-smart-tv-2025/906394",
-      "checkoutUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/tv-og-tilbehor/tv/samsung-85-qn85f-neo-qled-4k-miniled-smart-tv-2025/906394"
+      "name": "Samsung 75\" Neo QLED 4K TV",
+      "productUrl": "https://www.elkjop.no/product/408895",
+      "checkoutUrl": "https://www.elkjop.no/product/408895"
     },
     "408896": {
-      "name": "Samsung 5.1.2ch HW-Q810F lydplanke (sort)",
-      "productUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/hoyttalere-og-hi-fi/lydplanke/samsung-312ch-hw-q610f-lydplanke-sort/908701",
-      "checkoutUrl": "https://www.elkjop.no/product/tv-lyd-og-smarte-hjem/hoyttalere-og-hi-fi/lydplanke/samsung-312ch-hw-q610f-lydplanke-sort/908701"
+      "name": "Samsung HW-Q61MF Lydplanke",
+      "productUrl": "https://www.elkjop.no/product/408896",
+      "checkoutUrl": "https://www.elkjop.no/product/408896"
     }
   },
   "eventIds": {
