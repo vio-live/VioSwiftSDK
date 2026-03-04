@@ -47,6 +47,7 @@ public class VioConfiguration: ObservableObject {
     @Published public private(set) var dynamicEngagementConfig: DynamicEngagementConfig?
     @Published public private(set) var dynamicCommerceConfig: DynamicCommerceConfig?
     @Published public private(set) var dynamicLocalizationConfig: DynamicLocalizationConfig?
+    @Published public private(set) var checkoutConfig: CheckoutConfig = .default
     
     @Published public private(set) var isConfigured: Bool = false
     @Published public private(set) var isMarketAvailable: Bool = true  // If false, SDK should not be used
@@ -306,6 +307,11 @@ public class VioConfiguration: ObservableObject {
         NotificationCenter.default.post(name: .commerceConfigDidChange, object: nil)
     }
     
+    /// Update checkout config from backend campaign config
+    public func updateCheckoutConfig(_ config: CheckoutConfig) {
+        self.checkoutConfig = config
+    }
+
     /// Update dynamic localization configuration from backend
     public func updateDynamicLocalizationConfig(_ config: DynamicLocalizationConfig?) {
         self.dynamicLocalizationConfig = config
