@@ -171,6 +171,10 @@ public class CampaignManager: ObservableObject {
             if let commerceConfig = config.integrations?.commerce {
                 VioConfiguration.shared.updateDynamicCommerceConfig(commerceConfig)
             }
+            if let checkoutConfig = config.checkout?.resolvedCheckoutConfig {
+                VioConfiguration.shared.updateCheckoutConfig(checkoutConfig)
+                VioLogger.debug("initializeCampaign: paymentMethods=\(config.checkout?.paymentMethods ?? [])", component: "CampaignManager")
+            }
             VioLogger.debug("initializeCampaign: Loaded dynamic config for campaignId=\(campaignId)", component: "CampaignManager")
         }
         

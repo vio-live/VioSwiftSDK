@@ -13,7 +13,8 @@ public struct CampaignConfig: Codable {
     public let integrations: IntegrationsConfig?
     public let cache: CacheConfig?
     public let sponsor: SponsorConfig?
-    
+    public let checkout: DynamicCheckoutConfig?
+
     public init(
         campaignId: Int,
         version: String? = nil,
@@ -23,7 +24,8 @@ public struct CampaignConfig: Codable {
         features: DynamicFeatureFlags? = nil,
         integrations: IntegrationsConfig? = nil,
         cache: CacheConfig? = nil,
-        sponsor: SponsorConfig? = nil
+        sponsor: SponsorConfig? = nil,
+        checkout: DynamicCheckoutConfig? = nil
     ) {
         self.campaignId = campaignId
         self.version = version
@@ -34,6 +36,7 @@ public struct CampaignConfig: Codable {
         self.integrations = integrations
         self.cache = cache
         self.sponsor = sponsor
+        self.checkout = checkout
     }
 }
 
@@ -319,4 +322,16 @@ struct EngagementConfigResponse: Codable {
     let matchId: String
     let engagement: DynamicEngagementConfig
     let cache: CacheConfig?
+}
+
+// MARK: - Checkout Config (from backend campaign config)
+public struct DynamicCheckoutConfig: Codable {
+    public let paymentMethods: [String]?
+
+    public var resolvedCheckoutConfig: CheckoutConfig {
+        let methods = (paymentMethods ?? ["apple_pay"]).compactMap {
+            CheckoutConfig.PaymentMethod(rawValue: $0)
+        }
+        return CheckoutConfig(paymentMethods: methods.isEmpty ? [.applePay] : methods)
+    }
 }
