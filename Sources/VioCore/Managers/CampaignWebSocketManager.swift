@@ -243,15 +243,17 @@ public class CampaignWebSocketManager: ObservableObject {
                 let broadcastId = json["broadcastId"] as? String
                     ?? (json["data"] as? [String: Any])?["broadcastId"] as? String
                 
-                print("🔵 [WS] contest event received — broadcastId=\(broadcastId ?? \"nil\") currentContext=\(CampaignManager.shared.currentBroadcastContext?.broadcastId ?? \"nil\")")
+                let dbgBid = broadcastId ?? "nil"
+                let dbgCtx = CampaignManager.shared.currentBroadcastContext?.broadcastId ?? "nil"
+                print("🔵 [WS] contest received — bid=\(dbgBid) ctx=\(dbgCtx)")
                 
                 guard let broadcastId = broadcastId else {
-                    print("🔴 [WS] contest event missing broadcastId — ignored")
+                    print("🔴 [WS] contest missing broadcastId")
                     break
                 }
                 
                 guard broadcastId == CampaignManager.shared.currentBroadcastContext?.broadcastId else {
-                    print("🔴 [WS] contest ignored — \(broadcastId) ≠ \(CampaignManager.shared.currentBroadcastContext?.broadcastId ?? \"nil\")")
+                    print("🔴 [WS] contest ignored mismatch")
                     break
                 }
                 
