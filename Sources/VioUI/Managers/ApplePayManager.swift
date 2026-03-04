@@ -135,7 +135,7 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
             return true
         }
 
-        let backendUrl = VioConfiguration.shared.backendBaseUrl + "/api/checkout/confirm-apple-pay"
+        let backendUrl = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL + "/api/checkout/confirm-apple-pay"
         guard let url = URL(string: backendUrl) else {
             paymentResult = .success
             return true
