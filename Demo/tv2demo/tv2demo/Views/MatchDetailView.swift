@@ -284,7 +284,7 @@ struct MatchDetailView: View {
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             
                             // Product banner — sport-detail-banner slot
-                            VProductBanner(locationId: "sport-detail-banner")
+                            // VProductBanner(locationId: "sport-detail-banner") // hidden for demo
                             
                             // Products carousel — sport-detail-carousel slot
                             VProductCarousel(locationId: "sport-detail-carousel", layout: "compact")
