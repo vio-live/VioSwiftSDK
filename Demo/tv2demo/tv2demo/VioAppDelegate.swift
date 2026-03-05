@@ -38,11 +38,24 @@ class VioAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
+        print("📲 [TV2Demo] Push tap — userInfo: \(userInfo)")
 
-        if let productId = userInfo["productId"] as? String,
-           (userInfo["action"] as? String) == "open_product" {
-            print("📲 [TV2Demo] Push tap — abriendo producto \(productId)")
-            Task {
+        // productId puede llegar como String o Int
+        let productId: String?
+        if let pid = userInfo["productId"] as? String {
+            productId = pid
+        } else if let pid = userInfo["productId"] as? Int {
+            productId = String(pid)
+        } else {
+            productId = nil
+        }
+
+        let action = userInfo["action"] as? String
+        print("📲 [TV2Demo] productId=\(productId ?? "nil") action=\(action ?? "nil")")
+
+        if let productId = productId {
+            print("📲 [TV2Demo] Abriendo producto \(productId)")
+            Task { @MainActor in
                 await VioSDK.openProduct(id: productId)
             }
         }
