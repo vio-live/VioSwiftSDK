@@ -202,6 +202,7 @@ public class ConfigurationLoader {
 
         VioConfiguration.configure(
             apiKey: config.apiKey,
+            userId: "angelo_demo_001",
             environment: VioEnvironment(rawValue: config.environment) ?? .production,
             theme: theme,
             cartConfig: cartConfig,
@@ -214,8 +215,7 @@ public class ConfigurationLoader {
             campaignConfig: campaignConfig,
             analyticsConfig: analyticsConfig,
             brandConfig: brandConfig,
-            engagementConfig: engagementConfig,
-            userId: "angelo_demo_001"
+            engagementConfig: engagementConfig
         )
         
         // Initialize Stripe automatically if available
@@ -341,6 +341,7 @@ public class ConfigurationLoader {
     private static func applyPlistConfiguration(_ config: PlistConfiguration) {
         VioConfiguration.configure(
             apiKey: config.apiKey,
+            userId: "angelo_demo_001",
             environment: VioEnvironment(rawValue: config.environment) ?? .production,
             marketConfig: .default
         )
