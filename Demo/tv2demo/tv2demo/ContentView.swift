@@ -51,13 +51,19 @@ struct ContentView: View {
         .sheet(isPresented: $showPushOverlay) {
             if let product = pushProduct {
                 VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+                    .environmentObject(cartManager)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
+            print("📲 [TV2Demo] vioOpenProductOverlay recibido: \(notification.userInfo?.keys.map { $0 } ?? [])")
             if let product = notification.userInfo?["product"] as? Product {
                 print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
-                pushProduct = product
-                showPushOverlay = true
+                DispatchQueue.main.async {
+                    pushProduct = product
+                    showPushOverlay = true
+                }
+            } else {
+                print("❌ [TV2Demo] Cast a Product falló — tipo: \(type(of: notification.userInfo?["product"] ?? "nil"))")
             }
         }
         .onAppear {
@@ -83,13 +89,19 @@ struct ContentView: View {
         .sheet(isPresented: $showPushOverlay) {
             if let product = pushProduct {
                 VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+                    .environmentObject(cartManager)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
+            print("📲 [TV2Demo] vioOpenProductOverlay recibido: \(notification.userInfo?.keys.map { $0 } ?? [])")
             if let product = notification.userInfo?["product"] as? Product {
                 print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
-                pushProduct = product
-                showPushOverlay = true
+                DispatchQueue.main.async {
+                    pushProduct = product
+                    showPushOverlay = true
+                }
+            } else {
+                print("❌ [TV2Demo] Cast a Product falló — tipo: \(type(of: notification.userInfo?["product"] ?? "nil"))")
             }
         }
         .onAppear {
