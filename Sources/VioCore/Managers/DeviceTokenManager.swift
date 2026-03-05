@@ -17,7 +17,7 @@ public class DeviceTokenManager {
     public func registerIfNeeded() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             guard granted else {
-                VioLogger.log("🔕 [DeviceToken] Push permission denied", level: .warning)
+                VioLogger.warning("🔕 [DeviceToken] Push permission denied")
                 return
             }
             DispatchQueue.main.async {
@@ -31,13 +31,13 @@ public class DeviceTokenManager {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         guard token != registeredToken else { return }
         registeredToken = token
-        VioLogger.log("📱 [DeviceToken] Token recibido: \(token.prefix(12))...", level: .info)
+        VioLogger.info("📱 [DeviceToken] Token recibido: \(token.prefix(12))...")
         Task { await sendToBackend(token: token) }
     }
 
     /// Llamar desde AppDelegate.didFailToRegisterForRemoteNotificationsWithError
     public func didFailToRegister(error: Error) {
-        VioLogger.log("❌ [DeviceToken] Registration failed: \(error.localizedDescription)", level: .error)
+        VioLogger.error("❌ [DeviceToken] Registration failed: \(error.localizedDescription)")
     }
 
     // MARK: - Private
@@ -46,11 +46,11 @@ public class DeviceTokenManager {
         let config = VioConfiguration.shared
         guard !config.apiKey.isEmpty,
               let campaign = CampaignManager.shared.currentCampaign else {
-            VioLogger.log("⚠️ [DeviceToken] No apiKey o campaña activa — skip register", level: .warning)
+            VioLogger.warning("⚠️ [DeviceToken] No apiKey o campaña activa — skip register")
             return
         }
 
-        let baseURL = config.campaignConfiguration.restAPIBaseURL
+        let baseURL = await config.campaignConfiguration.restAPIBaseURL
         guard let url = URL(string: "\(baseURL)/api/campaigns/\(campaign.id)/register-device") else { return }
 
         var request = URLRequest(url: url)
@@ -66,10 +66,10 @@ public class DeviceTokenManager {
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode == 200 || http.statusCode == 201 {
-                VioLogger.log("✅ [DeviceToken] Registrado en backend (userId: \(config.userId))", level: .info)
+                VioLogger.info("✅ [DeviceToken] Registrado en backend (userId: \(config.userId))")
             }
         } catch {
-            VioLogger.log("❌ [DeviceToken] Backend register error: \(error)", level: .error)
+            VioLogger.error("❌ [DeviceToken] Backend register error: \(error)")
         }
     }
 }
