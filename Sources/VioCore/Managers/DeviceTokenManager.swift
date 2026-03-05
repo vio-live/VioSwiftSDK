@@ -44,8 +44,8 @@ public class DeviceTokenManager {
 
     private func sendToBackend(token: String) async {
         let config = VioConfiguration.shared
-        guard !config.apiKey.isEmpty,
-              let campaign = CampaignManager.shared.currentCampaign else {
+        let campaigns = await CampaignManager.shared.activeCampaigns
+        guard !config.apiKey.isEmpty, let campaign = campaigns.first else {
             VioLogger.warning("⚠️ [DeviceToken] No apiKey o campaña activa — skip register")
             return
         }
