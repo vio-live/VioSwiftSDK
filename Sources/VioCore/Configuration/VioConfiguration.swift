@@ -26,6 +26,7 @@ public class VioConfiguration: ObservableObject {
     
     // MARK: - Configuration Properties
     @Published public private(set) var apiKey: String = ""
+    @Published public private(set) var userId: String = ""
     @Published public private(set) var environment: VioEnvironment = .sandbox
     @Published public private(set) var theme: VioTheme = .default
     @Published public private(set) var cartConfiguration: CartConfiguration = .default
@@ -61,6 +62,7 @@ public class VioConfiguration: ObservableObject {
     /// Main configuration method - call once at app startup
     public static func configure(
         apiKey: String,
+        userId: String = "",
         environment: VioEnvironment = .production,
         theme: VioTheme? = nil,
         cartConfig: CartConfiguration? = nil,
@@ -79,6 +81,7 @@ public class VioConfiguration: ObservableObject {
         let instance = VioConfiguration.shared
         
         instance.apiKey = apiKey
+        instance.userId = userId
         instance.environment = environment
         instance.theme = theme ?? .default
         instance.cartConfiguration = cartConfig ?? .default
