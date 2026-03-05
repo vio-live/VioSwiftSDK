@@ -15,6 +15,7 @@ import UserNotifications
 
 struct ContentView: View {
     @StateObject private var castingManager = CastingManager.shared
+    @StateObject private var pushNav = PushNavigationManager.shared
     @State private var showCastingView = false
     @EnvironmentObject var cartManager: CartManager
     @State private var pushProduct: Product? = nil
@@ -55,15 +56,23 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
-            print("📲 [TV2Demo] vioOpenProductOverlay recibido: \(notification.userInfo?.keys.map { $0 } ?? [])")
             if let product = notification.userInfo?["product"] as? Product {
-                print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
-                DispatchQueue.main.async {
-                    pushProduct = product
-                    showPushOverlay = true
+                print("📲 [TV2Demo] Overlay abriendo: \(product.title)")
+                pushProduct = product
+                showPushOverlay = true
+            }
+        }
+        .onReceive(pushNav.$pendingProductId.compactMap { $0 }) { productId in
+            print("📲 [TV2Demo] pendingProductId detectado: \(productId) — esperando SDK READY...")
+            Task {
+                // Esperar hasta que el SDK esté listo (hasta 10s)
+                for _ in 0..<20 {
+                    if VioConfiguration.shared.shouldUseSDK && CampaignManager.shared.isCampaignActive {
+                        break
+                    }
+                    try? await Task.sleep(nanoseconds: 500_000_000)
                 }
-            } else {
-                print("❌ [TV2Demo] Cast a Product falló — tipo: \(type(of: notification.userInfo?["product"] ?? "nil"))")
+                await VioSDK.openProduct(id: pushNav.consume() ?? productId)
             }
         }
         .onAppear {
@@ -93,15 +102,23 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
-            print("📲 [TV2Demo] vioOpenProductOverlay recibido: \(notification.userInfo?.keys.map { $0 } ?? [])")
             if let product = notification.userInfo?["product"] as? Product {
-                print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
-                DispatchQueue.main.async {
-                    pushProduct = product
-                    showPushOverlay = true
+                print("📲 [TV2Demo] Overlay abriendo: \(product.title)")
+                pushProduct = product
+                showPushOverlay = true
+            }
+        }
+        .onReceive(pushNav.$pendingProductId.compactMap { $0 }) { productId in
+            print("📲 [TV2Demo] pendingProductId detectado: \(productId) — esperando SDK READY...")
+            Task {
+                // Esperar hasta que el SDK esté listo (hasta 10s)
+                for _ in 0..<20 {
+                    if VioConfiguration.shared.shouldUseSDK && CampaignManager.shared.isCampaignActive {
+                        break
+                    }
+                    try? await Task.sleep(nanoseconds: 500_000_000)
                 }
-            } else {
-                print("❌ [TV2Demo] Cast a Product falló — tipo: \(type(of: notification.userInfo?["product"] ?? "nil"))")
+                await VioSDK.openProduct(id: pushNav.consume() ?? productId)
             }
         }
         .onAppear {

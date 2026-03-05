@@ -54,9 +54,9 @@ class VioAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
         print("📲 [TV2Demo] productId=\(productId ?? "nil") action=\(action ?? "nil")")
 
         if let productId = productId {
-            print("📲 [TV2Demo] Abriendo producto \(productId)")
+            print("📲 [TV2Demo] Guardando producto pendiente: \(productId)")
             Task { @MainActor in
-                await VioSDK.openProduct(id: productId)
+                PushNavigationManager.shared.setPendingProduct(id: productId)
             }
         }
 
