@@ -8,8 +8,14 @@ class VioAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        Task { @MainActor in
-            DeviceTokenManager.shared.registerIfNeeded()
+
+        // Registrar APNs directamente — no esperar callback de autorización
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            print("🔔 [TV2Push] requestAuthorization: granted=\(granted), error=\(String(describing: error))")
+            DispatchQueue.main.async {
+                UIApplication.shared.registerForRemoteNotifications()
+                print("📲 [TV2Push] registerForRemoteNotifications llamado")
+            }
         }
         return true
     }
