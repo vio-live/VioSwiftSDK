@@ -14,6 +14,7 @@ import VioEngagementSystem
 
 @main
 struct tv2demoApp: App {
+    @UIApplicationDelegateAdaptor(VioAppDelegate.self) var appDelegate
     // MARK: - Global State Managers
     // These are initialized once and shared across the entire app
     @StateObject private var cartManager = CartManager()
