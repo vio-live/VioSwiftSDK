@@ -26,7 +26,7 @@ struct tv2demoApp: App {
         // Stripe is initialized automatically by the SDK
         print("🚀 [TV2Demo] Loading Vio SDK configuration...")
         ConfigurationLoader.loadConfiguration()
-        VioConfiguration.shared.userId = "angelo_demo_001"  // debe coincidir con Apple TV cart-intent
+
         print("✅ [TV2Demo] Vio SDK configured successfully")
         print("🎨 [TV2Demo] Theme: \(VioConfiguration.shared.theme.name)")
         print("🎨 [TV2Demo] Mode: \(VioConfiguration.shared.theme.mode)")

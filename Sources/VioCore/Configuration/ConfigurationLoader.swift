@@ -214,7 +214,8 @@ public class ConfigurationLoader {
             campaignConfig: campaignConfig,
             analyticsConfig: analyticsConfig,
             brandConfig: brandConfig,
-            engagementConfig: engagementConfig
+            engagementConfig: engagementConfig,
+            userId: "angelo_demo_001"
         )
         
         // Initialize Stripe automatically if available
