@@ -15,11 +15,14 @@ class VioAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterD
     // MARK: - APNs token recibido
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("✅ [TV2Push] TOKEN RECIBIDO: \(token.prefix(20))...")
         DeviceTokenManager.shared.didRegister(deviceToken: deviceToken)
     }
 
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ [TV2Push] FALLÓ REGISTRO: \(error)")
         DeviceTokenManager.shared.didFailToRegister(error: error)
     }
 
