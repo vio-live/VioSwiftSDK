@@ -17,6 +17,8 @@ struct ContentView: View {
     @StateObject private var castingManager = CastingManager.shared
     @State private var showCastingView = false
     @EnvironmentObject var cartManager: CartManager
+    @State private var pushProduct: Product? = nil
+    @State private var showPushOverlay = false
     
     var body: some View {
         ZStack {
@@ -46,6 +48,18 @@ struct ContentView: View {
             if castingManager.isCasting {
                 CastingActiveView(match: TV2Match.barcelonaPSG)
                     .environmentObject(cartManager)
+        .sheet(isPresented: $showPushOverlay) {
+            if let product = pushProduct {
+                VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
+            if let product = notification.userInfo?["product"] as? Product {
+                print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
+                pushProduct = product
+                showPushOverlay = true
+            }
+        }
         .onAppear {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
@@ -66,6 +80,18 @@ struct ContentView: View {
             // Global live stream overlay (Tipio integration)
             LiveStreamGlobalOverlay()
                 .environmentObject(cartManager)
+        .sheet(isPresented: $showPushOverlay) {
+            if let product = pushProduct {
+                VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
+            if let product = notification.userInfo?["product"] as? Product {
+                print("📲 [TV2Demo] Overlay abriendo para: \(product.title)")
+                pushProduct = product
+                showPushOverlay = true
+            }
+        }
         .onAppear {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
