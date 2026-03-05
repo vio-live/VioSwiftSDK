@@ -11,6 +11,7 @@ import VioCore
 // import VioLiveUI  // Not available as package product
 // import VioLiveShow  // Not available as package product
 import AVFoundation
+import UserNotifications
 
 struct ContentView: View {
     @StateObject private var castingManager = CastingManager.shared
@@ -45,6 +46,15 @@ struct ContentView: View {
             if castingManager.isCasting {
                 CastingActiveView(match: TV2Match.barcelonaPSG)
                     .environmentObject(cartManager)
+        .onAppear {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                    print("📲 [TV2Push] registerForRemoteNotifications llamado desde ContentView")
+                }
+            }
+        }
             }
         }
         .onChange(of: castingManager.isCasting) { isCasting in
@@ -56,6 +66,15 @@ struct ContentView: View {
             // Global live stream overlay (Tipio integration)
             LiveStreamGlobalOverlay()
                 .environmentObject(cartManager)
+        .onAppear {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                    print("📲 [TV2Push] registerForRemoteNotifications llamado desde ContentView")
+                }
+            }
+        }
         }
     }
 }
