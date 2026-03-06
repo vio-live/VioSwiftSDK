@@ -54,7 +54,7 @@ public struct VProductDetailOverlay: View {
     @State private var quantity = 1
     @State private var showSuccessAnimation = false
     @State private var showToastOverModal = false
-    @State private var imageLoaded = false
+    @State private var imageLoaded = true  // Mostrar contenido inmediatamente; imagen carga async
     @State private var imageLoadTimeout = false
     
     // MARK: - Computed Properties
