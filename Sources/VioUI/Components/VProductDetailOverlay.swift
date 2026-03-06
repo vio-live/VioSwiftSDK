@@ -55,6 +55,7 @@ public struct VProductDetailOverlay: View {
     @State private var showSuccessAnimation = false
     @State private var showToastOverModal = false
     @State private var imageLoaded = false
+    @State private var imageLoadTimeout = false
     
     // MARK: - Computed Properties
     private var displayImages: [ProductImage] {
@@ -168,7 +169,7 @@ public struct VProductDetailOverlay: View {
                     }
                     
                     // Product Information (only show after image loads)
-                    if imageLoaded || displayImages.isEmpty {
+                    if imageLoaded || displayImages.isEmpty || imageLoadTimeout {
                         VStack(alignment: .leading, spacing: VioSpacing.md) {
                             productInfoSection
                             variantSelectionSection
@@ -197,7 +198,7 @@ public struct VProductDetailOverlay: View {
                 }
                 .safeAreaInset(edge: .bottom) {
                     // Bottom Action Bar (only show after image loads)
-                    if imageLoaded || displayImages.isEmpty {
+                    if imageLoaded || displayImages.isEmpty || imageLoadTimeout {
                         bottomActionBar
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
