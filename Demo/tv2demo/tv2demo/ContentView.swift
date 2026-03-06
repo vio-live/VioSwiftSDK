@@ -56,6 +56,19 @@ struct ContentView: View {
                     .environmentObject(cartManager)
             }
         }
+        // DEBUG: botón para simular push sin Apple TV
+        .overlay(alignment: .topTrailing) {
+            Button("🛒 Demo") {
+                Task {
+                    await VioSDK.openProduct(id: "408898")
+                }
+            }
+            .padding(12)
+            .background(Color.black.opacity(0.6))
+            .foregroundColor(.white)
+            .clipShape(Capsule())
+            .padding()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
             if let product = notification.userInfo?["product"] as? Product {
                 print("📲 [TV2Demo] Overlay abriendo: \(product.title)")
@@ -103,6 +116,19 @@ struct ContentView: View {
                 VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
                     .environmentObject(cartManager)
             }
+        }
+        // DEBUG: botón para simular push sin Apple TV
+        .overlay(alignment: .topTrailing) {
+            Button("🛒 Demo") {
+                Task {
+                    await VioSDK.openProduct(id: "408898")
+                }
+            }
+            .padding(12)
+            .background(Color.black.opacity(0.6))
+            .foregroundColor(.white)
+            .clipShape(Capsule())
+            .padding()
         }
         .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
             if let product = notification.userInfo?["product"] as? Product {
