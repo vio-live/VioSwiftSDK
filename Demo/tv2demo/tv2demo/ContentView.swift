@@ -63,20 +63,22 @@ struct ContentView: View {
                 showPushOverlay = true
             }
         }
-        .onReceive(pushNav.$pendingProductId.compactMap { $0 }) { productId in
-            print("📲 [TV2Demo] pendingProductId detectado: \(productId) — esperando SDK READY...")
-            Task {
-                // Esperar hasta que el SDK esté listo (hasta 10s)
-                for _ in 0..<20 {
-                    if VioConfiguration.shared.shouldUseSDK && CampaignManager.shared.isCampaignActive {
-                        break
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                }
-                await VioSDK.openProduct(id: pushNav.consume() ?? productId)
-            }
-        }
+
         .onAppear {
+            // Verificar si hay un producto pendiente por push notification
+            if let productId = PushNavigationManager.shared.consume() {
+                print("📲 [TV2Demo] onAppear: productId pendiente \(productId) — abriendo cuando SDK listo...")
+                Task {
+                    for _ in 0..<20 {
+                        if VioConfiguration.shared.shouldUseSDK {
+                            break
+                        }
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+                    print("📲 [TV2Demo] SDK listo — openProduct(\(productId))")
+                    await VioSDK.openProduct(id: productId)
+                }
+            }
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
                 DispatchQueue.main.async {
@@ -109,20 +111,22 @@ struct ContentView: View {
                 showPushOverlay = true
             }
         }
-        .onReceive(pushNav.$pendingProductId.compactMap { $0 }) { productId in
-            print("📲 [TV2Demo] pendingProductId detectado: \(productId) — esperando SDK READY...")
-            Task {
-                // Esperar hasta que el SDK esté listo (hasta 10s)
-                for _ in 0..<20 {
-                    if VioConfiguration.shared.shouldUseSDK && CampaignManager.shared.isCampaignActive {
-                        break
-                    }
-                    try? await Task.sleep(nanoseconds: 500_000_000)
-                }
-                await VioSDK.openProduct(id: pushNav.consume() ?? productId)
-            }
-        }
+
         .onAppear {
+            // Verificar si hay un producto pendiente por push notification
+            if let productId = PushNavigationManager.shared.consume() {
+                print("📲 [TV2Demo] onAppear: productId pendiente \(productId) — abriendo cuando SDK listo...")
+                Task {
+                    for _ in 0..<20 {
+                        if VioConfiguration.shared.shouldUseSDK {
+                            break
+                        }
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+                    print("📲 [TV2Demo] SDK listo — openProduct(\(productId))")
+                    await VioSDK.openProduct(id: productId)
+                }
+            }
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
                 DispatchQueue.main.async {
