@@ -40,17 +40,25 @@ public extension Notification.Name {
 
 private enum CommerceProductFetcher {
 
-    // Modelo ligero — solo los campos que devuelve la query GraphQL
     struct SlimProduct: Codable {
         let id: Int
         let title: String
         let images: [SlimImage]?
         let price: SlimPrice?
+        let variants: [SlimVariant]?
         struct SlimImage: Codable { let url: String?; let order: Int? }
         struct SlimPrice: Codable {
             let amount: Float?
             let amount_incl_taxes: Float?
             let currency_code: String?
+        }
+        struct SlimVariant: Codable {
+            let id: Int?
+            let title: String?
+            let quantity: Int?
+            let price: SlimPrice?
+            let options: [SlimOption]?
+            struct SlimOption: Codable { let id: Int?; let name: String?; let value: String? }
         }
     }
 
@@ -106,6 +114,18 @@ private enum CommerceProductFetcher {
             currency_code: slim.price?.currency_code ?? "NOK",
             amount_incl_taxes: slim.price?.amount_incl_taxes
         )
+        let variants: [Variant] = (slim.variants ?? []).map { v in
+            let vPrice = Price(
+                amount: v.price?.amount ?? price.amount,
+                currency_code: v.price?.currency_code ?? price.currency_code,
+                amount_incl_taxes: v.price?.amount_incl_taxes
+            )
+            let opts = (v.options ?? []).map { o in
+                VariantOption(id: String(o.id ?? 0), name: o.name ?? "", value: o.value ?? "")
+            }
+            return Variant(id: String(v.id ?? 0), title: v.title ?? "", quantity: v.quantity, price: vPrice, options: opts, barcode: nil, sku: nil, images: nil)
+        }
+
         return Product(
             id: slim.id,
             title: slim.title,
@@ -115,7 +135,7 @@ private enum CommerceProductFetcher {
             sku: "",
             quantity: nil,
             price: price,
-            variants: [],
+            variants: variants,
             barcode: nil,
             options: nil,
             categories: nil,
