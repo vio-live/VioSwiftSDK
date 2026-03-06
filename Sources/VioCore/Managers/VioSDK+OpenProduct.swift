@@ -120,10 +120,7 @@ private enum CommerceProductFetcher {
                 currency_code: v.price?.currency_code ?? price.currency_code,
                 amount_incl_taxes: v.price?.amount_incl_taxes
             )
-            let opts = (v.options ?? []).map { o in
-                VariantOption(id: String(o.id ?? 0), name: o.name ?? "", value: o.value ?? "")
-            }
-            return Variant(id: String(v.id ?? 0), title: v.title ?? "", quantity: v.quantity, price: vPrice, options: opts, barcode: nil, sku: nil, images: nil)
+            return Variant(id: String(v.id ?? 0), title: v.title ?? "", quantity: v.quantity, price: vPrice, sku: "")
         }
 
         return Product(
