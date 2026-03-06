@@ -72,10 +72,13 @@ private enum CommerceProductFetcher {
         request.setValue(apiKey, forHTTPHeaderField: "Authorization")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["query": query])
 
-        guard let (data, _) = try? await URLSession.shared.data(for: request) else {
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else {
             print("❌ [Commerce] Network error")
             return nil
         }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let raw = String(data: data, encoding: .utf8) ?? ""
+        print("🔵 [Commerce] HTTP \(status) raw: \(raw.prefix(400))")
 
         struct GQLResponse: Codable {
             struct GData: Codable {
