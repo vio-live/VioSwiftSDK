@@ -12,6 +12,7 @@ import VioCore
 // import VioLiveShow  // Not available as package product
 import AVFoundation
 import UserNotifications
+import Combine
 
 struct ContentView: View {
     @StateObject private var castingManager = CastingManager.shared
