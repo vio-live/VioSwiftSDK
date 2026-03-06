@@ -39,19 +39,32 @@ public extension Notification.Name {
 }
 
 private enum CommerceProductFetcher {
+
+    // Modelo ligero — solo los campos que devuelve la query GraphQL
+    struct SlimProduct: Codable {
+        let id: Int
+        let title: String
+        let images: [SlimImage]?
+        let price: SlimPrice?
+        struct SlimImage: Codable { let url: String?; let order: Int? }
+        struct SlimPrice: Codable {
+            let amount: Float?
+            let amount_incl_taxes: Float?
+            let currency_code: String?
+        }
+    }
+
     static func fetch(id: String) async -> Product? {
         let baseURL = "https://graph-ql-dev.vio.live/graphql"
         let apiKey = VioConfiguration.shared.dynamicCommerceConfig?.apiKey ?? ""
 
-        guard !apiKey.isEmpty, let url = URL(string: baseURL) else { return nil }
+        print("🔵 [Commerce] Fetching id=\(id) apiKey=\(apiKey.prefix(8))...")
+        guard !apiKey.isEmpty, let url = URL(string: baseURL) else {
+            print("❌ [Commerce] apiKey vacío o URL inválida")
+            return nil
+        }
 
-        let query = """
-        { Channel { GetProductsByIds(product_ids: [\(id)]) {
-            id title
-            images { url order }
-            price { amount amount_incl_taxes currency_code }
-        } } }
-        """
+        let query = "{ Channel { GetProductsByIds(product_ids: [\(id)]) { id title images { url order } price { amount amount_incl_taxes currency_code } } } }"
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -59,19 +72,61 @@ private enum CommerceProductFetcher {
         request.setValue(apiKey, forHTTPHeaderField: "Authorization")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["query": query])
 
-        guard let (data, _) = try? await URLSession.shared.data(for: request) else { return nil }
-
-        struct GQLResponse: Codable {
-            struct Data: Codable {
-                struct Channel: Codable {
-                    let GetProductsByIds: [Product]?
-                }
-                let Channel: Channel?
-            }
-            let data: Data?
+        guard let (data, _) = try? await URLSession.shared.data(for: request) else {
+            print("❌ [Commerce] Network error")
+            return nil
         }
 
-        return (try? JSONDecoder().decode(GQLResponse.self, from: data))?.data?.Channel?.GetProductsByIds?.first
+        struct GQLResponse: Codable {
+            struct GData: Codable {
+                struct Channel: Codable { let GetProductsByIds: [SlimProduct]? }
+                let Channel: Channel?
+            }
+            let data: GData?
+        }
+
+        guard let slim = (try? JSONDecoder().decode(GQLResponse.self, from: data))?.data?.Channel?.GetProductsByIds?.first else {
+            let raw = String(data: data, encoding: .utf8) ?? ""
+            print("❌ [Commerce] Decode falló. Raw: \(raw.prefix(300))")
+            return nil
+        }
+
+        print("✅ [Commerce] Producto obtenido: \(slim.title)")
+
+        // Convertir a Product completo con defaults para campos no usados en overlay
+        let images = (slim.images ?? []).compactMap { img -> ProductImage? in
+            guard let urlStr = img.url else { return nil }
+            return ProductImage(id: img.order ?? 0, url: urlStr, order: img.order ?? 0)
+        }
+        let price = Price(
+            amount: slim.price?.amount ?? 0,
+            amount_incl_taxes: slim.price?.amount_incl_taxes,
+            currency_code: slim.price?.currency_code ?? "NOK"
+        )
+        return Product(
+            id: slim.id,
+            title: slim.title,
+            brand: nil,
+            description: nil,
+            tags: nil,
+            sku: "",
+            quantity: nil,
+            price: price,
+            variants: [],
+            barcode: nil,
+            options: nil,
+            categories: nil,
+            images: images,
+            product_shipping: nil,
+            supplier: "",
+            supplier_id: nil,
+            imported_product: nil,
+            referral_fee: nil,
+            options_enabled: false,
+            digital: false,
+            origin: "",
+            return: nil
+        )
     }
 }
 #endif
