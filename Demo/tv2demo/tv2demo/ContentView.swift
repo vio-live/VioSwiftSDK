@@ -20,7 +20,6 @@ struct ContentView: View {
     @State private var showCastingView = false
     @EnvironmentObject var cartManager: CartManager
     @State private var pushProduct: Product? = nil
-    @State private var showPushOverlay = false
     
     var body: some View {
         ZStack {
@@ -50,14 +49,14 @@ struct ContentView: View {
             if castingManager.isCasting {
                 CastingActiveView(match: TV2Match.barcelonaPSG)
                     .environmentObject(cartManager)
-        .sheet(isPresented: $showPushOverlay) {
-            if let product = pushProduct {
-                PushProductSheet(product: product, onDismiss: { showPushOverlay = false })
-                    .environmentObject(cartManager)
             }
         }
-        // DEBUG: botón para simular push sin Apple TV
+        .sheet(item: $pushProduct, onDismiss: { pushProduct = nil }) { product in
+            PushProductSheet(product: product, onDismiss: { pushProduct = nil })
+                .environmentObject(cartManager)
+        }
         .overlay(alignment: .topTrailing) {
+            // DEBUG: botón para simular push sin Apple TV
             Button("🛒 Demo") {
                 Task {
                     await VioSDK.openProduct(id: "408898")
@@ -73,11 +72,10 @@ struct ContentView: View {
             if let product = notification.userInfo?["product"] as? Product {
                 print("📲 [TV2Demo] Overlay abriendo: \(product.title)")
                 pushProduct = product
-                showPushOverlay = true
             }
         }
-
         .onAppear {
+            registerVioOpenProductFetcherIfNeeded()
             // Verificar si hay un producto pendiente por push notification
             if let productId = PushNavigationManager.shared.consume() {
                 print("📲 [TV2Demo] onAppear: productId pendiente \(productId) — abriendo cuando SDK listo...")
@@ -98,8 +96,6 @@ struct ContentView: View {
                     UIApplication.shared.registerForRemoteNotifications()
                     print("📲 [TV2Push] registerForRemoteNotifications llamado desde ContentView")
                 }
-            }
-        }
             }
         }
         .onChange(of: castingManager.isCasting) { isCasting in
@@ -111,56 +107,6 @@ struct ContentView: View {
             // Global live stream overlay (Tipio integration)
             LiveStreamGlobalOverlay()
                 .environmentObject(cartManager)
-        .sheet(isPresented: $showPushOverlay) {
-            if let product = pushProduct {
-                PushProductSheet(product: product, onDismiss: { showPushOverlay = false })
-                    .environmentObject(cartManager)
-            }
-        }
-        // DEBUG: botón para simular push sin Apple TV
-        .overlay(alignment: .topTrailing) {
-            Button("🛒 Demo") {
-                Task {
-                    await VioSDK.openProduct(id: "408898")
-                }
-            }
-            .padding(12)
-            .background(Color.black.opacity(0.6))
-            .foregroundColor(.white)
-            .clipShape(Capsule())
-            .padding()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .vioOpenProductOverlay)) { notification in
-            if let product = notification.userInfo?["product"] as? Product {
-                print("📲 [TV2Demo] Overlay abriendo: \(product.title)")
-                pushProduct = product
-                showPushOverlay = true
-            }
-        }
-
-        .onAppear {
-            // Verificar si hay un producto pendiente por push notification
-            if let productId = PushNavigationManager.shared.consume() {
-                print("📲 [TV2Demo] onAppear: productId pendiente \(productId) — abriendo cuando SDK listo...")
-                Task {
-                    for _ in 0..<20 {
-                        if VioConfiguration.shared.shouldUseSDK {
-                            break
-                        }
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                    }
-                    print("📲 [TV2Demo] SDK listo — openProduct(\(productId))")
-                    await VioSDK.openProduct(id: productId)
-                }
-            }
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                print("🔔 [TV2Push] Push auth: granted=\(granted), error=\(String(describing: error))")
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                    print("📲 [TV2Push] registerForRemoteNotifications llamado desde ContentView")
-                }
-            }
-        }
         }
     }
 }

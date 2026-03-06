@@ -10,11 +10,8 @@ struct PushProductSheet: View {
     @EnvironmentObject var cartManager: CartManager
 
     var body: some View {
-        NavigationView {
-            VProductDetailOverlay(product: product, onDismiss: onDismiss)
-                .environmentObject(cartManager)
-                .navigationBarHidden(true)
-        }
-        .navigationViewStyle(.stack)
+        VProductDetailOverlay(product: product, onDismiss: onDismiss)
+            .environmentObject(cartManager)
+            .onAppear { print("🔍 [PushProductSheet] appeared for product: \(product.title)") }
     }
 }

@@ -109,6 +109,7 @@ public struct VFloatingCartIndicator: View {
         customPadding: EdgeInsets? = nil,
         onTap: (() -> Void)? = nil
     ) {
+        registerVioOpenProductFetcherIfNeeded()
         // Read from configuration if not provided
         let cartConfig = VioConfiguration.shared.cartConfiguration
         

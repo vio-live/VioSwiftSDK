@@ -14,6 +14,7 @@ public class ProductService {
     private let sdkClientQueue = DispatchQueue(label: "com.vio.productsdk")
     
     private init() {
+        registerVioOpenProductFetcherIfNeeded()
         NotificationCenter.default.addObserver(
             forName: .commerceConfigDidChange,
             object: nil,

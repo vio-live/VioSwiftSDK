@@ -2,8 +2,28 @@ import Foundation
 #if canImport(UIKit)
 import UIKit
 
+/// Protocol for fetching products by ID. VioUI registers an implementation that uses ProductService
+/// (same path as carousel). When set, openProduct uses it; otherwise falls back to CommerceProductFetcher.
+public protocol VioSDKProductFetcher: AnyObject {
+    func fetchProduct(id: String, currency: String, country: String) async -> Product?
+}
+
 /// Extensión pública para abrir un producto desde una push notification.
 public enum VioSDK {
+
+    /// Strong reference so the fetcher is not deallocated after registration.
+    private static var _productFetcher: VioSDKProductFetcher?
+
+    /// Product fetcher for openProduct. When set (by VioUI), uses ProductService (same as carousel).
+    public static var productFetcher: VioSDKProductFetcher? {
+        get { _productFetcher }
+        set { _productFetcher = newValue }
+    }
+
+    /// Register a product fetcher. Call from VioUI at init to use ProductService for openProduct.
+    public static func registerProductFetcher(_ fetcher: VioSDKProductFetcher) {
+        _productFetcher = fetcher
+    }
 
     @MainActor
     public static func openProduct(id: String) async {
@@ -15,11 +35,19 @@ public enum VioSDK {
             return
         }
 
-        print("🔵 [VioSDK] Fetching producto \(id) desde Commerce...")
-        let apiKey = VioConfiguration.shared.dynamicCommerceConfig?.apiKey ?? ""
-        print("🔵 [VioSDK] Commerce apiKey=\(apiKey.prefix(8))...")
+        let currency = VioConfiguration.shared.marketConfiguration.currencyCode
+        let country = VioConfiguration.shared.marketConfiguration.countryCode
 
-        guard let product = await CommerceProductFetcher.fetch(id: id) else {
+        let product: Product?
+        if let fetcher = _productFetcher {
+            print("🔵 [VioSDK] Fetching producto \(id) via ProductFetcher (ProductService)")
+            product = await fetcher.fetchProduct(id: id, currency: currency, country: country)
+        } else {
+            print("🔵 [VioSDK] Fetching producto \(id) desde Commerce (fallback)")
+            product = await CommerceProductFetcher.fetch(id: id)
+        }
+
+        guard let product = product else {
             print("❌ [VioSDK] No se pudo obtener producto \(id)")
             return
         }
@@ -57,8 +85,6 @@ private enum CommerceProductFetcher {
             let title: String?
             let quantity: Int?
             let price: SlimPrice?
-            let options: [SlimOption]?
-            struct SlimOption: Codable { let id: Int?; let name: String?; let value: String? }
         }
     }
 
@@ -72,7 +98,8 @@ private enum CommerceProductFetcher {
             return nil
         }
 
-        let query = "{ Channel { GetProductsByIds(product_ids: [\(id)]) { id title images { url order } price { amount amount_incl_taxes currency_code } } } }"
+        // Query mínima: sku/description causan 500 en algunos productos; variants sin sku para evitar errores
+        let query = "{ Channel { GetProductsByIds(product_ids: [\(id)]) { id title images { url order } price { amount amount_incl_taxes currency_code } variants { id title quantity price { amount amount_incl_taxes currency_code } } } } }"
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -104,7 +131,7 @@ private enum CommerceProductFetcher {
 
         print("✅ [Commerce] Producto obtenido: \(slim.title)")
 
-        // Convertir a Product completo con defaults para campos no usados en overlay
+        // Convertir a Product para VProductDetailOverlay
         let images = (slim.images ?? []).compactMap { img -> ProductImage? in
             guard let urlStr = img.url else { return nil }
             return ProductImage(id: String(img.order ?? 0), url: urlStr, order: img.order ?? 0)

@@ -109,12 +109,15 @@ public struct VProductDetailOverlay: View {
     }
     
     // MARK: - Body
+    @ViewBuilder
     public var body: some View {
         // Hide if SDK should not be used (market not available) or campaign not active
         if !VioConfiguration.shared.shouldUseSDK || !CampaignManager.shared.isCampaignActive {
             EmptyView()
+                .onAppear { print("🔍 [VProductDetailOverlay] EmptyView (guard failed) shouldUseSDK=\(VioConfiguration.shared.shouldUseSDK) isCampaignActive=\(CampaignManager.shared.isCampaignActive)") }
         } else {
             productDetailContent
+                .onAppear { print("🔍 [VProductDetailOverlay] showing productDetailContent for \(product.title)") }
         }
     }
     
