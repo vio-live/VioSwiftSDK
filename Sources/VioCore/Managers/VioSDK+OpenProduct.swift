@@ -7,27 +7,30 @@ public enum VioSDK {
 
     @MainActor
     public static func openProduct(id: String) async {
+        print("🔵 [VioSDK] openProduct(\(id)) llamado")
+        print("🔵 [VioSDK] shouldUseSDK=\(VioConfiguration.shared.shouldUseSDK) isCampaignActive=\(CampaignManager.shared.isCampaignActive)")
+
         guard VioConfiguration.shared.shouldUseSDK else {
-            VioLogger.warning("⚠️ [VioSDK] SDK no configurado — llamar configure() primero")
+            print("❌ [VioSDK] SDK no configurado — saliendo")
             return
         }
 
-        VioLogger.info("📦 [VioSDK] openProduct(\(id)) — fetching from Commerce")
+        print("🔵 [VioSDK] Fetching producto \(id) desde Commerce...")
+        let apiKey = VioConfiguration.shared.dynamicCommerceConfig?.apiKey ?? ""
+        print("🔵 [VioSDK] Commerce apiKey=\(apiKey.prefix(8))...")
 
         guard let product = await CommerceProductFetcher.fetch(id: id) else {
-            VioLogger.error("❌ [VioSDK] No se pudo obtener producto \(id)")
+            print("❌ [VioSDK] No se pudo obtener producto \(id)")
             return
         }
 
-        VioLogger.info("✅ [VioSDK] Producto listo: \(product.title) — presentando overlay")
-
+        print("✅ [VioSDK] Producto: \(product.title) — emitiendo overlay")
         NotificationCenter.default.post(
             name: .vioOpenProductOverlay,
             object: nil,
             userInfo: ["product": product]
         )
-
-        VioLogger.info("📤 [VioSDK] Evento vioOpenProductOverlay emitido")
+        print("📤 [VioSDK] vioOpenProductOverlay emitido")
     }
 }
 
