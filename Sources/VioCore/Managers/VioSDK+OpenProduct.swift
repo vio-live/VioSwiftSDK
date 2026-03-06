@@ -96,12 +96,12 @@ private enum CommerceProductFetcher {
         // Convertir a Product completo con defaults para campos no usados en overlay
         let images = (slim.images ?? []).compactMap { img -> ProductImage? in
             guard let urlStr = img.url else { return nil }
-            return ProductImage(id: img.order ?? 0, url: urlStr, order: img.order ?? 0)
+            return ProductImage(id: String(img.order ?? 0), url: urlStr, order: img.order ?? 0)
         }
         let price = Price(
             amount: slim.price?.amount ?? 0,
-            amount_incl_taxes: slim.price?.amount_incl_taxes,
-            currency_code: slim.price?.currency_code ?? "NOK"
+            currency_code: slim.price?.currency_code ?? "NOK",
+            amount_incl_taxes: slim.price?.amount_incl_taxes
         )
         return Product(
             id: slim.id,
