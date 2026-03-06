@@ -215,6 +215,10 @@ public struct VProductDetailOverlay: View {
         .onAppear {
             // Initialize default options and variant
             initializeDefaultOptions()
+            // Timeout: mostrar contenido aunque imagen no cargue
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                if !imageLoaded { imageLoadTimeout = true }
+            }
         }
         .overlay {
             // Success animation overlay
