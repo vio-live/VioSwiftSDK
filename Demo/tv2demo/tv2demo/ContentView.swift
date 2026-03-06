@@ -52,7 +52,7 @@ struct ContentView: View {
                     .environmentObject(cartManager)
         .sheet(isPresented: $showPushOverlay) {
             if let product = pushProduct {
-                VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+                PushProductSheet(product: product, onDismiss: { showPushOverlay = false })
                     .environmentObject(cartManager)
             }
         }
@@ -113,7 +113,7 @@ struct ContentView: View {
                 .environmentObject(cartManager)
         .sheet(isPresented: $showPushOverlay) {
             if let product = pushProduct {
-                VProductDetailOverlay(product: product, onDismiss: { showPushOverlay = false })
+                PushProductSheet(product: product, onDismiss: { showPushOverlay = false })
                     .environmentObject(cartManager)
             }
         }
