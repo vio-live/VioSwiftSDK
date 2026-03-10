@@ -1,249 +1,183 @@
 //
 //  MatchLineupView.swift
-//  Viaplay
+//  ViaCastingUI
 //
-//  Componente reutilizable para mostrar alineaciones en campo de fútbol
+//  Shows starting XI for both teams.
+//  Fetches from Vio backend via LineupService — data sourced from Sportmonks.
 //
 
 import SwiftUI
+import VioCore
 
-struct MatchLineupView: View {
-    let homeLineup: TeamLineup
-    let awayLineup: TeamLineup
-    
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Home Team
-                    teamLineupSection(homeLineup, isHome: true)
-                        .frame(width: geometry.size.width - 24)
-                    
-                    // Football Pitch
-                    footballPitchView
-                        .frame(width: geometry.size.width - 24)
-                    
-                    // Away Team
-                    teamLineupSection(awayLineup, isHome: false)
-                        .frame(width: geometry.size.width - 24)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .frame(width: geometry.size.width)
+// MARK: - Backend-driven Lineup View
+
+/// Fetches and displays lineup for a broadcast.
+/// Usage: MatchLineupView(broadcastId: "real-madrid-vs-barcelona-2025-01-24")
+public struct MatchLineupView: View {
+
+    let broadcastId: String
+
+    @StateObject private var service = LineupService.shared
+
+    public init(broadcastId: String) {
+        self.broadcastId = broadcastId
+    }
+
+    public var body: some View {
+        Group {
+            switch service.state {
+            case .idle:
+                Color.clear.onAppear { service.loadLineup(broadcastId: broadcastId) }
+
+            case .loading:
+                lineupSkeleton
+
+            case .unavailable(let msg):
+                unavailableView(message: msg)
+
+            case .error(let msg):
+                unavailableView(message: msg)
+
+            case .loaded(let data):
+                loadedView(data: data)
             }
-            .frame(width: geometry.size.width)
-            .background(Color(hex: "1B1B25"))
+        }
+        .onAppear {
+            service.loadLineup(broadcastId: broadcastId)
         }
     }
-    
-    // MARK: - Team Lineup Section
-    
-    private func teamLineupSection(_ lineup: TeamLineup, isHome: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Team Header
-            HStack {
-                Text(lineup.team.name)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Spacer()
-                
-                Text(lineup.formation)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            // Players Grid
-            let playersByPosition = groupPlayersByPosition(lineup.players)
-            
-            VStack(spacing: 12) {
-                // Goalkeeper
-                if let gk = playersByPosition[.goalkeeper]?.first {
-                    playerRow(gk, isHome: isHome)
-                }
-                
-                // Defenders
-                if let defenders = playersByPosition[.defender] {
-                    HStack(spacing: 4) {
-                        ForEach(defenders) { player in
-                            playerCircle(player, isHome: isHome)
-                        }
+
+    // MARK: - Loaded State
+
+    private func loadedView(data: MatchLineupResponse) -> some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if let home = data.home, let away = data.away {
+                    HStack(alignment: .top, spacing: 0) {
+                        teamColumn(team: home, isHome: true)
+                        Divider().background(Color.white.opacity(0.1))
+                        teamColumn(team: away, isHome: false)
                     }
-                    .frame(maxWidth: .infinity)
-                }
-                
-                // Midfielders
-                if let midfielders = playersByPosition[.midfielder] {
-                    HStack(spacing: 4) {
-                        ForEach(midfielders) { player in
-                            playerCircle(player, isHome: isHome)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                
-                // Forwards
-                if let forwards = playersByPosition[.forward] {
-                    HStack(spacing: 4) {
-                        ForEach(forwards) { player in
-                            playerCircle(player, isHome: isHome)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                } else {
+                    unavailableView(message: "Lineup data incomplete")
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white.opacity(0.05))
-        )
+        .background(Color(hex: "1B1B25"))
     }
-    
-    // MARK: - Football Pitch View
-    
-    private var footballPitchView: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Pitch background
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(hex: "2C2D36"))
-                
-                // Pitch lines
-                VStack(spacing: 0) {
-                    // Top penalty area
-                    Rectangle()
-                        .fill(Color.white.opacity(0.3))
-                        .frame(height: geometry.size.height * 0.15)
-                    
-                    // Center circle area
-                    Spacer()
-                    
-                    // Center line
-                    Rectangle()
-                        .fill(Color.white.opacity(0.3))
-                        .frame(height: 2)
-                    
-                    Spacer()
-                    
-                    // Bottom penalty area
-                    Rectangle()
-                        .fill(Color.white.opacity(0.3))
-                        .frame(height: geometry.size.height * 0.15)
-                }
-                
-                // Center circle
-                Circle()
-                    .stroke(Color.white.opacity(0.3), lineWidth: 2)
-                    .frame(width: geometry.size.width * 0.3)
-                
-                // Players on pitch
-                VStack(spacing: 0) {
-                    // Home team (top)
-                    HStack(spacing: 4) {
-                        ForEach(homeLineup.players.filter { $0.position != .goalkeeper }.prefix(10)) { player in
-                            playerCircleOnPitch(player, isHome: true)
-                        }
+
+    private func teamColumn(team: LineupTeam, isHome: Bool) -> some View {
+        VStack(alignment: isHome ? .leading : .trailing, spacing: 0) {
+            // Team header
+            HStack(spacing: 8) {
+                if !isHome { Spacer() }
+                if let logo = team.teamLogo {
+                    AsyncImage(url: URL(string: logo)) { img in
+                        img.resizable().scaledToFit()
+                    } placeholder: {
+                        Circle().fill(Color.white.opacity(0.1))
                     }
-                    .padding(.top, 20)
-                    .padding(.horizontal, 8)
-                    
-                    Spacer()
-                    
-                    // Away team (bottom)
-                    HStack(spacing: 4) {
-                        ForEach(awayLineup.players.filter { $0.position != .goalkeeper }.prefix(10)) { player in
-                            playerCircleOnPitch(player, isHome: false)
-                        }
-                    }
-                    .padding(.bottom, 20)
-                    .padding(.horizontal, 8)
+                    .frame(width: 24, height: 24)
                 }
-            }
-        }
-        .frame(height: 400)
-    }
-    
-    // MARK: - Player Circle
-    
-    private func playerCircle(_ player: Player, isHome: Bool) -> some View {
-        VStack(spacing: 4) {
-            Circle()
-                .fill(isHome ? Color.red : Color.blue)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text("\(player.number)")
-                        .font(.system(size: 12, weight: .bold))
+                VStack(alignment: isHome ? .leading : .trailing, spacing: 2) {
+                    Text(team.teamName)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
-                )
-            
-            Text(player.name.components(separatedBy: " ").last ?? "")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.8))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                    if let formation = team.formation {
+                        Text(formation)
+                            .font(.system(size: 11))
+                            .foregroundColor(.white.opacity(0.5))
+                    }
+                }
+                if isHome { Spacer() }
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 10)
+
+            // Players
+            ForEach(team.starters) { player in
+                playerRow(player: player, isHome: isHome)
+            }
         }
         .frame(maxWidth: .infinity)
     }
-    
-    private func playerCircleOnPitch(_ player: Player, isHome: Bool) -> some View {
-        Circle()
-            .fill(isHome ? Color.red : Color.blue)
-            .frame(width: 32, height: 32)
-            .overlay(
-                Text("\(player.number)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.white)
-            )
-            .frame(maxWidth: .infinity)
-    }
-    
-    // MARK: - Player Row
-    
-    private func playerRow(_ player: Player, isHome: Bool) -> some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(isHome ? Color.red : Color.blue)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text("\(player.number)")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                )
-            
+
+    private func playerRow(player: LineupPlayer, isHome: Bool) -> some View {
+        HStack(spacing: 6) {
+            if !isHome { Spacer() }
+
+            // Jersey number
+            Text(player.jerseyNumber.map { "\($0)" } ?? "-")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundColor(.white.opacity(0.5))
+                .frame(width: 22, alignment: isHome ? .leading : .trailing)
+
+            // Name
             Text(player.name)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.white)
-            
-            if player.isCaptain {
-                Image(systemName: "c.circle.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(.yellow)
-            }
-            
-            Spacer()
-            
-            Text(player.position.displayName)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.6))
+                .lineLimit(1)
+
+            // Position emoji
+            Text(player.positionEmoji)
+                .font(.system(size: 11))
+
+            if isHome { Spacer() }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.02))
     }
-    
-    // MARK: - Helpers
-    
-    private func groupPlayersByPosition(_ players: [Player]) -> [Player.PlayerPosition: [Player]] {
-        Dictionary(grouping: players, by: { $0.position })
+
+    // MARK: - Skeleton
+
+    private var lineupSkeleton: some View {
+        HStack(alignment: .top, spacing: 0) {
+            skeletonColumn
+            Divider().background(Color.white.opacity(0.1))
+            skeletonColumn
+        }
+        .padding(.vertical, 12)
+        .background(Color(hex: "1B1B25"))
+    }
+
+    private var skeletonColumn: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Header skeleton
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 100, height: 14)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 6)
+
+            ForEach(0..<11, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 28)
+                    .padding(.horizontal, 12)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Unavailable
+
+    private func unavailableView(message: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 32))
+                .foregroundColor(.white.opacity(0.2))
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.white.opacity(0.4))
+                .multilineTextAlignment(.center)
+            Text("Tilgjengelig ~60 min før kampstart")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.25))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(32)
+        .background(Color(hex: "1B1B25"))
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    MatchLineupView(
-        homeLineup: .mockHome(for: Match.barcelonaPSG),
-        awayLineup: .mockAway(for: Match.barcelonaPSG)
-    )
-    .preferredColorScheme(.dark)
-}
-
