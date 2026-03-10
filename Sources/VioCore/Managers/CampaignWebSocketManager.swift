@@ -23,6 +23,8 @@ public class CampaignWebSocketManager: ObservableObject {
     public var onComponentStatusChanged: ((ComponentStatusChangedEvent) -> Void)?
     public var onComponentConfigUpdated: ((ComponentConfigUpdatedEvent) -> Void)?
     public var onConnectionStatusChanged: ((Bool) -> Void)?
+    /// Called when backend triggers lineup display. Carries the video timestamp and optional broadcastId.
+    public var onLineupShow: ((LineupShowEvent) -> Void)?
     
     // MARK: - Initialization
     public init(campaignId: Int, baseURL: String) {
@@ -212,6 +214,11 @@ public class CampaignWebSocketManager: ObservableObject {
                 } else {
                     VioLogger.warning("Invalid config:updated event format", component: "CampaignWebSocket")
                 }
+                
+            case "lineup_show":
+                let event = try JSONDecoder().decode(LineupShowEvent.self, from: data)
+                VioLogger.success("Decoded lineup_show event (videoTimestamp: \(event.videoTimestamp))", component: "CampaignWebSocket")
+                onLineupShow?(event)
                 
             default:
                 VioLogger.warning("Unknown event type: \(eventType)", component: "CampaignWebSocket")

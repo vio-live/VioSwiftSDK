@@ -25,6 +25,7 @@ struct AllContentFeed: View {
     @State private var shareVideoTitle = ""
     @State private var shareVideoURL: URL?
     @State private var scrolledToTop = false
+    @ObservedObject private var lineupService = LineupService.shared
     
     init(
         timelineEvents: [AnyTimelineEvent],
@@ -55,9 +56,6 @@ struct AllContentFeed: View {
                         // Welcome message - shown immediately at the top
                         welcomeMessage
                             .id("welcome")
-
-                        // Lineup preview card — shows starting XI from backend (LineupService)
-                        LineupPreviewCard(onTapFullLineup: { onSelectTab(.statistics) })
 
                         // Events oldest to newest (antiguos arriba, nuevos abajo)
                         ForEach(timelineEvents.sorted { $0.videoTimestamp < $1.videoTimestamp }, id: \.id) { wrappedEvent in
@@ -409,10 +407,22 @@ struct AllContentFeed: View {
                         ))
                         
                     case "lineup":
-                        // Render lineup card with proper positions
+                        // Render lineup card — uses real backend data if source=="backend", else hardcoded demo data
                         if let team = announcement.metadata?["team"],
                            let formation = announcement.metadata?["formation"] {
-                            let players = getDefaultLineup(team: team, formation: formation)
+                            let isBackend = announcement.metadata?["source"] == "backend"
+                            let players: [PlayerInfo]
+                            if isBackend {
+                                if team == "home", let homeTeam = lineupService.lineup?.home {
+                                    players = homeTeam.players.map { $0.toPlayerInfo() }
+                                } else if team == "away", let awayTeam = lineupService.lineup?.away {
+                                    players = awayTeam.players.map { $0.toPlayerInfo() }
+                                } else {
+                                    players = getDefaultLineup(team: team, formation: formation)
+                                }
+                            } else {
+                                players = getDefaultLineup(team: team, formation: formation)
+                            }
                             
                             LineupCard(
                                 teamName: announcement.title.replacingOccurrences(of: "Oppstilling ", with: ""),
