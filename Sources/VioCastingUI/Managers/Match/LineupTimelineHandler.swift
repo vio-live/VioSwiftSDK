@@ -3,17 +3,20 @@
 //  VioCastingUI
 //
 //  Handles `lineup_show` WebSocket events.
+//
 //  Flow:
 //    1. WS fires lineup_show with videoTimestamp
-//    2. Pre-fetched LineupService data used (or fetched on-demand if missing)
-//    3. Two AnnouncementEvents (home + away) injected into UnifiedTimelineManager
-//       at the received videoTimestamp
+//    2. LineupService data used if already cached; otherwise fetch is triggered
+//       and state is observed via Combine — no polling, no Task.sleep
+//    3. Two LineupTimelineEvents (home + away) injected into UnifiedTimelineManager
+//       at the received videoTimestamp, with players embedded in the event itself
 //
 //  Hardcoded demo data in TimelineDataGenerator is NOT touched —
 //  this handler only runs in the live / backend-driven path.
 //
 
 import Foundation
+import Combine
 import VioCore
 
 @MainActor
@@ -21,6 +24,7 @@ public class LineupTimelineHandler {
 
     private weak var timeline: UnifiedTimelineManager?
     private var lineupService: LineupService { .shared }
+    private var cancellable: AnyCancellable?
 
     public init(timeline: UnifiedTimelineManager) {
         self.timeline = timeline
@@ -31,29 +35,38 @@ public class LineupTimelineHandler {
     /// Call this when a `lineup_show` WS event arrives.
     public func handle(event: LineupShowEvent, broadcastId: String) {
         let ts = event.videoTimestamp
+        cancellable = nil   // cancel any pending observation
 
-        // If already loaded, inject immediately
+        // Already loaded → inject immediately, no async work needed
         if let cached = lineupService.lineup {
             inject(lineup: cached, at: ts)
             return
         }
 
-        // Fetch first, then inject
+        // Trigger fetch if idle
         lineupService.loadLineup(broadcastId: broadcastId)
 
-        // Observe until loaded (poll via Task — lightweight)
-        Task {
-            for _ in 0..<30 {   // max 15 s (30 × 0.5 s)
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                if let loaded = lineupService.lineup {
-                    inject(lineup: loaded, at: ts)
-                    return
+        // Observe state via Combine — resolves exactly once
+        cancellable = lineupService.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                switch state {
+                case .loaded(let data):
+                    self?.inject(lineup: data, at: ts)
+                    self?.cancellable = nil   // done
+
+                case .error(let msg):
+                    VioLogger.error("lineup_show: fetch failed — \(msg). Lineup not shown.", component: "Lineup")
+                    self?.cancellable = nil
+
+                case .unavailable(let msg):
+                    VioLogger.warning("lineup_show: lineup unavailable — \(msg)", component: "Lineup")
+                    self?.cancellable = nil
+
+                case .loading, .idle:
+                    break   // wait for next state
                 }
-                if case .error = lineupService.state { return }
-                if case .unavailable = lineupService.state { return }
             }
-            VioLogger.warning("lineup_show: lineup not available after 15 s — skipping injection", component: "Lineup")
-        }
     }
 
     // MARK: - Inject into timeline
@@ -62,65 +75,38 @@ public class LineupTimelineHandler {
         guard let timeline = timeline else { return }
 
         if let home = lineup.home {
-            let event = AnnouncementEvent(
-                id: "lineup-home-\(Int(videoTimestamp))",
+            let event = LineupTimelineEvent(
+                id: "lineup-home-\(broadcastSuffix(videoTimestamp))",
                 videoTimestamp: videoTimestamp,
-                title: "Oppstilling \(home.teamName)",
-                message: "\(home.formation ?? "") · \(home.players.count) spillere",
-                imageUrl: home.teamLogo,
-                actionUrl: nil,
-                actionText: nil,
-                metadata: [
-                    "type":      "lineup",
-                    "team":      "home",
-                    "formation": home.formation ?? "",
-                    "source":    "backend"   // flag so renderEvent uses real data
-                ]
+                teamKey: "home",
+                teamName: home.teamName,
+                formation: home.formation,
+                teamLogo: home.teamLogo,
+                players: home.players
             )
             timeline.addEvent(event)
         }
 
         if let away = lineup.away {
-            let event = AnnouncementEvent(
-                id: "lineup-away-\(Int(videoTimestamp))",
-                videoTimestamp: videoTimestamp + 1,  // 1 s apart so both appear
-                title: "Oppstilling \(away.teamName)",
-                message: "\(away.formation ?? "") · \(away.players.count) spillere",
-                imageUrl: away.teamLogo,
-                actionUrl: nil,
-                actionText: nil,
-                metadata: [
-                    "type":      "lineup",
-                    "team":      "away",
-                    "formation": away.formation ?? "",
-                    "source":    "backend"
-                ]
+            let event = LineupTimelineEvent(
+                id: "lineup-away-\(broadcastSuffix(videoTimestamp))",
+                videoTimestamp: videoTimestamp + 1,   // 1 s apart so both render correctly
+                teamKey: "away",
+                teamName: away.teamName,
+                formation: away.formation,
+                teamLogo: away.teamLogo,
+                players: away.players
             )
             timeline.addEvent(event)
         }
 
-        VioLogger.success("Lineup injected into timeline at ts=\(videoTimestamp)", component: "Lineup")
-    }
-}
-
-// MARK: - PlayerInfo mapper
-
-extension LineupPlayer {
-    /// Convert backend LineupPlayer to the existing PlayerInfo model used by LineupCard.
-    func toPlayerInfo() -> PlayerInfo {
-        PlayerInfo(
-            number: jerseyNumber ?? 0,
-            name: name,
-            position: localizedPosition
+        VioLogger.success(
+            "Lineup injected at ts=\(Int(videoTimestamp))s — home: \(lineup.home?.players.count ?? 0), away: \(lineup.away?.players.count ?? 0)",
+            component: "Lineup"
         )
     }
 
-    private var localizedPosition: String {
-        switch position {
-        case "goalkeeper": return "Keeper"
-        case "defender":   return "Forsvar"
-        case "midfielder": return "Midtbane"
-        default:           return "Angrep"
-        }
+    private func broadcastSuffix(_ ts: TimeInterval) -> String {
+        String(Int(ts))
     }
 }

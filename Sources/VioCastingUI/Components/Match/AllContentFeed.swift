@@ -25,7 +25,6 @@ struct AllContentFeed: View {
     @State private var shareVideoTitle = ""
     @State private var shareVideoURL: URL?
     @State private var scrolledToTop = false
-    @ObservedObject private var lineupService = LineupService.shared
     
     init(
         timelineEvents: [AnyTimelineEvent],
@@ -407,27 +406,13 @@ struct AllContentFeed: View {
                         ))
                         
                     case "lineup":
-                        // Render lineup card — uses real backend data if source=="backend", else hardcoded demo data
+                        // Legacy demo path — real backend lineup uses case .lineup below
                         if let team = announcement.metadata?["team"],
                            let formation = announcement.metadata?["formation"] {
-                            let isBackend = announcement.metadata?["source"] == "backend"
-                            let players: [PlayerInfo]
-                            if isBackend {
-                                if team == "home", let homeTeam = lineupService.lineup?.home {
-                                    players = homeTeam.players.map { $0.toPlayerInfo() }
-                                } else if team == "away", let awayTeam = lineupService.lineup?.away {
-                                    players = awayTeam.players.map { $0.toPlayerInfo() }
-                                } else {
-                                    players = getDefaultLineup(team: team, formation: formation)
-                                }
-                            } else {
-                                players = getDefaultLineup(team: team, formation: formation)
-                            }
-                            
                             LineupCard(
                                 teamName: announcement.title.replacingOccurrences(of: "Oppstilling ", with: ""),
                                 formation: formation,
-                                players: players,
+                                players: getDefaultLineup(team: team, formation: formation),
                                 teamColor: team == "home" ? .blue : .red,
                                 isHome: team == "home"
                             )
@@ -504,6 +489,22 @@ struct AllContentFeed: View {
                         ))
                 }
                 
+            // Lineup — injected by LineupTimelineHandler from real backend data
+            case .lineup:
+                if let lineupEvent = wrappedEvent.event as? LineupTimelineEvent {
+                    LineupCard(
+                        teamName: lineupEvent.teamName,
+                        formation: lineupEvent.formation ?? "",
+                        players: lineupEvent.players.map { $0.toPlayerInfo() },
+                        teamColor: lineupEvent.teamKey == "home" ? .blue : .red,
+                        isHome: lineupEvent.teamKey == "home"
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    ))
+                }
+
             // Other types - add as needed
             default:
                 EmptyView()

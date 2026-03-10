@@ -43,6 +43,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
     case highlight = "highlight"
     case statisticsUpdate = "statistics_update"
     case announcement = "announcement"
+    case lineup = "lineup"
     case replay = "replay"
 
     public var displayName: String {
@@ -152,7 +153,7 @@ extension TimelineEventType {
     public var category: TimelineEventCategory {
         switch self {
         case .matchGoal, .matchCard, .matchSubstitution, .matchKickOff,
-             .matchHalfTime, .matchFullTime, .matchPenalty:
+             .matchHalfTime, .matchFullTime, .matchPenalty, .lineup:
             return .match
         case .chatMessage, .adminComment, .tweet, .socialPost:
             return .social

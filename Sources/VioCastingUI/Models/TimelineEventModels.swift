@@ -269,6 +269,24 @@ public struct AnnouncementEvent: TimelineEvent {
     public var displayPriority: Int { 9 }
 }
 
+// MARK: - Lineup Event
+
+/// Carries starting XI data for both teams as a proper timeline event.
+/// Injected by LineupTimelineHandler when a lineup_show WS event arrives.
+/// Players are embedded at injection time — no need to query LineupService at render time.
+public struct LineupTimelineEvent: TimelineEvent {
+    public let id: String
+    public let videoTimestamp: TimeInterval
+    public let teamKey: String      // "home" | "away"
+    public let teamName: String
+    public let formation: String?
+    public let teamLogo: String?
+    public let players: [LineupPlayer]
+
+    public var eventType: TimelineEventType { .lineup }
+    public var displayPriority: Int { 9 }
+}
+
 // MARK: - Highlight Event
 public struct HighlightTimelineEvent: TimelineEvent {
     public let id: String
