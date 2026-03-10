@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct MatchContentView: View {
     let selectedTab: MatchTab
@@ -124,7 +125,11 @@ struct MatchContentView: View {
                     )
                     
                 case .statistics:
-                    MatchStatsView(statistics: viewModel.matchStatistics)
+                    MatchStatsView(
+                        statistics: viewModel.matchStatistics,
+                        broadcastId: viewModel.match.id.uuidString.isEmpty ? nil
+                            : CampaignManager.shared.currentBroadcastContext?.broadcastId
+                    )
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)

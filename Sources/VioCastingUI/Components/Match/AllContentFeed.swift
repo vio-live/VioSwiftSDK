@@ -55,7 +55,10 @@ struct AllContentFeed: View {
                         // Welcome message - shown immediately at the top
                         welcomeMessage
                             .id("welcome")
-                        
+
+                        // Lineup preview card — shows starting XI from backend (LineupService)
+                        LineupPreviewCard(onTapFullLineup: { onSelectTab(.statistics) })
+
                         // Events oldest to newest (antiguos arriba, nuevos abajo)
                         ForEach(timelineEvents.sorted { $0.videoTimestamp < $1.videoTimestamp }, id: \.id) { wrappedEvent in
                             renderEvent(wrappedEvent)

@@ -9,11 +9,22 @@ import SwiftUI
 
 struct MatchStatsView: View {
     let statistics: MatchStatistics
-    
+    var broadcastId: String? = nil
+
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
+                    // Starting XI — from backend (LineupService)
+                    if let bid = broadcastId {
+                        MatchLineupView(broadcastId: bid)
+                            .frame(minHeight: 200)
+
+                        Divider()
+                            .background(Color.white.opacity(0.08))
+                            .padding(.vertical, 8)
+                    }
+
                     ForEach(statistics.stats) { stat in
                         statRow(stat)
                             .padding(.horizontal, 12)
