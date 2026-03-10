@@ -28,6 +28,10 @@ public class CampaignManager: ObservableObject {
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
+    
+    /// Called when backend sends a `lineup_show` WS event.
+    /// Set this from VioCastingUI layer (LineupTimelineHandler) — avoids cross-module dependency.
+    public var onLineupShow: ((LineupShowEvent) -> Void)?
     private var cancellables = Set<AnyCancellable>()
     private var baseURL: String  // For REST API (GraphQL base URL)
     private var isInitializing = false  // Flag to prevent multiple simultaneous initializations
@@ -985,6 +989,12 @@ public class CampaignManager: ObservableObject {
                 // - If campaign is Upcoming: No event sent, waits for campaign_started
                 // - If campaign is Active: No event sent, can fetch components
                 // The event handlers above will process these events automatically
+            }
+        }
+        
+        webSocketManager?.onLineupShow = { [weak self] event in
+            Task { @MainActor in
+                self?.onLineupShow?(event)
             }
         }
         
