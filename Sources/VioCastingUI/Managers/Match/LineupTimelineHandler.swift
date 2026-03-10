@@ -37,7 +37,15 @@ public class LineupTimelineHandler {
         let ts = event.videoTimestamp
         cancellable = nil   // cancel any pending observation
 
-        // Already loaded → inject immediately, no async work needed
+        // Calibrate timeline if backend provided kickoffVideoTimestamp.
+        // This adjusts preMatchDuration to the real stream length before kickoff,
+        // regardless of whether the stream started 5 or 30 minutes early.
+        if let kickoffTs = event.kickoffVideoTimestamp, kickoffTs > 0 {
+            timeline?.preMatchDuration = kickoffTs
+            VioLogger.debug("preMatchDuration calibrated to \(Int(kickoffTs))s from kickoffVideoTimestamp", component: "Lineup")
+        }
+
+        // Already loaded → inject immediately
         if let cached = lineupService.lineup {
             inject(lineup: cached, at: ts)
             return
@@ -46,14 +54,14 @@ public class LineupTimelineHandler {
         // Trigger fetch if idle
         lineupService.loadLineup(broadcastId: broadcastId)
 
-        // Observe state via Combine — resolves exactly once
+        // Observe state via Combine — resolves exactly once, no polling
         cancellable = lineupService.$state
             .receive(on: DispatchQueue.main)
             .sink { [weak self] state in
                 switch state {
                 case .loaded(let data):
                     self?.inject(lineup: data, at: ts)
-                    self?.cancellable = nil   // done
+                    self?.cancellable = nil
 
                 case .error(let msg):
                     VioLogger.error("lineup_show: fetch failed — \(msg). Lineup not shown.", component: "Lineup")
