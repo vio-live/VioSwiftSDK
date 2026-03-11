@@ -124,11 +124,7 @@
     "flag": "https://flagcdn.com/w320/no.png"
   },
   "liveShow": {
-    "campaignId": 0,
-    "tipio": {
-      "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
-      "baseUrl": "https://stg-dev-microservices.tipioapp.com"
-    }
+    "campaignId": 0
   },
   "localization": {
     "defaultLanguage": "en",
@@ -150,12 +146,8 @@
   "campaigns": {
     "webSocketBaseURL": "https://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "campaignAdminApiKey": "",
     "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
-    "_comment": "campaignApiKey: for GET /v1/sdk/broadcast and contentId flow (Viaplay app). campaignAdminApiKey: for legacy endpoints.",
-    "_comment2": "autoDiscover: true = use auto-discovery endpoint (/v1/sdk/campaigns), false = use legacy single campaign mode (campaignId from liveShow.campaignId)",
     "autoDiscover": true,
-    "_comment2": "channelId: Optional channel ID for broadcast context. Can be null.",
     "channelId": null
   },
   "brand": {

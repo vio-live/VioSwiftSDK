@@ -9,6 +9,9 @@ import SwiftUI
 import Combine
 import VioCore
 
+#if canImport(UIKit)
+import UIKit
+
 /// AsyncImage with caching support to avoid loading indicators
 /// Caches images in memory and disk, only shows loading if image is not cached
 public struct CachedAsyncImage<Content: View, Placeholder: View>: View {
@@ -70,7 +73,6 @@ public class ImageLoader: ObservableObject {
             return
         }
         
-        // Validate URL scheme
         guard Self.isValidImageURL(url) else {
             VioLogger.warning("Invalid URL scheme for image: \(url.absoluteString)", component: "ImageLoader")
             self.image = nil
@@ -79,13 +81,11 @@ public class ImageLoader: ObservableObject {
         
         let cacheKey = url.absoluteString as NSString
         
-        // Check memory cache first
         if let cachedImage = Self.cache.object(forKey: cacheKey) {
             self.image = Image(uiImage: cachedImage)
             return
         }
         
-        // Check disk cache
         do {
             if let diskImage = try loadFromDisk(key: cacheKey as String) {
                 Self.cache.setObject(diskImage, forKey: cacheKey)
@@ -96,20 +96,16 @@ public class ImageLoader: ObservableObject {
             VioLogger.warning("Failed to load image from disk cache: \(error)", component: "ImageLoader")
         }
         
-        // Load from network
         Task {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
                 if let uiImage = UIImage(data: data) {
-                    // Save to memory cache
                     Self.cache.setObject(uiImage, forKey: cacheKey)
-                    // Save to disk cache
                     do {
                         try saveToDisk(image: uiImage, key: cacheKey as String)
                     } catch {
                         VioLogger.warning("Failed to save image to disk cache: \(error)", component: "ImageLoader")
                     }
-                    // Update image
                     await MainActor.run {
                         self.image = Image(uiImage: uiImage)
                     }
@@ -141,19 +137,14 @@ public class ImageLoader: ObservableObject {
     
     private static func cacheFileURL(key: String) -> URL? {
         guard let cacheDir = cacheDirectory() else { return nil }
-        // Use hash of URL as filename to avoid special characters
         let filename = String(key.hashValue)
         return cacheDir.appendingPathComponent(filename)
     }
     
     private func loadFromDisk(key: String) throws -> UIImage? {
-        guard let fileURL = cacheFileURL(key: key) else {
-            return nil
-        }
+        guard let fileURL = cacheFileURL(key: key) else { return nil }
         let data = try Data(contentsOf: fileURL)
-        guard let image = UIImage(data: data) else {
-            return nil
-        }
+        guard let image = UIImage(data: data) else { return nil }
         return image
     }
     
@@ -165,40 +156,65 @@ public class ImageLoader: ObservableObject {
         try data.write(to: fileURL)
     }
     
-    /// Clear cache for a specific logo URL (called when logo changes)
     public static func clearCache(for url: URL?) {
         guard let url = url else { return }
-        
-        // Validate URL scheme
-        guard isValidImageURL(url) else {
-            VioLogger.warning("Cannot clear cache for invalid URL scheme: \(url.absoluteString)", component: "ImageLoader")
-            return
-        }
-        
+        guard isValidImageURL(url) else { return }
         let cacheKey = url.absoluteString as NSString
-        
-        // Remove from memory cache
         cache.removeObject(forKey: cacheKey)
-        
-        // Remove from disk cache
         let key = cacheKey as String
         if let fileURL = cacheFileURL(key: key) {
-            do {
-                try fileManager.removeItem(at: fileURL)
-                VioLogger.debug("Cleared cache for logo: \(url.absoluteString)", component: "ImageLoader")
-            } catch {
-                VioLogger.warning("Failed to remove cached logo file: \(error)", component: "ImageLoader")
-            }
+            try? fileManager.removeItem(at: fileURL)
         }
     }
     
-    /// Clear all cached campaign logos (called when configuration changes)
     public static func clearCache() {
         cache.removeAllObjects()
         if let cacheDir = cacheDirectory() {
             try? fileManager.removeItem(at: cacheDir)
-            // Recreate directory
             try? fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         }
     }
 }
+
+#else
+
+// MARK: - macOS / CLI fallback (no UIKit)
+
+/// Fallback for non-UIKit platforms (macOS CLI, testing)
+public struct CachedAsyncImage<Content: View, Placeholder: View>: View {
+    let url: URL?
+    let content: (Image) -> Content
+    let placeholder: () -> Placeholder
+
+    public init(
+        url: URL?,
+        @ViewBuilder content: @escaping (Image) -> Content,
+        @ViewBuilder placeholder: @escaping () -> Placeholder
+    ) {
+        self.url = url
+        self.content = content
+        self.placeholder = placeholder
+    }
+
+    public var body: some View {
+        AsyncImage(url: url) { phase in
+            if let image = phase.image {
+                content(image)
+            } else {
+                placeholder()
+            }
+        }
+    }
+}
+
+@MainActor
+public class ImageLoader: ObservableObject {
+    @Published public var image: Image?
+    public init(url: URL?) {}
+    public func load(url: URL?) {}
+    public static func clearCache(for url: URL?) {}
+    public static func clearCache() {}
+    public static func cacheDirectory() -> URL? { nil }
+}
+
+#endif

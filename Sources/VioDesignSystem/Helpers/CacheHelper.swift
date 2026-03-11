@@ -80,6 +80,7 @@ public struct CacheHelper {
     }
 
     /// Clear both campaign cache and image cache when configuration changes
+    @MainActor
     public static func clearAllCaches() {
         // Clear campaign cache (from SDK)
         CacheManager.shared.clearCache()
