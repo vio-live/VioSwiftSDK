@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import VioCore
 
 // MARK: - Match Tab Enum
 public enum MatchTab: String, CaseIterable {

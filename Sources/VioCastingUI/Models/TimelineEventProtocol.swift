@@ -73,6 +73,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "Høydepunkt"
         case .statisticsUpdate: return "Statistikk"
         case .announcement: return "Kunngjøring"
+        case .lineup: return "Oppstilling"
         case .replay: return "Reprise"
         }
     }
@@ -99,6 +100,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "play.circle.fill"
         case .statisticsUpdate: return "chart.line.uptrend.xyaxis"
         case .announcement: return "bell.fill"
+        case .lineup: return "person.3.fill"
         case .replay: return "arrow.counterclockwise.circle.fill"
         }
     }
@@ -124,6 +126,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "white"
         case .statisticsUpdate: return "cyan"
         case .announcement: return "yellow"
+        case .lineup: return "blue"
         case .replay: return "gray"
         }
     }

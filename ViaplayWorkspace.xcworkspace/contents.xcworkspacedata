@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:Package.swift">
+   </FileRef>
+   <Group
+      location = "container:"
+      name = "Demo Apps">
+      <FileRef
+         location = "group:Demo/Viaplay/Viaplay.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:Demo/tv2demo/tv2demo.xcodeproj">
+      </FileRef>
+   </Group>
+</Workspace>

@@ -282,9 +282,21 @@ public struct LineupTimelineEvent: TimelineEvent {
     public let formation: String?
     public let teamLogo: String?
     public let players: [LineupPlayer]
+    public let metadata: [String: String]?
 
     public var eventType: TimelineEventType { .lineup }
     public var displayPriority: Int { 9 }
+
+    public init(id: String, videoTimestamp: TimeInterval, teamKey: String, teamName: String, formation: String?, teamLogo: String?, players: [LineupPlayer], metadata: [String: String]? = nil) {
+        self.id = id
+        self.videoTimestamp = videoTimestamp
+        self.teamKey = teamKey
+        self.teamName = teamName
+        self.formation = formation
+        self.teamLogo = teamLogo
+        self.players = players
+        self.metadata = metadata
+    }
 }
 
 // MARK: - Highlight Event
