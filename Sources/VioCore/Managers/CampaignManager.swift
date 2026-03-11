@@ -28,6 +28,10 @@ public class CampaignManager: ObservableObject {
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
+    
+    /// Called when backend sends a `lineup_show` WS event.
+    /// Set this from VioCastingUI layer (LineupTimelineHandler) — avoids cross-module dependency.
+    public var onLineupShow: ((LineupShowEvent) -> Void)?
     private var cancellables = Set<AnyCancellable>()
     private var baseURL: String  // For REST API (GraphQL base URL)
     private var isInitializing = false  // Flag to prevent multiple simultaneous initializations
@@ -49,33 +53,22 @@ public class CampaignManager: ObservableObject {
             .replacingOccurrences(of: "/graphql", with: "")
             .replacingOccurrences(of: "/v1/graphql", with: "")
         
-        // Check if auto-discovery is enabled
-        let autoDiscover = config.campaignConfiguration.autoDiscover
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        
-        print("🎯 [CampaignManager] init - autoDiscover: \(autoDiscover), campaignId: \(configuredCampaignId)")
-        
-        // Backward compatibility logic:
-        // - If autoDiscover is true, use auto-discovery (campaignId can be 0)
-        // - If autoDiscover is false and campaignId > 0, use legacy single campaign mode
-        // - If both are false/0, campaigns are disabled
-        if autoDiscover {
-            // Auto-discovery mode - campaigns will be discovered when setBroadcastContext is called
-            print("🎯 [CampaignManager] init - Auto-discovery enabled, waiting for setBroadcastContext")
+        if config.campaignConfiguration.autoDiscover {
+            // Auto-discovery: campaigns resolved at runtime via setBroadcastContext
             self.isCampaignActive = true
             self.campaignState = .active
-        } else if configuredCampaignId > 0 {
-            // Legacy mode - single campaign
-            self.campaignId = configuredCampaignId
-            print("🎯 [CampaignManager] init - Legacy mode: Setting campaignId to: \(configuredCampaignId)")
-            Task {
-                await initializeCampaign()
-            }
+            VioLogger.debug("Auto-discovery mode — waiting for setBroadcastContext", component: "CampaignManager")
         } else {
-            // No campaign configured - SDK works normally without restrictions
-            self.isCampaignActive = true
-            self.campaignState = .active
-            print("🎯 [CampaignManager] init - No campaignId configured, campaigns disabled")
+            // Legacy mode (backward compat)
+            let configuredCampaignId = config.liveShowConfiguration.campaignId
+            if configuredCampaignId > 0 {
+                self.campaignId = configuredCampaignId
+                VioLogger.debug("Legacy mode — campaignId: \(configuredCampaignId)", component: "CampaignManager")
+                Task { await initializeCampaign() }
+            } else {
+                self.isCampaignActive = true
+                self.campaignState = .active
+            }
         }
     }
     
@@ -84,35 +77,38 @@ public class CampaignManager: ObservableObject {
     /// Reinitialize campaign manager with current configuration
     /// Called automatically when VioConfiguration is updated
     public func reinitialize() {
-        print("🎯 [CampaignManager] reinitialize - Starting reinitialization")
-        // Disconnect existing connection
+        VioLogger.debug("Reinitializing", component: "CampaignManager")
         disconnect()
         
-        // Get current configuration
         let config = VioConfiguration.shared
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        print("🎯 [CampaignManager] reinitialize - Reading campaignId from config: \(configuredCampaignId)")
-        print("🎯 [CampaignManager] reinitialize - Previous campaignId was: \(self.campaignId ?? -1)")
         
         // Update base URL
         self.baseURL = config.environment.graphQLURL
             .replacingOccurrences(of: "/graphql", with: "")
             .replacingOccurrences(of: "/v1/graphql", with: "")
         
-        // If campaignId is 0 or not configured, campaigns are disabled (normal SDK behavior)
-        if configuredCampaignId > 0 {
-            self.campaignId = configuredCampaignId
-            print("🎯 [CampaignManager] reinitialize - Setting campaignId to: \(configuredCampaignId)")
-            Task {
-                await initializeCampaign()
-            }
-        } else {
-            // No campaign configured - SDK works normally without restrictions
+        // Auto-discovery mode: campaigns are resolved at runtime via setBroadcastContext.
+        // Do NOT read campaignId from config — it will be discovered from broadcastId + apiKey.
+        if config.campaignConfiguration.autoDiscover {
             self.campaignId = nil
             self.isCampaignActive = true
             self.campaignState = .active
             self.activeComponents.removeAll()
-            print("🎯 [CampaignManager] reinitialize - No campaignId configured, campaigns disabled")
+            VioLogger.debug("Auto-discovery mode — waiting for setBroadcastContext", component: "CampaignManager")
+            return
+        }
+        
+        // Legacy mode (backward compat): use hardcoded campaignId from config
+        let configuredCampaignId = config.liveShowConfiguration.campaignId
+        if configuredCampaignId > 0 {
+            self.campaignId = configuredCampaignId
+            VioLogger.debug("Legacy mode — campaignId: \(configuredCampaignId)", component: "CampaignManager")
+            Task { await initializeCampaign() }
+        } else {
+            self.campaignId = nil
+            self.isCampaignActive = true
+            self.campaignState = .active
+            self.activeComponents.removeAll()
         }
     }
     
@@ -985,6 +981,12 @@ public class CampaignManager: ObservableObject {
                 // - If campaign is Upcoming: No event sent, waits for campaign_started
                 // - If campaign is Active: No event sent, can fetch components
                 // The event handlers above will process these events automatically
+            }
+        }
+        
+        webSocketManager?.onLineupShow = { [weak self] event in
+            Task { @MainActor in
+                self?.onLineupShow?(event)
             }
         }
         

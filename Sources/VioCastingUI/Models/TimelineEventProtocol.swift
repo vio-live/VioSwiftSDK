@@ -43,6 +43,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
     case highlight = "highlight"
     case statisticsUpdate = "statistics_update"
     case announcement = "announcement"
+    case lineup = "lineup"
     case replay = "replay"
 
     public var displayName: String {
@@ -72,6 +73,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "Høydepunkt"
         case .statisticsUpdate: return "Statistikk"
         case .announcement: return "Kunngjøring"
+        case .lineup: return "Oppstilling"
         case .replay: return "Reprise"
         }
     }
@@ -98,6 +100,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "play.circle.fill"
         case .statisticsUpdate: return "chart.line.uptrend.xyaxis"
         case .announcement: return "bell.fill"
+        case .lineup: return "person.3.fill"
         case .replay: return "arrow.counterclockwise.circle.fill"
         }
     }
@@ -123,6 +126,7 @@ public enum TimelineEventType: String, Codable, CaseIterable {
         case .highlight: return "white"
         case .statisticsUpdate: return "cyan"
         case .announcement: return "yellow"
+        case .lineup: return "blue"
         case .replay: return "gray"
         }
     }
@@ -152,7 +156,7 @@ extension TimelineEventType {
     public var category: TimelineEventCategory {
         switch self {
         case .matchGoal, .matchCard, .matchSubstitution, .matchKickOff,
-             .matchHalfTime, .matchFullTime, .matchPenalty:
+             .matchHalfTime, .matchFullTime, .matchPenalty, .lineup:
             return .match
         case .chatMessage, .adminComment, .tweet, .socialPost:
             return .social

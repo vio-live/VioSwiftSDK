@@ -40,12 +40,20 @@ public class AnalyticsManager {
         
         #if canImport(Mixpanel)
         // Initialize Mixpanel with basic configuration
+        #if os(iOS) || os(tvOS)
         mixpanelInstance = Mixpanel.initialize(
             token: token,
             trackAutomaticEvents: config.autocapture,
             optOutTrackingByDefault: false,
             superProperties: [:]
         )
+        #else
+        mixpanelInstance = Mixpanel.initialize(
+            token: token,
+            optOutTrackingByDefault: false,
+            superProperties: [:]
+        )
+        #endif
         
         // Disable Mixpanel logging to avoid unnecessary logs
         // Note: If you need to debug, you can enable this temporarily

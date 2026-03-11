@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import VioCore
 
 // MARK: - Match Tab Enum
 public enum MatchTab: String, CaseIterable {
@@ -41,6 +42,7 @@ public class LiveMatchViewModel: ObservableObject {
 
     public let timeline: UnifiedTimelineManager
     private var timelineCancellable: AnyCancellable?
+    private var lineupHandler: LineupTimelineHandler?
 
     public let chatManager: ChatManager
     public let matchSimulation: MatchSimulationManager
@@ -79,10 +81,24 @@ public class LiveMatchViewModel: ObservableObject {
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
             }
+        
+        // Lineup handler — receives lineup_show WS events and injects LineupTimelineEvents
+        let handler = LineupTimelineHandler(timeline: timeline)
+        self.lineupHandler = handler
+        CampaignManager.shared.onLineupShow = { [weak handler] event in
+            let broadcastId = CampaignManager.shared.currentBroadcastContext?.broadcastId ?? ""
+            guard !broadcastId.isEmpty else { return }
+            Task { @MainActor in handler?.handle(event: event, broadcastId: broadcastId) }
+        }
     }
 
     public func onAppear() {
         playerViewModel.setupPlayer()
+        
+        // Pre-fetch lineup so data is ready when lineup_show WS event arrives
+        if let broadcastId = CampaignManager.shared.currentBroadcastContext?.broadcastId, !broadcastId.isEmpty {
+            Task { await LineupService.shared.loadLineup(broadcastId: broadcastId) }
+        }
 
         if useTimelineSync {
             loadTimelineData()

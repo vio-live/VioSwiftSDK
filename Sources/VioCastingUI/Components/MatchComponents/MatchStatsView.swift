@@ -6,17 +6,19 @@
 //
 
 import SwiftUI
+import VioCore
 
 struct MatchStatsView: View {
     let statistics: MatchStatistics
     var broadcastId: String? = nil
+    @ObservedObject private var lineupService = LineupService.shared
 
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    // Starting XI — from backend (LineupService)
-                    if let bid = broadcastId {
+                    // Starting XI — only when LineupService has real data
+                    if let bid = broadcastId, case .loaded = lineupService.state {
                         MatchLineupView(broadcastId: bid)
                             .frame(minHeight: 200)
 

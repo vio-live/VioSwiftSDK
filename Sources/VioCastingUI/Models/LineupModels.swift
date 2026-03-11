@@ -46,6 +46,20 @@ public struct LineupPlayer: Codable, Identifiable {
     }
 }
 
+extension LineupPlayer {
+    /// Convert to the PlayerInfo type used by LineupCard UI.
+    func toPlayerInfo() -> PlayerInfo {
+        let posLabel: String
+        switch position.lowercased() {
+        case "goalkeeper": posLabel = "Keeper"
+        case "defender":   posLabel = "Forsvar"
+        case "midfielder": posLabel = "Midtbane"
+        default:           posLabel = "Angrep"
+        }
+        return PlayerInfo(number: jerseyNumber ?? 0, name: name, position: posLabel)
+    }
+}
+
 // MARK: - Lineup State
 
 public enum LineupState {

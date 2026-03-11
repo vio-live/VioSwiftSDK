@@ -167,6 +167,7 @@ public struct VButton: View {
 }
 
 // MARK: - Previews
+#if canImport(UIKit)
 #Preview("Button Styles") {
     VStack(spacing: VioSpacing.md) {
         VButton(title: "Primary Button", style: .primary) {
@@ -220,3 +221,4 @@ public struct VButton: View {
     }
     .padding()
 }
+#endif

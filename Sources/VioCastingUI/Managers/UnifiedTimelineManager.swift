@@ -82,7 +82,10 @@ public class UnifiedTimelineManager: ObservableObject {
         allEvents.removeAll()
     }
 
-    public static let preMatchDuration: TimeInterval = 900
+    /// Duration of pre-match coverage in seconds (before kickoff).
+    /// Defaults to 900s (15 min). Updated dynamically when backend sends
+    /// kickoffVideoTimestamp in a lineup_show or similar WS event.
+    public var preMatchDuration: TimeInterval = 900
     public static let firstHalfDuration: TimeInterval = 2700
     public static let halfTimeDuration: TimeInterval = 900
     public static let secondHalfDuration: TimeInterval = 2700
@@ -90,7 +93,7 @@ public class UnifiedTimelineManager: ObservableObject {
     public static let totalMatchDuration: TimeInterval = 7200
 
     public func updateVideoTime(_ seconds: TimeInterval) {
-        let clampedTime = max(-Self.preMatchDuration, min(seconds, liveVideoTime))
+        let clampedTime = max(-preMatchDuration, min(seconds, liveVideoTime))
         currentVideoTime = clampedTime
     }
 

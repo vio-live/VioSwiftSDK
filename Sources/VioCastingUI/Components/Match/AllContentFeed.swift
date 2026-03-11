@@ -56,9 +56,6 @@ struct AllContentFeed: View {
                         welcomeMessage
                             .id("welcome")
 
-                        // Lineup preview card — shows starting XI from backend (LineupService)
-                        LineupPreviewCard(onTapFullLineup: { onSelectTab(.statistics) })
-
                         // Events oldest to newest (antiguos arriba, nuevos abajo)
                         ForEach(timelineEvents.sorted { $0.videoTimestamp < $1.videoTimestamp }, id: \.id) { wrappedEvent in
                             renderEvent(wrappedEvent)
@@ -409,15 +406,13 @@ struct AllContentFeed: View {
                         ))
                         
                     case "lineup":
-                        // Render lineup card with proper positions
+                        // Legacy demo path — real backend lineup uses case .lineup below
                         if let team = announcement.metadata?["team"],
                            let formation = announcement.metadata?["formation"] {
-                            let players = getDefaultLineup(team: team, formation: formation)
-                            
                             LineupCard(
                                 teamName: announcement.title.replacingOccurrences(of: "Oppstilling ", with: ""),
                                 formation: formation,
-                                players: players,
+                                players: getDefaultLineup(team: team, formation: formation),
                                 teamColor: team == "home" ? .blue : .red,
                                 isHome: team == "home"
                             )
@@ -494,6 +489,22 @@ struct AllContentFeed: View {
                         ))
                 }
                 
+            // Lineup — injected by LineupTimelineHandler from real backend data
+            case .lineup:
+                if let lineupEvent = wrappedEvent.event as? LineupTimelineEvent {
+                    LineupCard(
+                        teamName: lineupEvent.teamName,
+                        formation: lineupEvent.formation ?? "",
+                        players: lineupEvent.players.map { $0.toPlayerInfo() },
+                        teamColor: lineupEvent.teamKey == "home" ? .blue : .red,
+                        isHome: lineupEvent.teamKey == "home"
+                    )
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    ))
+                }
+
             // Other types - add as needed
             default:
                 EmptyView()

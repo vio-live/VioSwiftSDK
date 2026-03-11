@@ -205,7 +205,7 @@ public struct VToastOverlay: View {
 }
 
 // MARK: - Previews
-#if DEBUG
+#if DEBUG && canImport(UIKit)
 
 #Preview("Toast Success") {
     ZStack {
