@@ -117,17 +117,84 @@ public class VioConfiguration: ObservableObject {
         }
     }
     
-    /// Quick configuration with just API key (uses defaults for everything else)
-    public static func configure(apiKey: String) {
-        configure(
-            apiKey: apiKey,
-            environment: .production,
-            theme: nil,
-            cartConfig: nil,
-            networkConfig: nil,
-            uiConfig: nil,
-            liveShowConfig: nil
+    // MARK: - Zero-Config Entry Point
+
+    /// Zero-config entry point — the only method clients need to call.
+    ///
+    /// Fetches all configuration from the Vio backend using just the apiKey.
+    /// Theme, commerce config, feature flags and endpoints are loaded remotely.
+    ///
+    /// **Usage:**
+    /// ```swift
+    /// // AppDelegate / App.swift — this is all you need:
+    /// VioSDK.configure(apiKey: "your-api-key")
+    ///
+    /// // When user opens a stream:
+    /// VioSDK.setContent(id: stream.id)
+    /// ```
+    public static func configure(apiKey: String, environment: VioEnvironment = .production) {
+        let instance = VioConfiguration.shared
+        instance.apiKey = apiKey
+        instance.environment = environment
+
+        // Apply defaults immediately so SDK is usable before remote config arrives
+        let baseURL = environment == .production
+            ? "https://api.vio.live"
+            : "https://api-dev.vio.live"
+        instance.campaignConfiguration = CampaignConfiguration(
+            webSocketBaseURL: baseURL,
+            restAPIBaseURL: baseURL,
+            campaignAdminApiKey: "",
+            campaignApiKey: apiKey,
+            autoDiscover: true
         )
+        instance.isConfigured = true
+
+        Task { @MainActor in
+            CampaignManager.shared.reinitialize()
+        }
+
+        // Fetch remote config async — updates configuration when received
+        Task {
+            let service = VioSDKConfigService()
+            guard let remoteConfig = await service.fetchConfig(apiKey: apiKey, baseURL: baseURL) else {
+                VioLogger.info("[VioConfiguration] Remote config unavailable — using defaults")
+                return
+            }
+            await MainActor.run {
+                instance.applyRemoteConfig(remoteConfig)
+            }
+        }
+    }
+
+    /// Apply remote config received from GET /v1/sdk/config
+    @MainActor
+    private func applyRemoteConfig(_ remote: RemoteSDKConfig) {
+        // Endpoints
+        let restBase = remote.endpoints?.restBase ?? campaignConfiguration.restAPIBaseURL
+        let wsBase = remote.endpoints?.webSocketBase ?? campaignConfiguration.webSocketBaseURL
+
+        campaignConfiguration = CampaignConfiguration(
+            webSocketBaseURL: wsBase,
+            restAPIBaseURL: restBase,
+            campaignAdminApiKey: "",
+            campaignApiKey: apiKey,
+            autoDiscover: true
+        )
+
+        // Commerce — store in campaignConfiguration for now (until commerceApiKey field exists)
+        // TODO: add commerceApiKey to EngagementConfiguration when backend Task 1 is live
+        if let commerce = remote.commerce {
+            VioLogger.info("[VioConfiguration] Commerce config received: endpoint=\(commerce.endpoint ?? "default")")
+        }
+
+        // Markets
+        if let markets = remote.markets, !markets.isEmpty {
+            userCountryCode = Locale.current.region?.identifier
+        }
+
+        VioLogger.info("[VioConfiguration] Remote config applied — endpoints: \(restBase)")
+        CampaignManager.shared.reinitialize()
     }
     
     /// Map country codes to language codes
