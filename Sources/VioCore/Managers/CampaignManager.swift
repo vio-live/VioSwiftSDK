@@ -28,6 +28,7 @@ public class CampaignManager: ObservableObject {
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
+    private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
     
     /// Called when backend sends a `lineup_show` WS event.
     /// Set this from VioCastingUI layer (LineupTimelineHandler) — avoids cross-module dependency.
@@ -135,6 +136,7 @@ public class CampaignManager: ObservableObject {
         print("🎯 [CampaignManager] initializeCampaign - Starting initialization for campaignId: \(campaignId)")
         
         // 0. Load dynamic configuration from backend
+        var dynamicSponsorLogoUrl: String? = nil
         if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(
             campaignId: campaignId,
             broadcastId: currentBroadcastContext?.broadcastId
@@ -142,11 +144,13 @@ public class CampaignManager: ObservableObject {
             // Update VioConfiguration with dynamic config
             if let brandConfig = config.brand {
                 VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
+                dynamicSponsorLogoUrl = brandConfig.logoUrl
+                pendingSponsorLogoUrl = brandConfig.logoUrl  // Used by fetchCampaignInfo to set Campaign.campaignLogo
             }
             if let engagementConfig = config.engagement {
                 VioConfiguration.shared.updateDynamicEngagementConfig(engagementConfig)
             }
-            print("🎯 [CampaignManager] initializeCampaign - Loaded dynamic config for campaignId: \(campaignId)")
+            print("🎯 [CampaignManager] initializeCampaign - Loaded dynamic config for campaignId: \(campaignId), sponsorLogo: \(dynamicSponsorLogoUrl ?? "nil")")
         }
         
         // 0.5. Load from cache first for instant UI update
@@ -480,12 +484,13 @@ public class CampaignManager: ObservableObject {
             print("🎯 [CampaignManager] Existing campaign before update: ID=\(existingCampaign?.id ?? -1), logo=\(existingCampaign?.campaignLogo ?? "nil")")
             
             let resolvedCampaignId = sdkConfig.campaignId ?? config.liveShowConfiguration.campaignId
+            let resolvedLogo = sdkConfig.campaignLogo ?? pendingSponsorLogoUrl
             let campaign = Campaign(
                 id: resolvedCampaignId,
                 startDate: existingCampaign?.startDate,
                 endDate: existingCampaign?.endDate,
                 isPaused: existingCampaign?.isPaused,
-                campaignLogo: sdkConfig.campaignLogo,
+                campaignLogo: resolvedLogo,
                 broadcastContext: sdkConfig.broadcastContext ?? existingCampaign?.broadcastContext
             )
             
