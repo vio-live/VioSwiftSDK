@@ -446,6 +446,7 @@ internal struct CampaignsDiscoveryResponse: Codable {
                 case id
                 case type
                 case name
+                case locationId
                 case broadcastContext
                 case matchContext  // For backward compatibility decoding
                 case config
