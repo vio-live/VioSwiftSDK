@@ -479,8 +479,9 @@ public class CampaignManager: ObservableObject {
             let existingCampaign = self.currentCampaign
             print("🎯 [CampaignManager] Existing campaign before update: ID=\(existingCampaign?.id ?? -1), logo=\(existingCampaign?.campaignLogo ?? "nil")")
             
+            let resolvedCampaignId = sdkConfig.campaignId ?? config.liveShowConfiguration.campaignId ?? existingCampaign?.id ?? 0
             let campaign = Campaign(
-                id: sdkConfig.campaignId,
+                id: resolvedCampaignId,
                 startDate: existingCampaign?.startDate,
                 endDate: existingCampaign?.endDate,
                 isPaused: existingCampaign?.isPaused,

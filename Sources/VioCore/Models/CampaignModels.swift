@@ -262,7 +262,7 @@ public struct Campaign: Codable, Identifiable, Equatable {
 
 /// SDK Config Response from GET /v1/sdk/config
 internal struct SDKConfigResponse: Codable {
-    let campaignId: Int
+    let campaignId: Int?
     let campaignName: String?
     let campaignLogo: String?
     let channelId: Int?
@@ -277,7 +277,7 @@ internal struct SDKConfigResponse: Codable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        campaignId = try container.decode(Int.self, forKey: .campaignId)
+        campaignId = try container.decodeIfPresent(Int.self, forKey: .campaignId)
         campaignName = try container.decodeIfPresent(String.self, forKey: .campaignName)
         campaignLogo = try container.decodeIfPresent(String.self, forKey: .campaignLogo)
         channelId = try container.decodeIfPresent(Int.self, forKey: .channelId)

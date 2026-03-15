@@ -4,7 +4,7 @@ import Foundation
 
 /// Complete campaign configuration from backend
 public struct CampaignConfig: Codable {
-    public let campaignId: Int
+    public let campaignId: Int?
     public let version: String?
     public let brand: DynamicBrandConfig?
     public let engagement: DynamicEngagementConfig?
@@ -13,7 +13,7 @@ public struct CampaignConfig: Codable {
     public let cache: CacheConfig?
     
     public init(
-        campaignId: Int,
+        campaignId: Int? = nil,
         version: String? = nil,
         brand: DynamicBrandConfig? = nil,
         engagement: DynamicEngagementConfig? = nil,
