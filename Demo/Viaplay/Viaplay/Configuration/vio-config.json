@@ -1,7 +1,7 @@
 {
   "name": "Viaplay Demo Configuration",
   "version": "1.0.0",
-  "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+  "apiKey": "viaplay_api_key_0c611e983b314ff8",
   "environment": "development",
   "theme": {
     "name": "Elkjøp Theme",
