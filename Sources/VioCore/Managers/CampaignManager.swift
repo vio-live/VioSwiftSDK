@@ -502,6 +502,7 @@ public class CampaignManager: ObservableObject {
             print("🎯 [CampaignManager] currentCampaign updated - ID: \(self.currentCampaign?.id ?? -1), campaignLogo: \(self.currentCampaign?.campaignLogo ?? "nil")")
             
             self.campaignState = campaign.currentState
+            self.isCampaignActive = true  // Restore after cache clear — campaign fetched successfully
             
             // If campaign configuration changed, invalidate cache appropriately
             if campaignChanged {
