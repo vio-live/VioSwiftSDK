@@ -659,6 +659,7 @@ public struct Component: Codable, Identifiable {
         
         // Decode broadcastContext from response if available
         self.broadcastContext = response.broadcastContext
+        self.locationId = nil
     }
     
     /// Decode from JSON (for WebSocket events)
@@ -670,6 +671,7 @@ public struct Component: Codable, Identifiable {
         name = try container.decode(String.self, forKey: .name)
         config = try container.decode(ComponentConfig.self, forKey: .config)
         status = try container.decodeIfPresent(String.self, forKey: .status)
+        locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
         // Try broadcastContext first, fallback to matchContext for backward compatibility
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
             self.broadcastContext = broadcastContext
@@ -694,6 +696,7 @@ public struct Component: Codable, Identifiable {
         case id
         case type
         case name
+        case locationId
         case config
         case status
         case broadcastContext
