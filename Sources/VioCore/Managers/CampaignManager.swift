@@ -479,7 +479,7 @@ public class CampaignManager: ObservableObject {
             let existingCampaign = self.currentCampaign
             print("🎯 [CampaignManager] Existing campaign before update: ID=\(existingCampaign?.id ?? -1), logo=\(existingCampaign?.campaignLogo ?? "nil")")
             
-            let resolvedCampaignId = sdkConfig.campaignId ?? config.liveShowConfiguration.campaignId ?? existingCampaign?.id ?? 0
+            let resolvedCampaignId = sdkConfig.campaignId ?? config.liveShowConfiguration.campaignId
             let campaign = Campaign(
                 id: resolvedCampaignId,
                 startDate: existingCampaign?.startDate,
