@@ -136,10 +136,10 @@ extension Match {
 
     private func generateBroadcastId() -> String {
         if title.contains("Barcelona") && title.contains("PSG") {
-            return "barcelona-psg-2025-01-23"
+            return "paris-saint-germain-vs-chelsea-2026-03-11"
         }
         if title.contains("Real Madrid") && title.contains("Barcelona") {
-            return "real-madrid-barcelona-2025-01-24"
+            return "real-madrid-vs-manchester-city-2026-03-11"
         }
         let homeTeamSlug = homeTeam.name.lowercased()
             .replacingOccurrences(of: " ", with: "-")
