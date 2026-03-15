@@ -8,8 +8,6 @@
 import SwiftUI
 import VioUI
 import VioCore
-import VioLiveUI
-import VioLiveShow
 import AVFoundation
 
 struct ContentView: View {
@@ -50,28 +48,6 @@ struct ContentView: View {
         .onChange(of: castingManager.isCasting) { isCasting in
             if !isCasting {
                 showCastingView = false
-            }
-        }
-        .overlay {
-            // Global live stream overlay (Tipio integration)
-            LiveStreamGlobalOverlay()
-                .environmentObject(cartManager)
-        }
-    }
-}
-
-// MARK: - Live Stream Overlay
-
-struct LiveStreamGlobalOverlay: View {
-    @ObservedObject private var liveShowManager = LiveShowManager.shared
-    @EnvironmentObject private var cartManager: CartManager
-    
-    var body: some View {
-        ZStack {
-            // Full screen LiveShow overlay
-            if liveShowManager.isLiveShowVisible {
-                VLiveShowFullScreenOverlay()
-                    .environmentObject(cartManager)
             }
         }
     }
