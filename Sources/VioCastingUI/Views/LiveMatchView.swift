@@ -84,6 +84,12 @@ public struct LiveMatchView: View {
         .environmentObject(effectiveSessionContext)
         .onAppear {
             viewModel.onAppear()
+            // Auto-discovery: trigger discoverCampaigns so sponsor logo + components are loaded
+            let ctx = effectiveSessionContext
+            Task {
+                let broadcastId = ctx.contentId ?? ctx.broadcastContext?.broadcastId
+                await CampaignManager.shared.discoverCampaigns(broadcastId: broadcastId)
+            }
         }
         .onDisappear {
             viewModel.onDisappear()
