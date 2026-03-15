@@ -408,6 +408,7 @@ internal struct CampaignsDiscoveryResponse: Codable {
             let id: String
             let type: String
             let name: String
+            let locationId: String?
             let broadcastContext: BroadcastContext?
             @available(*, deprecated, renamed: "broadcastContext")
             var matchContext: BroadcastContext? { broadcastContext }
@@ -419,6 +420,7 @@ internal struct CampaignsDiscoveryResponse: Codable {
                 id = try container.decode(String.self, forKey: .id)
                 type = try container.decode(String.self, forKey: .type)
                 name = try container.decode(String.self, forKey: .name)
+                locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
                 config = try container.decode([String: AnyCodable].self, forKey: .config)
                 status = try container.decodeIfPresent(String.self, forKey: .status)
                 
@@ -596,6 +598,7 @@ public struct Component: Codable, Identifiable {
     public let name: String
     public let config: ComponentConfig
     public let status: String?  // "active" or "inactive"
+    public let locationId: String?  // Slot identifier (e.g., "sport-detail-carousel", "sport-detail-banner")
     public let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware components
     
     public init(
@@ -604,6 +607,7 @@ public struct Component: Codable, Identifiable {
         name: String,
         config: ComponentConfig,
         status: String? = nil,
+        locationId: String? = nil,
         broadcastContext: BroadcastContext? = nil
     ) {
         self.id = id
@@ -611,6 +615,7 @@ public struct Component: Codable, Identifiable {
         self.name = name
         self.config = config
         self.status = status
+        self.locationId = locationId
         self.broadcastContext = broadcastContext
     }
     

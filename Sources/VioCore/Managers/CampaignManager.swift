@@ -284,16 +284,21 @@ public class CampaignManager: ObservableObject {
     ///   - type: Component type (e.g., "product_spotlight", "product_carousel")
     ///   - componentId: Optional component ID to identify a specific component. If nil, returns the first matching component.
     /// - Returns: Active component matching the type and optional componentId, or nil if not found
-    public func getActiveComponent(type: String, componentId: String? = nil) -> Component? {
+    public func getActiveComponent(type: String, componentId: String? = nil, locationId: String? = nil) -> Component? {
         guard isCampaignActive else { return nil }
         
-        if let componentId = componentId {
+        if let locationId = locationId {
+            // Search by locationId first (preferred — slot system)
+            return activeComponents.first {
+                $0.type == type && $0.locationId == locationId && $0.isActive
+            }
+        } else if let componentId = componentId {
             // Search by type AND specific componentId
             return activeComponents.first { 
                 $0.type == type && $0.id == componentId && $0.isActive 
             }
         } else {
-            // Current behavior: return the first one found
+            // Return the first one found
             return activeComponents.first { $0.type == type && $0.isActive }
         }
     }
@@ -684,6 +689,7 @@ public class CampaignManager: ObservableObject {
                                 name: componentItem.name,
                                 config: componentConfig,
                                 status: componentItem.status,
+                                locationId: componentItem.locationId,
                                 broadcastContext: componentItem.broadcastContext
                             )
                             allComponents.append(component)
@@ -713,7 +719,27 @@ public class CampaignManager: ObservableObject {
             }
             
             // Set current campaign to first active campaign if available
-            if let firstActiveCampaign = discoveredCampaigns.first(where: { $0.currentState == .active && $0.isPaused != true }) {
+            if var firstActiveCampaign = discoveredCampaigns.first(where: { $0.currentState == .active && $0.isPaused != true }) {
+                // If campaignLogo is null from discovery, fetch it from dynamic config (brand.logoUrl)
+                if firstActiveCampaign.campaignLogo == nil {
+                    if let dynamicConfig = await DynamicConfigurationManager.shared.loadCampaignConfig(
+                        campaignId: firstActiveCampaign.id
+                    ), let brandLogoUrl = dynamicConfig.brand?.logoUrl, !brandLogoUrl.isEmpty {
+                        firstActiveCampaign = Campaign(
+                            id: firstActiveCampaign.id,
+                            startDate: firstActiveCampaign.startDate,
+                            endDate: firstActiveCampaign.endDate,
+                            isPaused: firstActiveCampaign.isPaused,
+                            campaignLogo: brandLogoUrl,
+                            broadcastContext: firstActiveCampaign.broadcastContext
+                        )
+                        // Also update VioConfiguration brand config
+                        if let brandConfig = dynamicConfig.brand {
+                            VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
+                        }
+                    }
+                }
+
                 // Detect changes in campaign configuration
                 let existingCampaign = self.currentCampaign
                 let oldLogoUrl = existingCampaign?.campaignLogo

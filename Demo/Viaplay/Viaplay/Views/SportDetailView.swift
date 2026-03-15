@@ -279,7 +279,7 @@ struct SportDetailView: View {
                             .padding(.horizontal, 16)
                             
                             VProductCarousel(
-                                componentId: "product-carousel-template",
+                                locationId: "sport-detail-carousel",
                                 layout: "compact",
                                 showSponsor: true,
                                 sponsorPosition: "topRight"

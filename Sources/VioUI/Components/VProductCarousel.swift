@@ -109,6 +109,7 @@ public struct VProductCarousel: View {
     /// Optional component ID to identify a specific component
     /// If nil, uses the first matching component from the campaign
     private let componentId: String?
+    private let locationId: String?
     
     // MARK: - Properties for Demo/Testing
     
@@ -140,9 +141,10 @@ public struct VProductCarousel: View {
     
     // MARK: - Initializer
     
-    public init(componentId: String? = nil, layout: String? = nil, showAddToCartButton: Bool = false, showSponsor: Bool = false, sponsorPosition: String? = nil, imageBackgroundColor: Color? = nil) {
+    public init(componentId: String? = nil, locationId: String? = nil, layout: String? = nil, showAddToCartButton: Bool = false, showSponsor: Bool = false, sponsorPosition: String? = nil, imageBackgroundColor: Color? = nil) {
         // Optional component ID to identify a specific component
         self.componentId = componentId
+        self.locationId = locationId
         // Optional layout override for demo/testing (e.g., "full", "compact", "horizontal")
         // If nil, uses layout from backend config
         self.layout = layout
@@ -162,7 +164,7 @@ public struct VProductCarousel: View {
     
     /// Get active product carousel component from campaign
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_carousel", componentId: componentId)
+        campaignManager.getActiveComponent(type: "product_carousel", componentId: componentId, locationId: locationId)
     }
     
     /// Extract ProductCarouselConfig from component
