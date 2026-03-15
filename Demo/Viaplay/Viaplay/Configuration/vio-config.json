@@ -4,13 +4,13 @@
   "apiKey": "viaplay_api_key_0c611e983b314ff8",
   "environment": "development",
   "theme": {
-    "name": "Elkjøp Theme",
+    "name": "Elkj\u00f8p Theme",
     "mode": "dark",
     "_brandColors": {
       "_comment": "Brand color references for documentation",
-      "elkjøp": {
+      "elkj\u00f8p": {
         "primary": "#69A333",
-        "description": "Elkjøp green - used as primary color"
+        "description": "Elkj\u00f8p green - used as primary color"
       },
       "power": {
         "primary": "#FF9500",
@@ -107,7 +107,11 @@
     "enableGuestCheckout": true,
     "requirePhoneNumber": true,
     "defaultShippingCountry": "NO",
-    "supportedPaymentMethods": ["stripe", "klarna", "vipps"]
+    "supportedPaymentMethods": [
+      "stripe",
+      "klarna",
+      "vipps"
+    ]
   },
   "productDetail": {
     "showNavigationTitle": false,
@@ -124,7 +128,9 @@
     "flag": "https://flagcdn.com/w320/no.png"
   },
   "liveShow": {
-    "campaignId": 0
+    "campaignId": 0,
+    "tipioApiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+    "autoDiscover": true
   },
   "localization": {
     "defaultLanguage": "en",
@@ -151,7 +157,7 @@
     "channelId": null
   },
   "brand": {
-    "name": "Elkjøp",
+    "name": "Elkj\u00f8p",
     "iconAsset": "avatar_el",
     "_comment": "Brand configuration for engagement components. Legacy Power values: name='Power', iconAsset='avatar_power'"
   },
@@ -162,15 +168,33 @@
   },
   "_cartOptions": {
     "_comment": "Available options for cart configuration",
-    "floatingCartPosition": ["topLeft", "topCenter", "topRight", "centerLeft", "centerRight", "bottomLeft", "bottomCenter", "bottomRight"],
-    "floatingCartDisplayMode": ["iconOnly", "minimal", "compact", "full"],
+    "floatingCartPosition": [
+      "topLeft",
+      "topCenter",
+      "topRight",
+      "centerLeft",
+      "centerRight",
+      "bottomLeft",
+      "bottomCenter",
+      "bottomRight"
+    ],
+    "floatingCartDisplayMode": [
+      "iconOnly",
+      "minimal",
+      "compact",
+      "full"
+    ],
     "floatingCartDisplayModeDescription": {
       "iconOnly": "Circle icon with badge only (smallest)",
       "minimal": "Icon + item count",
       "compact": "Icon + item count + price",
       "full": "Icon + item count + price + arrow (complete)"
     },
-    "floatingCartSize": ["small", "medium", "large"],
+    "floatingCartSize": [
+      "small",
+      "medium",
+      "large"
+    ],
     "floatingCartSizeDescription": {
       "small": "Compact size with title3 icon",
       "medium": "Standard size with title2 icon",
@@ -179,7 +203,11 @@
   },
   "_productDetailOptions": {
     "_comment": "Available options for product detail modal configuration",
-    "modalHeight": ["full", "half", "threeQuarters"],
+    "modalHeight": [
+      "full",
+      "half",
+      "threeQuarters"
+    ],
     "modalHeightDescription": {
       "full": "Modal takes full screen height",
       "half": "Modal takes half screen height (50%)",
@@ -189,14 +217,21 @@
     "imageCornerRadius": "Number - Corner radius for product images (0 for square edges)",
     "imageHeight": "Number (optional) - Fixed height for product images in pixels (e.g., 380). If not set, uses default heights (240 for single image, 300 for gallery)",
     "showImageGallery": "Boolean - true: show thumbnail gallery for multiple images, false: hide gallery thumbnails and page indicators",
-    "headerStyle": ["standard", "compact"],
+    "headerStyle": [
+      "standard",
+      "compact"
+    ],
     "headerStyleDescription": {
       "standard": "Normal header with standard spacing",
       "compact": "Reduced header height for more content space"
     },
     "enableImageZoom": "Boolean - true: allow pinch-to-zoom on product images, false: disable zoom",
     "showNavigationTitle": "Boolean - true: show 'Product Details' navigation title, false: hide title for immersive view",
-    "closeButtonStyle": ["navigationBar", "overlayTopLeft", "overlayTopRight"],
+    "closeButtonStyle": [
+      "navigationBar",
+      "overlayTopLeft",
+      "overlayTopRight"
+    ],
     "closeButtonStyleDescription": {
       "navigationBar": "Standard close button in navigation bar (default)",
       "overlayTopLeft": "Floating close button on top left corner of image",
@@ -206,4 +241,3 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   }
 }
-
