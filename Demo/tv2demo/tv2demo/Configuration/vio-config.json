@@ -1,7 +1,7 @@
 {
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
-  "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+  "apiKey": "tv2_api_key_91b4fbf634af4bc5",
   "environment": "development",
   "theme": {
     "name": "TV2 Dark Theme",
@@ -110,11 +110,7 @@
     "flag": "https://flagcdn.com/w320/no.png"
   },
   "liveShow": {
-    "campaignId": 3,
-    "tipio": {
-      "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
-      "baseUrl": "https://stg-dev-microservices.tipioapp.com"
-    }
+    "campaignId": 36
   },
   "localization": {
     "defaultLanguage": "no",
