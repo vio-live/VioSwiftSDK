@@ -723,7 +723,8 @@ public class CampaignManager: ObservableObject {
                 // If campaignLogo is null from discovery, fetch it from dynamic config (brand.logoUrl)
                 if firstActiveCampaign.campaignLogo == nil {
                     if let dynamicConfig = await DynamicConfigurationManager.shared.loadCampaignConfig(
-                        campaignId: firstActiveCampaign.id
+                        campaignId: firstActiveCampaign.id,
+                        broadcastId: nil
                     ), let brandLogoUrl = dynamicConfig.brand?.logoUrl, !brandLogoUrl.isEmpty {
                         firstActiveCampaign = Campaign(
                             id: firstActiveCampaign.id,
