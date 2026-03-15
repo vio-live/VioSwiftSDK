@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "brand": {
     "_comment": "Brand name and icon - single source for demo consistency. Overrides vio-config when present.",
-    "name": "Elkjøp",
+    "name": "Elkj\u00f8p",
     "iconAsset": "avatar_el"
   },
   "assets": {
     "_comment": "Image asset names used as fallbacks throughout the demo",
-    "defaultLogo": "default_logo",
+    "defaultLogo": "avatar_el",
     "defaultAvatar": "avatar_el",
     "backgroundImages": {
       "footballField": "football_field_bg",
@@ -34,7 +34,7 @@
         "color": "#F5145A"
       },
       {
-        "name": "ElkjøpFan",
+        "name": "Elkj\u00f8pFan",
         "color": "#69A333"
       },
       {
@@ -48,8 +48,8 @@
     ],
     "socialAccounts": [
       {
-        "name": "Elkjøp Norge",
-        "handle": "@ElkjøpNorge",
+        "name": "Elkj\u00f8p Norge",
+        "handle": "@Elkj\u00f8pNorge",
         "verified": true
       },
       {
@@ -106,16 +106,16 @@
       {
         "id": "casting-contest-quiz",
         "videoTimestamp": 2700,
-        "title": "Elkjøp Konkurranse",
-        "description": "Delta og vinn et gavekort på 5000kr ved å svare på et lite quiz",
-        "prize": "Gavekort på 5000kr",
+        "title": "Elkj\u00f8p Konkurranse",
+        "description": "Delta og vinn et gavekort p\u00e5 5000kr ved \u00e5 svare p\u00e5 et lite quiz",
+        "prize": "Gavekort p\u00e5 5000kr",
         "contestType": "quiz",
         "imageAsset": "contest_prize_giftcard"
       },
       {
         "id": "casting-contest-giveaway",
         "videoTimestamp": 2750,
-        "title": "Elkjøp Konkurranse",
+        "title": "Elkj\u00f8p Konkurranse",
         "description": "Delta og vinn to billetter til Champions League",
         "prize": "To billetter til Champions League",
         "contestType": "giveaway",
@@ -130,8 +130,8 @@
         "productIds": [
           "408896"
         ],
-        "title": "Spesialtilbud på TV og Lyd",
-        "description": "Ikke gå glipp av denne muligheten - 25% rabatt kun under kampen"
+        "title": "Spesialtilbud p\u00e5 TV og Lyd",
+        "description": "Ikke g\u00e5 glipp av denne muligheten - 25% rabatt kun under kampen"
       }
     ]
   },
@@ -185,14 +185,14 @@
       {
         "imageUrl": "img1",
         "time": "00:51",
-        "title": "Haaland ofret sitt for å redde City-poeng",
+        "title": "Haaland ofret sitt for \u00e5 redde City-poeng",
         "subtitle": "PREMIER LEAGUE | 2K. OKTOBER",
         "isLarge": false
       },
       {
         "imageUrl": "img1",
         "time": "00:53",
-        "title": "Jørgen Strand Larsen scoring i Premier League",
+        "title": "J\u00f8rgen Strand Larsen scoring i Premier League",
         "subtitle": "PREMIER LEAGUE",
         "isLarge": false
       }
