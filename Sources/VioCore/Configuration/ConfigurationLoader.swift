@@ -524,8 +524,8 @@ public class ConfigurationLoader {
         // Use streaming.enableAutoplay if available, otherwise fallback to legacy enableAutoplay
         let enableAutoplay = config.streaming?.enableAutoplay ?? config.enableAutoplay ?? false
         
-        // Tipio configuration
-        let tipioApiKey = config.tipio?.apiKey ?? ""
+        // Commerce API key — prefer commerceApiKey, fallback to legacy tipio.apiKey
+        let tipioApiKey = config.commerceApiKey ?? config.tipio?.apiKey ?? ""
         let tipioBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
         
         // Dynamic components configuration
@@ -923,6 +923,9 @@ private struct JSONLiveShowConfiguration: Codable {
     // Dynamic components configuration
     let campaignId: Int?
     
+    // Commerce API key (replaces legacy tipio.apiKey)
+    let commerceApiKey: String?
+
     // Legacy properties for backward compatibility
     let autoJoinChat: Bool?
     let enableShopping: Bool?

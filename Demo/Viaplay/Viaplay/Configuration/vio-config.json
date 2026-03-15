@@ -129,8 +129,8 @@
   },
   "liveShow": {
     "campaignId": 0,
-    "tipioApiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
-    "autoDiscover": true
+    "autoDiscover": true,
+    "commerceApiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S"
   },
   "localization": {
     "defaultLanguage": "en",
