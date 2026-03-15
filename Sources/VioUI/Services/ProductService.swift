@@ -29,7 +29,8 @@ public class ProductService {
             throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(config.environment.graphQLURL)")
         }
         
-        let apiKey = config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey
+        let commerceKey = config.liveShowConfiguration.tipioApiKey
+        let apiKey = commerceKey.isEmpty ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey) : commerceKey
         
         let client = SdkClient(baseUrl: baseURL, apiKey: apiKey)
         cachedSdkClient = client
