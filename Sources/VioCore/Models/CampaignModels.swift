@@ -272,6 +272,7 @@ internal struct SDKConfigResponse: Codable {
     let marketFallback: MarketFallbackConfig?
     let features: FeaturesConfig?
     let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware campaigns
+    let sdkVersion: String?
     @available(*, deprecated, renamed: "broadcastContext")
     var matchContext: BroadcastContext? { broadcastContext }
     
@@ -286,6 +287,7 @@ internal struct SDKConfigResponse: Codable {
         campaigns = try container.decodeIfPresent(CampaignsConfig.self, forKey: .campaigns)
         marketFallback = try container.decodeIfPresent(MarketFallbackConfig.self, forKey: .marketFallback)
         features = try container.decodeIfPresent(FeaturesConfig.self, forKey: .features)
+        sdkVersion = try container.decodeIfPresent(String.self, forKey: .sdkVersion)
         
         // Try broadcastContext first, fallback to matchContext for backward compatibility
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
@@ -306,6 +308,7 @@ internal struct SDKConfigResponse: Codable {
         try container.encodeIfPresent(campaigns, forKey: .campaigns)
         try container.encodeIfPresent(marketFallback, forKey: .marketFallback)
         try container.encodeIfPresent(features, forKey: .features)
+        try container.encodeIfPresent(sdkVersion, forKey: .sdkVersion)
         try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
     }
     
@@ -319,6 +322,7 @@ internal struct SDKConfigResponse: Codable {
         case campaigns
         case marketFallback
         case features
+        case sdkVersion
         case broadcastContext
         case matchContext  // For backward compatibility decoding
     }
