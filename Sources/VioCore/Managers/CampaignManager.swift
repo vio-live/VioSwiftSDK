@@ -793,6 +793,15 @@ public class CampaignManager: ObservableObject {
                 }
             }
             
+            // Fetch offers from /v1/offers for the active campaign (autoDiscover mode).
+            // This ensures offers data is loaded even when campaignId is not hardcoded in vio-config.json.
+            if let activeCampaign = self.currentCampaign,
+               self.campaignState == .active,
+               activeCampaign.isPaused != true {
+                print("🎯 [CampaignManager] discoverCampaigns - Fetching offers for discovered campaignId: \(activeCampaign.id)")
+                await fetchActiveComponents(campaignId: activeCampaign.id)
+            }
+            
             // Cache components
             CacheManager.shared.saveComponents(self.activeComponents)
             
@@ -810,7 +819,8 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Fetch active components from API using new v1 endpoint
-    /// Always uses campaignId from configuration file (vio-config.json)
+    /// Fetches active components from /v1/offers using the provided campaignId.
+    /// In autoDiscover mode, pass the discovered campaignId. In legacy mode, pass config campaignId.
     private func fetchActiveComponents(campaignId: Int) async {
         let config = VioConfiguration.shared
         
@@ -821,10 +831,9 @@ public class CampaignManager: ObservableObject {
         
         let countryCode = config.marketConfiguration.countryCode
         
-        // Always use campaignId from configuration file (vio-config.json)
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        guard configuredCampaignId > 0 else {
-            VioLogger.warning("No campaignId configured in liveShow.campaignId - skipping components fetch", component: "CampaignManager")
+        // Use the passed-in campaignId (from discovery or config)
+        guard campaignId > 0 else {
+            VioLogger.warning("No campaignId provided - skipping components fetch from /v1/offers", component: "CampaignManager")
             return
         }
         
@@ -832,7 +841,7 @@ public class CampaignManager: ObservableObject {
         var urlComponents = URLComponents(string: "\(campaignRestAPIBaseURL)/v1/offers")
         urlComponents?.queryItems = [
             URLQueryItem(name: "apiKey", value: campaignAdminApiKey),
-            URLQueryItem(name: "campaignId", value: "\(configuredCampaignId)")
+            URLQueryItem(name: "campaignId", value: "\(campaignId)")
         ]
         
         // Add optional userCountry if available
