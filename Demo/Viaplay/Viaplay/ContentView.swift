@@ -112,8 +112,9 @@ extension ContentView {
             print("❌ [Diag][Vio] Invalid base URL from configuration")
             return nil
         }
-        let key = VioConfiguration.shared.apiKey.isEmpty ? "DEMO_KEY" : VioConfiguration.shared.apiKey
-        print("🔌 [Diag][Vio] Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key))")
+        let commerceKey = VioConfiguration.shared.liveShowConfiguration.commerceApiKey
+        let key = commerceKey.isEmpty ? (VioConfiguration.shared.apiKey.isEmpty ? "DEMO_KEY" : VioConfiguration.shared.apiKey) : commerceKey
+        print("🔌 [Diag][Vio] Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key)) (commerceKey: \(!commerceKey.isEmpty))")
         return SdkClient(baseUrl: base, apiKey: key)
     }
 
