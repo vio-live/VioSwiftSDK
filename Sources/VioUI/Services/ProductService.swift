@@ -18,7 +18,7 @@ public class ProductService {
     // MARK: - SDK Client Management
     
     /// Get or create SDK client.
-    /// Always uses `commerceApiKey` (stored as `tipioApiKey`) when available.
+    /// Always uses `commerceApiKey` when available.
     /// Recreates the client if the resolved key differs from the one used at cache time.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
@@ -28,7 +28,7 @@ public class ProductService {
         }
         
         // Prefer commerceApiKey; fall back to SDK apiKey only as last resort
-        let commerceKey = config.liveShowConfiguration.tipioApiKey
+        let commerceKey = config.liveShowConfiguration.commerceApiKey
         let resolvedApiKey = commerceKey.isEmpty ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey) : commerceKey
         
         // Invalidate cache if the key or URL has changed (e.g. config loaded after first call)
