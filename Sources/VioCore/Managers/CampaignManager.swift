@@ -657,6 +657,7 @@ public class CampaignManager: ObservableObject {
             }
             
             // Decode campaigns discovery response
+            print("🔍 [Campaigns] Raw response: \(String(data: data, encoding: .utf8) ?? "nil")")
             let discoveryResponse = try JSONDecoder().decode(CampaignsDiscoveryResponse.self, from: data)
             
             // Convert discovery items to Campaign models
