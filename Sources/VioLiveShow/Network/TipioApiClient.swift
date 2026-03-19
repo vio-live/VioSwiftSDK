@@ -22,8 +22,8 @@ public class TipioApiClient {
         let config = VioConfiguration.shared.liveShowConfiguration
         
         // Use configuration values, fallback to defaults if empty
-        let baseUrl = config.tipioBaseUrl.isEmpty ? "https://stg-dev-microservices.tipioapp.com" : config.tipioBaseUrl
-        let apiKey = config.tipioApiKey.isEmpty ? "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S" : config.tipioApiKey
+        let baseUrl = config.commerceBaseUrl.isEmpty ? "https://stg-dev-microservices.tipioapp.com" : config.commerceBaseUrl
+        let apiKey = config.commerceApiKey.isEmpty ? "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S" : config.commerceApiKey
         
         self.init(baseUrl: baseUrl, apiKey: apiKey)
     }

@@ -438,8 +438,8 @@ public struct LiveShowConfiguration {
     public let enablePictureInPicture: Bool
     
     // Tipio Integration
-    public let tipioApiKey: String
-    public let tipioBaseUrl: String
+    public let commerceApiKey: String
+    public let commerceBaseUrl: String
     
     // Dynamic Components
     public let campaignId: Int  // 0 = no campaign (SDK works normally)
@@ -458,8 +458,8 @@ public struct LiveShowConfiguration {
         videoQuality: VideoQuality = .auto,
         enableAutoplay: Bool = false,
         enablePictureInPicture: Bool = true,
-        tipioApiKey: String = "",
-        tipioBaseUrl: String = "https://stg-dev-microservices.tipioapp.com",
+        commerceApiKey: String = "",
+        commerceBaseUrl: String = "https://stg-dev-microservices.tipioapp.com",
         campaignId: Int = 0  // Default to 0 (no campaign restrictions)
     ) {
         self.autoJoinChat = autoJoinChat
@@ -475,8 +475,8 @@ public struct LiveShowConfiguration {
         self.videoQuality = videoQuality
         self.enableAutoplay = enableAutoplay
         self.enablePictureInPicture = enablePictureInPicture
-        self.tipioApiKey = tipioApiKey
-        self.tipioBaseUrl = tipioBaseUrl
+        self.commerceApiKey = commerceApiKey
+        self.commerceBaseUrl = commerceBaseUrl
         self.campaignId = campaignId
     }
     

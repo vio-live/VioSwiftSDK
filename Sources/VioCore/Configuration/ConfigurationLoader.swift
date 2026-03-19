@@ -525,8 +525,8 @@ public class ConfigurationLoader {
         let enableAutoplay = config.streaming?.enableAutoplay ?? config.enableAutoplay ?? false
         
         // Commerce API key — prefer commerceApiKey, fallback to legacy tipio.apiKey
-        let tipioApiKey = config.commerceApiKey ?? config.tipio?.apiKey ?? ""
-        let tipioBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
+        let commerceApiKey = config.commerceApiKey ?? config.tipio?.apiKey ?? ""
+        let commerceBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
         
         // Dynamic components configuration
         // Priority: rootCampaignId > liveShow.campaignId > 0 (default)
@@ -536,8 +536,8 @@ public class ConfigurationLoader {
             autoJoinChat: autoJoinChat,
             enableShoppingDuringStream: enableShopping,
             enableAutoplay: enableAutoplay,
-            tipioApiKey: tipioApiKey,
-            tipioBaseUrl: tipioBaseUrl,
+            commerceApiKey: commerceApiKey,
+            commerceBaseUrl: commerceBaseUrl,
             campaignId: campaignId
         )
     }
