@@ -155,8 +155,8 @@
         "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
         "autoDiscover": true,
         "channelId": null,
-        "devRestAPIBaseURL": "https://drama-mines-graduates-endorsed.trycloudflare.com",
-        "devWebSocketBaseURL": "wss://drama-mines-graduates-endorsed.trycloudflare.com"
+        "devRestAPIBaseURL": "https://socket-qa.reachu.io",
+        "devWebSocketBaseURL": "wss://socket-qa.reachu.io"
     },
     "brand": {
         "name": "Elkj\u00f8p",
