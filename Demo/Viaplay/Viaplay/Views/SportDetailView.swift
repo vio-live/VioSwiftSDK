@@ -305,7 +305,7 @@ struct SportDetailView: View {
         .navigationBarHidden(true)
         .onAppear {
             Task {
-                await CampaignManager.shared.discoverCampaigns()
+                await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
             }
         }
         .fullScreenCover(isPresented: $showVideoPlayer) {
