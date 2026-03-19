@@ -1,8 +1,9 @@
 import Foundation
 import Combine
+import VioCore
 
 /// Manager para conexión WebSocket con servidor de eventos
-/// URL: wss://event-streamer-angelo100.replit.app/ws/3
+/// URL: from VioConfiguration (webSocketBaseURL + campaignId)
 class WebSocketManager: NSObject, ObservableObject {
     @Published var isConnected = false
     @Published var currentPoll: PollEventData?
@@ -23,7 +24,9 @@ class WebSocketManager: NSObject, ObservableObject {
             return
         }
         
-        let url = URL(string: "wss://event-streamer-angelo100.replit.app/ws/3")!
+        let baseURL = VioConfiguration.shared.campaignConfiguration.webSocketBaseURL
+        let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
+        let url = URL(string: "\(baseURL)/ws/\(campaignId)")!
         webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
         isConnected = true
