@@ -195,7 +195,8 @@ public class ConfigurationLoader {
         let marketFallback = createMarketConfiguration(from: config.marketFallback)
         let productDetailConfig = createProductDetailConfiguration(from: config.productDetail)
         let localizationConfig = createLocalizationConfiguration(from: config.localization, bundle: bundle)
-        let campaignConfig = createCampaignConfiguration(from: config.campaigns)
+        let environment = VioEnvironment(rawValue: config.environment) ?? .production
+        let campaignConfig = createCampaignConfiguration(from: config.campaigns, environment: environment)
         let analyticsConfig = createAnalyticsConfiguration(from: config.analytics)
         let brandConfig = createBrandConfiguration(from: config.brand)
         let engagementConfig = createEngagementConfiguration(from: config.engagement)
@@ -542,12 +543,17 @@ public class ConfigurationLoader {
         )
     }
 
-    private static func createCampaignConfiguration(from campaignConfig: JSONCampaignConfiguration?) -> CampaignConfiguration {
+    private static func createCampaignConfiguration(from campaignConfig: JSONCampaignConfiguration?, environment: VioEnvironment = .production) -> CampaignConfiguration {
         guard let config = campaignConfig else { return .default }
         
+        // Use dev URLs when environment is development and dev overrides are provided
+        let isDev = environment == .development
+        let resolvedRestURL = (isDev ? config.devRestAPIBaseURL : nil) ?? config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL
+        let resolvedWSURL = (isDev ? config.devWebSocketBaseURL : nil) ?? config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL
+        
         return CampaignConfiguration(
-            webSocketBaseURL: config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL,
-            restAPIBaseURL: config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL,
+            webSocketBaseURL: resolvedWSURL,
+            restAPIBaseURL: resolvedRestURL,
             campaignAdminApiKey: config.campaignAdminApiKey ?? CampaignConfiguration.default.campaignAdminApiKey,
             campaignApiKey: config.campaignApiKey ?? CampaignConfiguration.default.campaignApiKey,
             autoDiscover: config.autoDiscover ?? CampaignConfiguration.default.autoDiscover,
@@ -963,8 +969,10 @@ private struct JSONLocalizationConfiguration: Codable {
 }
 
 private struct JSONCampaignConfiguration: Codable {
-    let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-dev.vio.live")
-    let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://api.vio.live")
+    let webSocketBaseURL: String?     // WebSocket endpoint for production/staging
+    let restAPIBaseURL: String?       // REST API endpoint for production/staging
+    let devWebSocketBaseURL: String?  // WebSocket endpoint for development (e.g. ngrok tunnel)
+    let devRestAPIBaseURL: String?    // REST API endpoint for development (e.g. ngrok tunnel)
     let campaignAdminApiKey: String?  // API key for campaign admin endpoints (different from SDK API key) - Only needed if autoDiscover is false
     let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
