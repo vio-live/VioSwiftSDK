@@ -2,7 +2,7 @@
     "name": "Viaplay Demo Configuration",
     "version": "1.0.0",
     "apiKey": "viaplay_api_key_0c611e983b314ff8",
-    "environment": "production",
+    "environment": "development",
     "theme": {
         "name": "Elkj\u00f8p Theme",
         "mode": "dark",
