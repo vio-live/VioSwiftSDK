@@ -719,6 +719,7 @@ public class CampaignManager: ObservableObject {
             }
             
             // Set current campaign to first active campaign if available
+            print("🎯 [Sponsor] discoveredCampaigns: \(discoveredCampaigns.map { "id:\($0.id) state:\($0.currentState) paused:\($0.isPaused ?? false)" })")
             if var firstActiveCampaign = discoveredCampaigns.first(where: { $0.currentState == .active && $0.isPaused != true }) {
                 // If campaignLogo is null from discovery, fetch it from dynamic config (brand.logoUrl)
                 print("🎯 [Sponsor] campaignLogo from discovery: \(firstActiveCampaign.campaignLogo ?? "nil") | restAPIBase: \(campaignRestAPIBaseURL)")
