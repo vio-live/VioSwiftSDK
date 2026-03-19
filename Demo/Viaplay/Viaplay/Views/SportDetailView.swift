@@ -305,7 +305,7 @@ struct SportDetailView: View {
         .navigationBarHidden(true)
         .onAppear {
             Task {
-                await VioConfiguration.shared.campaignManager.discoverCampaigns()
+                await CampaignManager.shared.discoverCampaigns()
             }
         }
         .fullScreenCover(isPresented: $showVideoPlayer) {
