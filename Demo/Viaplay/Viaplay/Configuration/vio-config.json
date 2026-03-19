@@ -155,8 +155,8 @@
         "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
         "autoDiscover": true,
         "channelId": null,
-        "devRestAPIBaseURL": "https://f964-46-212-249-70.ngrok-free.app",
-        "devWebSocketBaseURL": "wss://f964-46-212-249-70.ngrok-free.app"
+        "devRestAPIBaseURL": "https://drama-mines-graduates-endorsed.trycloudflare.com",
+        "devWebSocketBaseURL": "wss://drama-mines-graduates-endorsed.trycloudflare.com"
     },
     "brand": {
         "name": "Elkj\u00f8p",
