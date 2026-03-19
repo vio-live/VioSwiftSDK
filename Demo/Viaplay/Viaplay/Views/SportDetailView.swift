@@ -303,6 +303,11 @@ struct SportDetailView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            Task {
+                await VioConfiguration.shared.campaignManager.discoverCampaigns()
+            }
+        }
         .fullScreenCover(isPresented: $showVideoPlayer) {
             let match = createMatchFromDetail()
             let sessionContext: VioSessionContext? = isRealMadridBarcelona
