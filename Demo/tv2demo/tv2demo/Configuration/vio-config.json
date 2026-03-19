@@ -211,8 +211,8 @@
     "campaigns": {
         "webSocketBaseURL": "wss://socket-qa.reachu.io",
         "restAPIBaseURL": "https://socket-qa.reachu.io",
-        "devWebSocketBaseURL": "wss://2362-46-212-249-70.ngrok-free.app",
-        "devRestAPIBaseURL": "https://2362-46-212-249-70.ngrok-free.app",
+        "devWebSocketBaseURL": "wss://4adb-46-212-249-70.ngrok-free.app",
+        "devRestAPIBaseURL": "https://4adb-46-212-249-70.ngrok-free.app",
         "campaignApiKey": "tv2_api_key_91b4fbf634af4bc5",
         "autoDiscover": true
     }

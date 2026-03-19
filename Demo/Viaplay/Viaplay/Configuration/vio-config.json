@@ -155,8 +155,8 @@
         "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
         "autoDiscover": true,
         "channelId": null,
-        "devRestAPIBaseURL": "https://2362-46-212-249-70.ngrok-free.app",
-        "devWebSocketBaseURL": "wss://2362-46-212-249-70.ngrok-free.app"
+        "devRestAPIBaseURL": "https://4adb-46-212-249-70.ngrok-free.app",
+        "devWebSocketBaseURL": "wss://4adb-46-212-249-70.ngrok-free.app"
     },
     "brand": {
         "name": "Elkj\u00f8p",
