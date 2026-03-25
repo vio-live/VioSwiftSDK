@@ -150,8 +150,8 @@
     "recordSessionsPercent": 0
   },
   "campaigns": {
-    "webSocketBaseURL": "wss://socket-qa.reachu.io",
-    "restAPIBaseURL": "https://socket-qa.reachu.io",
+    "webSocketBaseURL": "wss://api-dev.vio.live",
+    "restAPIBaseURL": "https://api-dev.vio.live",
     "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
     "autoDiscover": true,
     "channelId": null
