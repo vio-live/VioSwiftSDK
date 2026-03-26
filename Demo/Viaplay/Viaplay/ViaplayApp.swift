@@ -29,6 +29,13 @@ struct ViaplayApp: App {
         print("🚀 [Viaplay] Loading Vio SDK configuration...")
         ConfigurationLoader.loadConfiguration()
         print("✅ [Viaplay] Vio SDK configured successfully")
+        
+        // Set userId on CampaignManager for WS identification (wsUserMap)
+        // In production: extract sub/userId from the authenticated JWT token
+        // Example: CampaignManager.shared.userId = jwtPayload.sub
+        CampaignManager.shared.userId = "viaplay-demo-user-001"
+        print("👤 [Viaplay] WS userId set: viaplay-demo-user-001")
+        
         print("🎨 [Viaplay] Theme: \(VioConfiguration.shared.theme.name)")
         print("🎨 [Viaplay] Mode: \(VioConfiguration.shared.theme.mode)")
 

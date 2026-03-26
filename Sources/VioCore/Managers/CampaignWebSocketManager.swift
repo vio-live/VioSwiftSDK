@@ -26,10 +26,16 @@ public class CampaignWebSocketManager: ObservableObject {
     /// Called when backend triggers lineup display. Carries the video timestamp and optional broadcastId.
     public var onLineupShow: ((LineupShowEvent) -> Void)?
     
+    /// Optional user ID for WS identification. When set, an `{ "type": "identify", "userId": "..." }`
+    /// message is sent immediately after connection is established so the backend can register this
+    /// connection in its `wsUserMap` for targeted notifications (e.g. cart_intent).
+    public var userId: String?
+    
     // MARK: - Initialization
-    public init(campaignId: Int, baseURL: String) {
+    public init(campaignId: Int, baseURL: String, userId: String? = nil) {
         self.campaignId = campaignId
         self.baseURL = baseURL
+        self.userId = userId
         self.urlSession = URLSession(configuration: .default)
     }
     
@@ -70,6 +76,10 @@ public class CampaignWebSocketManager: ObservableObject {
         isConnected = true
         reconnectAttempts = 0 // Reset reconnect attempts on successful connection
         onConnectionStatusChanged?(true)
+        
+        // Send identify message so the backend registers this WS connection in wsUserMap
+        // Required for targeted push via WebSocket (e.g. cart_intent notifications)
+        await sendIdentifyIfNeeded()
         
         // Start listening for messages in a separate task so it doesn't block
         // URLSessionWebSocketTask handles keep-alive automatically
@@ -225,6 +235,32 @@ public class CampaignWebSocketManager: ObservableObject {
             }
         } catch {
             VioLogger.error("Failed to decode \(eventType): \(error) - Raw message: \(text)", component: "CampaignWebSocket")
+        }
+    }
+    
+    // MARK: - Outbound Messages
+    
+    /// Sends `{ "type": "identify", "userId": "..." }` to the backend if `userId` is set.
+    /// This registers the WS connection in the server's `wsUserMap` so that targeted
+    /// notifications (e.g. `cart_intent`) are routed to this specific device.
+    private func sendIdentifyIfNeeded() async {
+        guard let userId = userId, !userId.isEmpty else {
+            VioLogger.debug("No userId set — skipping identify", component: "CampaignWebSocket")
+            return
+        }
+        
+        let payload: [String: String] = ["type": "identify", "userId": userId]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let text = String(data: data, encoding: .utf8) else {
+            VioLogger.error("Failed to encode identify payload", component: "CampaignWebSocket")
+            return
+        }
+        
+        do {
+            try await webSocketTask?.send(.string(text))
+            VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
+        } catch {
+            VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
         }
     }
     
