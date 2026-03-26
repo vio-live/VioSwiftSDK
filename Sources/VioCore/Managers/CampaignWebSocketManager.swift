@@ -41,7 +41,10 @@ public class CampaignWebSocketManager: ObservableObject {
         let wsURLString = baseURL
             .replacingOccurrences(of: "https://", with: "wss://")
             .replacingOccurrences(of: "http://", with: "ws://")
-        let urlString = "\(wsURLString)/ws/\(campaignId)"
+        var urlString = "\(wsURLString)/ws/\(campaignId)"
+        if let uid = userId, !uid.isEmpty {
+            urlString += "?userId=\(uid)"
+        }
         
         guard let url = URL(string: urlString) else {
             VioLogger.error("Invalid WebSocket URL: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
