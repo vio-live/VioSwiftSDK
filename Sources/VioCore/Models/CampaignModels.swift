@@ -948,3 +948,24 @@ public struct ComponentConfigUpdatedEvent: Codable {
 }
 
 
+
+// MARK: - Cart Intent WS Event
+
+/// Received when the backend routes a cart_intent to this user's WebSocket connection.
+/// Triggered by POST /api/campaigns/:id/cart-intent → wsUserMap lookup → send to device.
+public struct CartIntentEvent: Codable {
+    public let type: String
+    /// Name of the product the user is being prompted to add to cart.
+    public let productName: String?
+    /// Optional product ID for deep-linking into a product detail view.
+    public let productId: String?
+    /// Optional campaign ID for context.
+    public let campaignId: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case type
+        case productName = "productName"
+        case productId   = "productId"
+        case campaignId  = "campaignId"
+    }
+}
