@@ -4,14 +4,16 @@
    <FileRef
       location = "group:Package.swift">
    </FileRef>
-   <Group
-      location = "container:"
-      name = "Demo Apps">
-      <FileRef
-         location = "group:Demo/Viaplay/Viaplay.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:Demo/tv2demo/tv2demo.xcodeproj">
-      </FileRef>
-   </Group>
+   <FileRef
+      location = "group:../Documents/GitHub/InteractiveAds-vio/Package.swift">
+   </FileRef>
+   <FileRef
+      location = "group:Demo/Viaplay/Viaplay.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Demo/tv2demo/tv2demo.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:Demo/tv2demo-appletv/tv2demo-appletv.xcodeproj">
+   </FileRef>
 </Workspace>
