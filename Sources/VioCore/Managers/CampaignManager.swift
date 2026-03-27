@@ -28,6 +28,11 @@ public class CampaignManager: ObservableObject {
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
+    
+    /// User ID passed to WebSocket for targeted notifications (wsUserMap).
+    /// Set before calling `discoverCampaigns` / `initializeCampaign`.
+    /// Example: `CampaignManager.shared.userId = jwtPayload.sub`
+    public var userId: String?
     private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
     
     /// Called when backend sends a `lineup_show` WS event.
@@ -979,7 +984,7 @@ public class CampaignManager: ObservableObject {
         print("🎯 [CampaignManager] connectWebSocket - Using campaignId from config file: \(configuredCampaignId)")
         
         // Use the campaign WebSocket endpoint, not the GraphQL endpoint
-        webSocketManager = CampaignWebSocketManager(campaignId: configuredCampaignId, baseURL: campaignWebSocketBaseURL)
+        webSocketManager = CampaignWebSocketManager(campaignId: configuredCampaignId, baseURL: campaignWebSocketBaseURL, userId: userId)
         
         // Setup event handlers
         webSocketManager?.onCampaignStarted = { [weak self] event in

@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import VioCore
 
 /// WebSocket Manager for Campaign Lifecycle Events
@@ -25,12 +26,29 @@ public class CampaignWebSocketManager: ObservableObject {
     public var onConnectionStatusChanged: ((Bool) -> Void)?
     /// Called when backend triggers lineup display. Carries the video timestamp and optional broadcastId.
     public var onLineupShow: ((LineupShowEvent) -> Void)?
+    /// Called when backend sends a cart_intent event for this user.
+    public var onCartIntent: ((CartIntentEvent) -> Void)?
+    
+    /// Optional user ID for WS identification and URL routing.
+    /// When set, appended as `?userId=<uid>` to the WS URL and sent via `identify` message post-connect.
+    /// Set via `CampaignManager.shared.userId` before connecting.
+    public var userId: String?
     
     // MARK: - Initialization
-    public init(campaignId: Int, baseURL: String) {
+    public init(campaignId: Int, baseURL: String, userId: String? = nil) {
         self.campaignId = campaignId
         self.baseURL = baseURL
+        self.userId = userId
         self.urlSession = URLSession(configuration: .default)
+        
+        // Request local notification permission so cart_intent alerts can fire
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error = error {
+                VioLogger.error("Notification permission error: \(error)", component: "CampaignWebSocket")
+            } else {
+                VioLogger.debug("Notification permission granted: \(granted)", component: "CampaignWebSocket")
+            }
+        }
     }
     
     // MARK: - Connection Management
@@ -41,7 +59,10 @@ public class CampaignWebSocketManager: ObservableObject {
         let wsURLString = baseURL
             .replacingOccurrences(of: "https://", with: "wss://")
             .replacingOccurrences(of: "http://", with: "ws://")
-        let urlString = "\(wsURLString)/ws/\(campaignId)"
+        var urlString = "\(wsURLString)/ws/\(campaignId)"
+        if let uid = userId, !uid.isEmpty {
+            urlString += "?userId=\(uid)"
+        }
         
         guard let url = URL(string: urlString) else {
             VioLogger.error("Invalid WebSocket URL: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
@@ -70,6 +91,9 @@ public class CampaignWebSocketManager: ObservableObject {
         isConnected = true
         reconnectAttempts = 0 // Reset reconnect attempts on successful connection
         onConnectionStatusChanged?(true)
+        
+        // Register this connection in backend wsUserMap via identify message
+        await sendIdentifyIfNeeded()
         
         // Start listening for messages in a separate task so it doesn't block
         // URLSessionWebSocketTask handles keep-alive automatically
@@ -220,11 +244,64 @@ public class CampaignWebSocketManager: ObservableObject {
                 VioLogger.success("Decoded lineup_show event (videoTimestamp: \(event.videoTimestamp))", component: "CampaignWebSocket")
                 onLineupShow?(event)
                 
+            case "cart_intent":
+                let event = try JSONDecoder().decode(CartIntentEvent.self, from: data)
+                VioLogger.success("Decoded cart_intent event (productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
+                onCartIntent?(event)
+                scheduleCartIntentNotification(productName: event.productName)
+                
             default:
                 VioLogger.warning("Unknown event type: \(eventType)", component: "CampaignWebSocket")
             }
         } catch {
             VioLogger.error("Failed to decode \(eventType): \(error) - Raw message: \(text)", component: "CampaignWebSocket")
+        }
+    }
+    
+    // MARK: - Outbound Messages
+    
+    /// Sends `{ "type": "identify", "userId": "..." }` to the backend if `userId` is set.
+    /// Registers this WS connection in the server's `wsUserMap` for targeted notifications.
+    private func sendIdentifyIfNeeded() async {
+        guard let userId = userId, !userId.isEmpty else {
+            VioLogger.debug("No userId set — skipping identify", component: "CampaignWebSocket")
+            return
+        }
+        let payload: [String: String] = ["type": "identify", "userId": userId]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let text = String(data: data, encoding: .utf8) else {
+            VioLogger.error("Failed to encode identify payload", component: "CampaignWebSocket")
+            return
+        }
+        do {
+            try await webSocketTask?.send(.string(text))
+            VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
+        } catch {
+            VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
+        }
+    }
+    
+    // MARK: - Local Notifications
+    
+    /// Fires a local notification when a cart_intent event is received via WebSocket.
+    private func scheduleCartIntentNotification(productName: String?) {
+        let content = UNMutableNotificationContent()
+        content.title = "Tienes un artículo esperando"
+        content.body = productName ?? "Un producto está listo para añadir al carrito"
+        content.sound = .default
+        
+        let request = UNNotificationRequest(
+            identifier: "cart_intent_\(UUID().uuidString)",
+            content: content,
+            trigger: nil // deliver immediately
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                VioLogger.error("Failed to schedule cart_intent notification: \(error)", component: "CampaignWebSocket")
+            } else {
+                VioLogger.success("cart_intent notification scheduled", component: "CampaignWebSocket")
+            }
         }
     }
     
