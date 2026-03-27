@@ -48,7 +48,12 @@ Viaplay_Casting_Components_Analysis.md
 SOLUCION_TEMPORAL_VIDEO_TIME.md
 PRICE_LOGGING_GUIDE.md
 Documentation/*.md
+!Documentation/VIO_OVERVIEW.md
+!Documentation/CONTEXT_IOS.md
+!Documentation/CODEBASE_INDEX.md
+!Documentation/VIO_PLATFORM_CURSOR_CONTEXT.md
 Demo/Viaplay/**/*.md
+!Demo/Viaplay/README.md
 Demo/tv2demo/**/Configuration/README.md
 Sources/VioCore/Configuration/theme-examples/README.md
 

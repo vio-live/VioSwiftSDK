@@ -1,0 +1,66 @@
+---
+description: VioSwiftSDK — contexto completo del package Swift (solo este repo)
+alwaysApply: true
+---
+
+# VioSwiftSDK — Ámbito
+
+Trabajas **solo** en este Swift Package (iOS / macOS / tvOS / watchOS). El backend Vio (Express, schema Postgres, dashboard) está **fuera de alcance** salvo que el usuario abra explícitamente otro root o pegue una spec.
+
+## Producto y nombres
+
+- **Vio.live** = producto actual. **Reachu** = legacy en código/API antigua. **Tipio** = otro producto; no confundir con Vio.
+- URLs dev habituales: API `https://api-dev.vio.live`, WS campaña `wss://api-dev.vio.live/ws/{campaignId}`, GraphQL commerce `https://graph-ql-dev.vio.live/graphql`.
+
+## Módulos SPM (resumen)
+
+Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio mentalmente), **VioNetwork**, **VioDesignSystem**, **VioUI**, **VioEngagementSystem**, **VioEngagementUI**, **VioCastingUI**, **VioComplete**. Targets **VioLiveShow** / **VioLiveUI** pueden existir en el manifiesto; productos públicos pueden estar comentados.
+
+## Inicialización (código real)
+
+- No hay tipo público unificado tipo `VioSDK`.
+- Demos: `ConfigurationLoader.loadConfiguration()` (p. ej. `vio-config.json` en bundle).
+- Programático: `VioConfiguration.configure(apiKey:)` u otras sobrecargas en `VioConfiguration.swift`.
+- Alias: `VioConfigurationLoader` = `ConfigurationLoader` (`VioCore.swift`).
+
+## CampaignManager
+
+- Acceso correcto: `CampaignManager.shared`. **`VioConfiguration.campaignManager` no existe.**
+
+## discoverCampaigns
+
+- Usar **`discoverCampaigns(broadcastId: String?)`**. Internamente para `/v1/sdk/campaigns` usa **`VioConfiguration.shared.apiKey`**.
+- `discoverCampaigns(matchId:)` está **deprecated** (delega en `broadcastId`). Para evitar ambigüedad de overloads: `await discoverCampaigns(broadcastId: nil)` o pasa string explícito.
+
+## WebSocket de campaña (`CampaignWebSocketManager`)
+
+- URL relativa: `{baseURL wss}/ws/{campaignId}`; header `X-API-Key` si hay `apiKey` en config.
+- Eventos **implementados** en `handleMessage` (comprobar archivo si añades casos): `campaign_started`, `campaign_ended`, `campaign_paused`, `campaign_resumed`, `component_status_changed`, `component_config_updated`, `config:updated`, `lineup_show`.
+- **No asumir** `cart_intent`, query `userId` en la URL ni mensaje `identify` hasta que existan en código; si un doc externo los menciona, verificar la rama/commit.
+
+## Managers y servicios (dónde mirar)
+
+| Área | Archivo principal |
+| --- | --- |
+| Config / JSON | `Sources/VioCore/Configuration/ConfigurationLoader.swift`, `VioConfiguration.swift`, `ModuleConfigurations.swift` |
+| Campaña | `Sources/VioCore/Managers/CampaignManager.swift` |
+| WS campaña | `Sources/VioCore/Managers/CampaignWebSocketManager.swift` |
+| Config remota | `Sources/VioCore/Managers/DynamicConfigurationManager.swift` |
+| contentId → broadcast | `Sources/VioCore/Services/BroadcastValidationService.swift` |
+| Sesión broadcast | `Sources/VioCore/Managers/VioSessionContext.swift` |
+| REST config | `Sources/VioCore/Network/ConfigAPIClient.swift` |
+| Productos GraphQL | `Sources/VioUI/Services/ProductService.swift` |
+| Casting / timeline / player | `Sources/VioCastingUI/` (p. ej. `VCastingVideoPlayer.swift`, `EventStreamerManager`, `LiveMatchViewModel`) |
+| Offer components + WS Replit | `Sources/VioCore/Models/OfferBannerModels.swift` (`ComponentManager` — revisar `baseURL` hardcodeada legacy) |
+
+No existe **`VioCommerceService`**; commerce: **ProductService** + **SdkClient** (VioNetwork).
+
+## Principios al editar
+
+- No inventar APIs públicas: grep en `Sources/` antes de documentar en respuestas.
+- No commitear nuevas API keys en comentarios o markdown del repo; usar `Demo/*/vio-config.json` local o secretos.
+- Código de **Demo/** no es la API pública del package: separar "app demo" de "SDK".
+
+## Tests
+
+- `Tests/VioCoreTests/` (y otros si existen). Comando: `swift test` desde la raíz del package.

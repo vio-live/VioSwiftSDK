@@ -1,0 +1,5 @@
+# VioSwiftSDK
+
+Todo el contexto persistente para el agente está en **`.cursor/rules/`** (`vio-swift-sdk-core.mdc`, `alwaysApply: true`). Ámbito: **solo este Swift Package**; backend/dashboard en otros repos.
+
+Documentación opcional en `Documentation/` (histórico, guías); no sustituye la regla.
