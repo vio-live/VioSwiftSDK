@@ -12,7 +12,11 @@ struct TV2VideoPlayer: View {
     let onDismiss: () -> Void
     
     @StateObject private var playerViewModel = VideoPlayerViewModel()
-    @StateObject private var webSocketManager = WebSocketManager()
+    // Legacy WebSocketManager removed — SDK (CampaignManager) handles WS for campaign events.
+    // Keeping state vars typed to legacy structs so overlays compile while migration completes.
+    @State private var currentPoll: PollEventData? = nil
+    @State private var currentProduct: ProductEventData? = nil
+    @State private var currentContest: ContestEventData? = nil
     @EnvironmentObject private var cartManager: CartManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -105,7 +109,7 @@ struct TV2VideoPlayer: View {
             }
             
             // Contest Overlay (máxima prioridad)
-            if let contest = webSocketManager.currentContest, showContest {
+            if let contest = currentContest, showContest {
                 TV2ContestOverlay(
                     contest: contest,
                     isChatExpanded: isChatExpanded,
@@ -122,7 +126,7 @@ struct TV2VideoPlayer: View {
             }
             
             // Product Overlay (sobre el chat y poll)
-            if let productEvent = webSocketManager.currentProduct, showProduct {
+            if let productEvent = currentProduct, showProduct {
                 TV2ProductOverlay(
                     productEvent: productEvent,
                     isChatExpanded: isChatExpanded,
@@ -152,7 +156,7 @@ struct TV2VideoPlayer: View {
             }
             
             // Poll Overlay (sobre el chat)
-            if let poll = webSocketManager.currentPoll, showPoll {
+            if let poll = currentPoll, showPoll {
                 TV2PollOverlay(
                     poll: poll,
                     isChatExpanded: isChatExpanded,
@@ -206,10 +210,8 @@ struct TV2VideoPlayer: View {
             // Enable all orientations for video playback
             setOrientation(.allButUpsideDown)
             
-            // Conectar WebSocket legacy (polls/contests)
-            webSocketManager.connect()
-            
             // 🎯 SDK: discoverCampaigns → WS identify → cart_intent → notificación
+            // Legacy WebSocketManager.connect() removed — was opening a 2nd WS to the same endpoint
             Task {
                 print("🎯 [TV2VideoPlayer] Starting SDK campaign discovery...")
                 await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
@@ -220,64 +222,10 @@ struct TV2VideoPlayer: View {
             playerViewModel.cleanup()
             // Return to portrait when dismissed
             setOrientation(.portrait)
-            
-            // Desconectar WebSocket legacy
-            webSocketManager.disconnect()
+            // Legacy webSocketManager.disconnect() removed — no longer needed
         }
-        .onReceive(webSocketManager.$currentPoll) { newPoll in
-            print("🎯 [VideoPlayer] Poll recibido: \(newPoll?.question ?? "nil")")
-            if newPoll != nil {
-                print("🎯 [VideoPlayer] Mostrando poll")
-                withAnimation {
-                    showPoll = true
-                }
-                
-                // Auto-ocultar después de la duración del poll
-                if let duration = newPoll?.duration {
-                    print("🎯 [VideoPlayer] Auto-ocultar en \(duration)s")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(duration)) {
-                        withAnimation {
-                            print("🎯 [VideoPlayer] Ocultando poll")
-                            showPoll = false
-                        }
-                    }
-                }
-            }
-        }
-        .onReceive(webSocketManager.$currentProduct) { newProduct in
-            print("🎯 [VideoPlayer] Producto recibido: \(newProduct?.name ?? "nil")")
-            if newProduct != nil {
-                print("🎯 [VideoPlayer] Mostrando producto")
-                withAnimation {
-                    showProduct = true
-                }
-                
-                // Auto-ocultar después de 30 segundos
-                DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
-                    withAnimation {
-                        print("🎯 [VideoPlayer] Ocultando producto")
-                        showProduct = false
-                    }
-                }
-            }
-        }
-        .onReceive(webSocketManager.$currentContest) { newContest in
-            print("🎯 [VideoPlayer] Concurso recibido: \(newContest?.name ?? "nil")")
-            if newContest != nil {
-                print("🎯 [VideoPlayer] Mostrando concurso")
-                withAnimation {
-                    showContest = true
-                }
-                
-                // Auto-ocultar después de 45 segundos (tiempo para countdown + wheel)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 45) {
-                    withAnimation {
-                        print("🎯 [VideoPlayer] Ocultando concurso")
-                        showContest = false
-                    }
-                }
-            }
-        }
+        // Note: poll/product/contest overlays are kept but won't trigger until
+        // SDK emits those event types via CampaignWebSocketManager callbacks.
     }
     
     // MARK: - Helpers
