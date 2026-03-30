@@ -255,11 +255,15 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     /// Responds to server-initiated app-level ping with `{ "type": "pong" }`.
     private func sendPong() async {
+        guard isConnected, let task = webSocketTask else {
+            VioLogger.debug("sendPong skipped — socket not connected", component: "CampaignWebSocket")
+            return
+        }
         let payload: [String: String] = ["type": "pong"]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let text = String(data: data, encoding: .utf8) else { return }
         do {
-            try await webSocketTask?.send(.string(text))
+            try await task.send(.string(text))
             VioLogger.debug("Sent pong", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send pong: \(error)", component: "CampaignWebSocket")
@@ -269,6 +273,10 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     /// Sends `{ "type": "identify", "userId": "..." }` to the backend if `userId` is set.
     /// Registers this WS connection in the server's `wsUserMap` for targeted notifications.
     private func sendIdentifyIfNeeded() async {
+        guard isConnected, let task = webSocketTask else {
+            VioLogger.debug("sendIdentify skipped — socket not connected", component: "CampaignWebSocket")
+            return
+        }
         guard let userId = userId, !userId.isEmpty else {
             VioLogger.debug("No userId set — skipping identify", component: "CampaignWebSocket")
             return
@@ -280,7 +288,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             return
         }
         do {
-            try await webSocketTask?.send(.string(text))
+            try await task.send(.string(text))
             VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
