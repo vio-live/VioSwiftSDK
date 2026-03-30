@@ -84,6 +84,11 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             VioLogger.debug("Using API Key: \(config.apiKey.prefix(8))...", component: "CampaignWebSocket")
         }
         
+        // Cancel any existing task before creating a new one
+        // Without this, the old task fires Code=57 during reconnect and creates a loop
+        webSocketTask?.cancel(with: .normalClosure, reason: nil)
+        webSocketTask = nil
+        
         pendingRequest = request
         webSocketTask = urlSession.webSocketTask(with: request)
         webSocketTask?.resume()
