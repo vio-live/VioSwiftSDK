@@ -238,6 +238,10 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
                 VioLogger.success("Decoded cart_intent event (productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
                 onCartIntent?(event)
                 scheduleCartIntentNotification(productName: event.productName)
+
+            case "ping":
+                // App-level heartbeat — respond immediately with pong
+                await sendPong()
                 
             default:
                 VioLogger.warning("Unknown event type: \(eventType)", component: "CampaignWebSocket")
@@ -248,6 +252,19 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     }
     
     // MARK: - Outbound Messages
+    
+    /// Responds to server-initiated app-level ping with `{ "type": "pong" }`.
+    private func sendPong() async {
+        let payload: [String: String] = ["type": "pong"]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let text = String(data: data, encoding: .utf8) else { return }
+        do {
+            try await webSocketTask?.send(.string(text))
+            VioLogger.debug("Sent pong", component: "CampaignWebSocket")
+        } catch {
+            VioLogger.error("Failed to send pong: \(error)", component: "CampaignWebSocket")
+        }
+    }
     
     /// Sends `{ "type": "identify", "userId": "..." }` to the backend if `userId` is set.
     /// Registers this WS connection in the server's `wsUserMap` for targeted notifications.
