@@ -982,6 +982,18 @@ public class CampaignManager: ObservableObject {
     /// - If campaign is Upcoming: No event sent, waits for campaign_started
     /// - If campaign is Active: No event sent, can fetch components
     private func connectWebSocket(campaignId: Int) async {
+        // Guard: skip if already connected or a manager is already being set up
+        // discoverCampaigns has no isInitializing guard, so ContentView + TV2VideoPlayer
+        // can call this simultaneously — without this check we get two separate URLSessions
+        if isConnected {
+            print("🎯 [CampaignManager] connectWebSocket - Already connected, skipping")
+            return
+        }
+        if webSocketManager != nil {
+            print("🎯 [CampaignManager] connectWebSocket - Manager already exists, skipping (prevents double-connect)")
+            return
+        }
+        
         // Prefer passed campaignId (from discovery), fallback to config file
         let config = VioConfiguration.shared
         let resolvedCampaignId: Int
