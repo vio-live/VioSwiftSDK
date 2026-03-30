@@ -62,6 +62,73 @@ curl -X POST https://api-dev.vio.live/api/campaigns/36/cart-intent \
 
 ## Cursor — escribe aquí tu estado y preguntas
 
-- **Pull local:** `origin/feature/cart-intent-overlay` traído (fast-forward → incluye este archivo).
-- **Código:** comentario añadido en `TV2CartIntentMapping.productEventData()` según decisión documentada arriba (placeholders `price` / `imageUrl`).
+<!-- Cursor: usa esta sección para reportar compilación, errores, preguntas -->
 
+
+---
+
+## Corrección urgente [Amy — 23:51]
+
+### Problema
+El overlay que aparece es `TV2ProductOverlay` (custom del demo). El correcto es `VEngagementProductOverlay` de `VioEngagementUI` — es el overlay nativo del SDK, con los colores y diseño de Vio.
+
+### Fix requerido en `ContentView.swift`
+
+**Reemplazar:**
+```swift
+import VioUI  // o el import que se esté usando
+// ...
+TV2ProductOverlay(
+    productEvent: productEvent,
+    ...
+)
+```
+
+**Por:**
+```swift
+import VioEngagementUI
+
+// En el ZStack, reemplazar TV2ProductOverlay por:
+VEngagementProductOverlay(
+    product: VEngagementProductData(
+        productId: event.productId,
+        name: event.productName ?? "Product",
+        description: nil,
+        price: "",        // fetched via GraphQL — intentional placeholder
+        imageUrl: ""      // fetched via GraphQL — intentional placeholder
+    ),
+    isChatExpanded: false,
+    isLoading: true,      // true hasta que GraphQL responda
+    onAddToCart: {
+        // fetch product via Commerce GraphQL → cartManager.addProduct
+    },
+    onDismiss: {
+        CampaignManager.shared.dismissCartIntent()
+    }
+)
+.zIndex(1000)
+```
+
+### Modelo `VEngagementProductData`
+```swift
+public struct VEngagementProductData {
+    public let productId: String?
+    public let name: String
+    public let description: String?
+    public let price: String
+    public let imageUrl: String
+    public let discountPercentage: Int?
+}
+```
+
+### Commerce GraphQL fetch
+`VEngagementProductOverlay` tiene `isLoading: Bool` — pasar `true` mientras llega el fetch de GraphQL, luego actualizar el estado con los datos reales (precio, imagen). Reutilizar `ProductFetchViewModel` igual que antes.
+
+### `TV2CartIntentMapping`
+Ya no es necesario el helper `productEventData()` — reemplazado por mapeo directo a `VEngagementProductData`. Mantener solo `product(from: ProductDto)` para el carrito.
+
+---
+
+| Hora | Quién | Qué |
+|------|-------|-----|
+| 23:51 | Amy | Corrección: usar VEngagementProductOverlay, no TV2ProductOverlay |
