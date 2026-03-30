@@ -57,11 +57,9 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     /// Connect to campaign WebSocket
     public func connect() async {
-        // Build WebSocket URL
-        let wsURLString = baseURL
-            .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", with: "ws://")
-        var urlString = "\(wsURLString)/ws/\(campaignId)"
+        // Build WebSocket URL — uses VioConfiguration.wsBaseURL (already wss://)
+        let wsBase = VioConfiguration.shared.wsBaseURL
+        var urlString = "\(wsBase)/ws/\(campaignId)"
         if let uid = userId, !uid.isEmpty {
             urlString += "?userId=\(uid)"
         }

@@ -44,7 +44,7 @@ public class CampaignManager: ObservableObject {
     
     // Campaign endpoints from configuration
     private var campaignWebSocketBaseURL: String {
-        VioConfiguration.shared.campaignConfiguration.webSocketBaseURL
+        VioConfiguration.shared.wsBaseURL
     }
     
     private var campaignRestAPIBaseURL: String {

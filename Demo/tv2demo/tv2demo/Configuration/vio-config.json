@@ -214,6 +214,8 @@
     "devWebSocketBaseURL": "wss://api-dev.vio.live",
     "devRestAPIBaseURL": "https://api-dev.vio.live",
     "campaignApiKey": "tv2_api_key_91b4fbf634af4bc5",
-    "autoDiscover": true
+    "autoDiscover": true,
+    "wsBaseURL": "wss://ws.vio.live",
+    "devWsBaseURL": "wss://ws-dev.vio.live"
   }
 }

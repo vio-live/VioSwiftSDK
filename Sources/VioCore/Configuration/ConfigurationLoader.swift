@@ -218,6 +218,19 @@ public class ConfigurationLoader {
             engagementConfig: engagementConfig
         )
         
+        // Resolve and set dedicated WS base URL
+        let isDevEnv = (VioEnvironment(rawValue: config.environment) ?? .production) == .development
+        let resolvedWsBaseURL: String
+        if let campaigns = config.campaigns {
+            resolvedWsBaseURL = (isDevEnv ? campaigns.devWsBaseURL : nil)
+                ?? campaigns.wsBaseURL
+                ?? (isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live")
+        } else {
+            resolvedWsBaseURL = isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live"
+        }
+        VioConfiguration.setWsBaseURL(resolvedWsBaseURL)
+        VioLogger.debug("wsBaseURL resolved: \(resolvedWsBaseURL)", component: "Config")
+
         // Initialize Stripe automatically if available
         initializeStripeIfAvailable()
         
@@ -973,6 +986,8 @@ private struct JSONCampaignConfiguration: Codable {
     let restAPIBaseURL: String?       // REST API endpoint for production/staging
     let devWebSocketBaseURL: String?  // WebSocket endpoint for development (e.g. ngrok tunnel)
     let devRestAPIBaseURL: String?    // REST API endpoint for development (e.g. ngrok tunnel)
+    let wsBaseURL: String?            // Dedicated WS URL prod (wss://ws.vio.live)
+    let devWsBaseURL: String?         // Dedicated WS URL dev  (wss://ws-dev.vio.live)
     let campaignAdminApiKey: String?  // API key for campaign admin endpoints (different from SDK API key) - Only needed if autoDiscover is false
     let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key

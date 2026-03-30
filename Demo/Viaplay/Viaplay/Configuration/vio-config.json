@@ -4,13 +4,13 @@
   "apiKey": "viaplay_api_key_0c611e983b314ff8",
   "environment": "development",
   "theme": {
-    "name": "Elkj\u00f8p Theme",
+    "name": "Elkjøp Theme",
     "mode": "dark",
     "_brandColors": {
       "_comment": "Brand color references for documentation",
-      "elkj\u00f8p": {
+      "elkjøp": {
         "primary": "#69A333",
-        "description": "Elkj\u00f8p green - used as primary color"
+        "description": "Elkjøp green - used as primary color"
       },
       "power": {
         "primary": "#FF9500",
@@ -154,10 +154,12 @@
     "restAPIBaseURL": "https://api-dev.vio.live",
     "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
     "autoDiscover": true,
-    "channelId": null
+    "channelId": null,
+    "wsBaseURL": "wss://ws.vio.live",
+    "devWsBaseURL": "wss://ws-dev.vio.live"
   },
   "brand": {
-    "name": "Elkj\u00f8p",
+    "name": "Elkjøp",
     "iconAsset": "avatar_el",
     "_comment": "Brand configuration for engagement components. Legacy Power values: name='Power', iconAsset='avatar_power'"
   },

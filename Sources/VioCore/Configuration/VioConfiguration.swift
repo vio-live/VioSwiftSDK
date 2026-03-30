@@ -46,6 +46,12 @@ public class VioConfiguration: ObservableObject {
     @Published public private(set) var dynamicEngagementConfig: DynamicEngagementConfig?
     @Published public private(set) var dynamicLocalizationConfig: DynamicLocalizationConfig?
     
+    /// Dedicated WebSocket base URL for campaign connections.
+    /// Dev default: wss://ws-dev.vio.live
+    /// Prod default: wss://ws.vio.live
+    /// Set by ConfigurationLoader from vio-config.json campaigns.wsBaseURL / campaigns.devWsBaseURL
+    @Published public private(set) var wsBaseURL: String = "wss://ws-dev.vio.live"
+
     @Published public private(set) var isConfigured: Bool = false
     @Published public private(set) var isMarketAvailable: Bool = true  // If false, SDK should not be used
     @Published public private(set) var userCountryCode: String? = nil  // User's country code if provided
@@ -167,6 +173,11 @@ public class VioConfiguration: ObservableObject {
         return countryToLanguage[countryCode] ?? "en"  // Default to English
     }
     
+    /// Update wsBaseURL — called by ConfigurationLoader after resolving env-specific URL
+    internal static func setWsBaseURL(_ url: String) {
+        shared.wsBaseURL = url
+    }
+
     /// Set market availability status and store available markets
     /// Also automatically updates language based on country code
     internal static func setMarketAvailable(_ available: Bool, userCountryCode: String? = nil, availableMarkets: [GetAvailableMarketsDto] = []) {
