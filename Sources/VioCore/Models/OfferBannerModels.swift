@@ -498,21 +498,26 @@ public class ComponentManager: ObservableObject {
     
     private init() {
         self.campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
-        self.webSocketManager = WebSocketManager(campaignId: self.campaignId)
-        
-        // Auto-connect on initialization
-        Task {
-            await connect()
-        }
+        // Do not auto-connect: avoids a second WebSocket before CampaignManager runs discoverCampaigns.
+        // Call `connect()` from UI (e.g. HomeView.onAppear) when needed.
     }
     
     
     /// Connect to backend and fetch active components
     public func connect() async {
-        // 1. Fetch initial active components
+        // 1. Fetch initial active components (legacy Replit helper API — may no-op)
         await fetchActiveComponents()
         
-        // 2. Connect WebSocket for real-time updates
+        // 2. Real-time updates: use the same WS as CampaignManager when autoDiscover is on
+        // (single connection to `VioConfiguration.wsBaseURL`, e.g. wss://ws-dev.vio.live)
+        if VioConfiguration.shared.campaignConfiguration.autoDiscover {
+            webSocketManager?.disconnect()
+            webSocketManager = nil
+            syncActiveBannerFromCampaignManager()
+            isConnected = true
+            return
+        }
+        
         webSocketManager = WebSocketManager(campaignId: campaignId)
         webSocketManager?.onMessage = { [weak self] message in
             Task { @MainActor in
@@ -522,6 +527,30 @@ public class ComponentManager: ObservableObject {
         
         await webSocketManager?.connect()
         isConnected = true
+    }
+    
+    /// Sync offer banner UI state from `CampaignManager` (used when `autoDiscover` — one shared campaign WebSocket).
+    private func syncActiveBannerFromCampaignManager() {
+        let comps = CampaignManager.shared.activeComponents
+        if let c = comps.first(where: { $0.type == "offer_banner" }),
+           case .offerBanner(let cfg) = c.config {
+            activeBanner = cfg
+            return
+        }
+        if let c = comps.first(where: { $0.type == "countdown" }),
+           case .countdown(let cc) = c.config,
+           let banner = cc.toOfferBannerConfig() {
+            activeBanner = banner
+            return
+        }
+        activeBanner = nil
+    }
+    
+    /// Called when campaign WebSocket updates components; no-op unless `autoDiscover`.
+    @MainActor
+    public func refreshActiveBannerFromCampaignManager() {
+        guard VioConfiguration.shared.campaignConfiguration.autoDiscover else { return }
+        syncActiveBannerFromCampaignManager()
     }
     
     /// Disconnect from backend
@@ -675,15 +704,29 @@ public class WebSocketManager: ObservableObject {
     }
     
     public func connect() async {
-        // Build WebSocket URL — uses VioConfiguration.wsBaseURL (already wss://)
+        // Same WS host/path as CampaignWebSocketManager: `wsBaseURL` + `/ws/{campaignId}` (+ optional userId).
         let wsBase = VioConfiguration.shared.wsBaseURL
-        let urlString = "\(wsBase)/ws/\(campaignId)"
-        
+        var urlString = "\(wsBase)/ws/\(campaignId)"
+        let resolvedUserId = await MainActor.run { CampaignManager.shared.userId }
+        if let uid = resolvedUserId, !uid.isEmpty {
+            var allowed = CharacterSet.urlQueryAllowed
+            allowed.remove(charactersIn: "&+=")
+            let enc = uid.addingPercentEncoding(withAllowedCharacters: allowed) ?? uid
+            urlString += "?userId=\(enc)"
+        }
+
         guard let url = URL(string: urlString) else {
             return
         }
         
-        webSocketTask = urlSession.webSocketTask(with: url)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10.0
+        let cfg = VioConfiguration.shared
+        if !cfg.apiKey.isEmpty {
+            request.setValue(cfg.apiKey, forHTTPHeaderField: "X-API-Key")
+        }
+        
+        webSocketTask = urlSession.webSocketTask(with: request)
         webSocketTask?.resume()
         
         // Start listening for messages

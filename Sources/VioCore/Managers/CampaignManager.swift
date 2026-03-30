@@ -815,6 +815,7 @@ public class CampaignManager: ObservableObject {
             
             // Cache components
             CacheManager.shared.saveComponents(self.activeComponents)
+            ComponentManager.shared.refreshActiveBannerFromCampaignManager()
             
             print("🎯 [CampaignManager] discoverCampaigns - Discovered \(discoveredCampaigns.count) campaigns, \(self.activeComponents.count) components")
             
@@ -1053,6 +1054,9 @@ public class CampaignManager: ObservableObject {
         webSocketManager?.onConnectionStatusChanged = { [weak self] connected in
             Task { @MainActor in
                 self?.isConnected = connected
+                if connected {
+                    ComponentManager.shared.refreshActiveBannerFromCampaignManager()
+                }
                 
                 // According to backend behavior:
                 // - If campaign is Ended: Backend sends campaign_ended immediately when connection opens
@@ -1069,6 +1073,7 @@ public class CampaignManager: ObservableObject {
         }
         
         await webSocketManager?.connect()
+        ComponentManager.shared.refreshActiveBannerFromCampaignManager()
     }
     
     // MARK: - Event Handlers
@@ -1208,6 +1213,8 @@ public class CampaignManager: ObservableObject {
             object: nil,
             userInfo: ["campaignId": event.campaignId]
         )
+        
+        ComponentManager.shared.refreshActiveBannerFromCampaignManager()
     }
     
     private func handleCampaignPaused(_ event: CampaignPausedEvent) {
@@ -1251,6 +1258,8 @@ public class CampaignManager: ObservableObject {
             object: nil,
             userInfo: ["campaignId": event.campaignId]
         )
+        
+        ComponentManager.shared.refreshActiveBannerFromCampaignManager()
     }
     
     private func handleCampaignResumed(_ event: CampaignResumedEvent) {
@@ -1367,6 +1376,7 @@ public class CampaignManager: ObservableObject {
                 // Save to cache
                 CacheManager.shared.saveComponents(activeComponents)
             }
+            ComponentManager.shared.refreshActiveBannerFromCampaignManager()
         } catch {
             VioLogger.error("Failed to convert component event: \(error)", component: "CampaignManager")
         }
@@ -1403,6 +1413,7 @@ public class CampaignManager: ObservableObject {
                     VioLogger.warning("Cannot add component - campaign not active or paused", component: "CampaignManager")
                 }
             }
+            ComponentManager.shared.refreshActiveBannerFromCampaignManager()
         } catch {
             VioLogger.error("Failed to convert component event: \(error)", component: "CampaignManager")
         }

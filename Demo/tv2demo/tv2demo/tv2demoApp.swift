@@ -22,14 +22,35 @@ struct tv2demoApp: App {
         // Stripe is initialized automatically by the SDK
         print("🚀 [TV2Demo] Loading Vio SDK configuration...")
         ConfigurationLoader.loadConfiguration()
+        
+        let cfg = VioConfiguration.shared
+        
         print("✅ [TV2Demo] Vio SDK configured successfully")
-        print("🎨 [TV2Demo] Theme: \(VioConfiguration.shared.theme.name)")
-        print("🎨 [TV2Demo] Mode: \(VioConfiguration.shared.theme.mode)")
+        print("🎨 [TV2Demo] Theme: \(cfg.theme.name)")
+        print("🎨 [TV2Demo] Mode: \(cfg.theme.mode)")
+        print("🎨 [TV2Demo] environment: \(cfg.environment.rawValue)")
+        print("🎨 [TV2Demo] GraphQL: \(cfg.environment.graphQLURL)")
+        print("🎨 [TV2Demo] REST: \(cfg.campaignConfiguration.restAPIBaseURL)")
+        print("🎨 [TV2Demo] WebSocket: \(cfg.wsBaseURL)")
+        let campaignId = cfg.liveShowConfiguration.campaignId
+        if campaignId > 0 {
+            print("🎨 [TV2Demo] campaignId (config): \(campaignId)")
+        }
+        print("🎨 [TV2Demo] autoDiscover: \(cfg.campaignConfiguration.autoDiscover)")
+        if !cfg.liveShowConfiguration.commerceBaseUrl.isEmpty {
+            print("🎨 [TV2Demo] Commerce: \(cfg.liveShowConfiguration.commerceBaseUrl)")
+        }
+        print("🎨 [TV2Demo] apiKey: \(cfg.apiKey.prefix(10))…")
         
         // Set demo userId for WS identify — backend uses this to route cart_intent events
         // In production replace with real user identity (e.g. JWT sub claim)
         CampaignManager.shared.userId = "tv2_demo_user"
         print("👤 [TV2Demo] userId set: tv2_demo_user")
+        
+        if campaignId > 0 {
+            let ws = "\(cfg.wsBaseURL)/ws/\(campaignId)?userId=\(CampaignManager.shared.userId ?? "")"
+            print("🎨 [TV2Demo] WebSocket URL: \(ws)")
+        }
     }
     
     var body: some Scene {

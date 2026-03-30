@@ -209,9 +209,9 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
   "campaigns": {
-    "webSocketBaseURL": "wss://api-dev.vio.live",
+    "webSocketBaseURL": "wss://ws-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "wss://api-dev.vio.live",
+    "devWebSocketBaseURL": "wss://ws-dev.vio.live",
     "devRestAPIBaseURL": "https://api-dev.vio.live",
     "campaignApiKey": "tv2_api_key_91b4fbf634af4bc5",
     "autoDiscover": true,
