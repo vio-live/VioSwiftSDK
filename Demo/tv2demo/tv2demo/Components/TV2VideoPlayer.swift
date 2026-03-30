@@ -206,15 +206,22 @@ struct TV2VideoPlayer: View {
             // Enable all orientations for video playback
             setOrientation(.allButUpsideDown)
             
-            // Conectar WebSocket
+            // Conectar WebSocket legacy (polls/contests)
             webSocketManager.connect()
+            
+            // 🎯 SDK: discoverCampaigns → WS identify → cart_intent → notificación
+            Task {
+                print("🎯 [TV2VideoPlayer] Starting SDK campaign discovery...")
+                await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
+                print("🎯 [TV2VideoPlayer] SDK campaigns: \(CampaignManager.shared.activeCampaigns.count), connected: \(CampaignManager.shared.isConnected)")
+            }
         }
         .onDisappear {
             playerViewModel.cleanup()
             // Return to portrait when dismissed
             setOrientation(.portrait)
             
-            // Desconectar WebSocket
+            // Desconectar WebSocket legacy
             webSocketManager.disconnect()
         }
         .onReceive(webSocketManager.$currentPoll) { newPoll in
