@@ -19,6 +19,14 @@ struct ContentView: View {
         ZStack {
             // Main app content
             HomeView()
+                .onAppear {
+                    // 🎯 SDK: discover active campaigns → WS connect → identify → ready for cart_intent
+                    Task {
+                        print("🎯 [ContentView] Starting campaign discovery...")
+                        await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
+                        print("🎯 [ContentView] Campaigns found: \(CampaignManager.shared.activeCampaigns.count), WS connected: \(CampaignManager.shared.isConnected)")
+                    }
+                }
             
             // Mini player de casting - SIEMPRE visible cuando hay casting (persistente)
             if castingManager.isCasting {
