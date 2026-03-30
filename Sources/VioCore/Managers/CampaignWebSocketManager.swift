@@ -4,17 +4,18 @@ import VioCore
 
 /// WebSocket Manager for Campaign Lifecycle Events
 @MainActor
-public class CampaignWebSocketManager: ObservableObject {
+public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     // MARK: - Properties
     private let campaignId: Int
     private let baseURL: String
     private var webSocketTask: URLSessionWebSocketTask?
-    private var urlSession: URLSession
+    private var urlSession: URLSession!
     private var reconnectTimer: Timer?
     private var reconnectAttempts: Int = 0
     private let maxReconnectAttempts: Int = 5
     private var isConnected: Bool = false
+    private var pendingRequest: URLRequest?
     
     // MARK: - Event Callbacks
     public var onCampaignStarted: ((CampaignStartedEvent) -> Void)?
@@ -39,7 +40,8 @@ public class CampaignWebSocketManager: ObservableObject {
         self.campaignId = campaignId
         self.baseURL = baseURL
         self.userId = userId
-        self.urlSession = URLSession(configuration: .default)
+        super.init()
+        self.urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
         
         // Request local notification permission so cart_intent alerts can fire
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -82,24 +84,11 @@ public class CampaignWebSocketManager: ObservableObject {
             VioLogger.debug("Using API Key: \(config.apiKey.prefix(8))...", component: "CampaignWebSocket")
         }
         
+        pendingRequest = request
         webSocketTask = urlSession.webSocketTask(with: request)
         webSocketTask?.resume()
-        
-        // Wait a moment for connection to establish
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        isConnected = true
-        reconnectAttempts = 0 // Reset reconnect attempts on successful connection
-        onConnectionStatusChanged?(true)
-        
-        // Register this connection in backend wsUserMap via identify message
-        await sendIdentifyIfNeeded()
-        
-        // Start listening for messages in a separate task so it doesn't block
-        // URLSessionWebSocketTask handles keep-alive automatically
-        Task {
-            await listenForMessages()
-        }
+        // Connection established confirmed via URLSessionWebSocketDelegate
+        // (didOpenWithProtocol fires when handshake completes)
     }
     
     /// Disconnect from WebSocket
@@ -328,6 +317,47 @@ public class CampaignWebSocketManager: ObservableObject {
         reconnectTimer?.invalidate()
         reconnectTimer = nil
         reconnectAttempts = 0
+    }
+}
+
+// MARK: - URLSessionWebSocketDelegate
+extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
+    
+    /// Fires when the WebSocket handshake completes — real connection confirmed.
+    public nonisolated func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didOpenWithProtocol protocol: String?
+    ) {
+        Task { @MainActor in
+            print("🎯 [CampaignWebSocket] WS connected (didOpenWithProtocol) campaignId: \(self.campaignId)")
+            self.isConnected = true
+            self.reconnectAttempts = 0
+            self.onConnectionStatusChanged?(true)
+            
+            // Identify + start listen loop only after real connection confirmed
+            await self.sendIdentifyIfNeeded()
+            Task {
+                await self.listenForMessages()
+            }
+        }
+    }
+    
+    /// Fires when the server closes the connection.
+    public nonisolated func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didCloseWith closeCode: URLSessionWebSocketTask.CloseCode,
+        reason: Data?
+    ) {
+        let reasonStr = reason.flatMap { String(data: $0, encoding: .utf8) } ?? "none"
+        Task { @MainActor in
+            print("🎯 [CampaignWebSocket] WS closed (code: \(closeCode.rawValue), reason: \(reasonStr)) campaignId: \(self.campaignId)")
+            guard self.isConnected else { return }
+            self.isConnected = false
+            self.onConnectionStatusChanged?(false)
+            await self.attemptReconnect()
+        }
     }
 }
 
