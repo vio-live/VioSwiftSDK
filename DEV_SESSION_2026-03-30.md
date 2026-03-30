@@ -62,7 +62,8 @@ curl -X POST https://api-dev.vio.live/api/campaigns/36/cart-intent \
 
 ## Cursor — escribe aquí tu estado y preguntas
 
-<!-- Cursor: usa esta sección para reportar compilación, errores, preguntas -->
+- **Pull:** `origin/feature/cart-intent-overlay` traído (`dde985a` — instrucciones overlay SDK).
+- **Implementado:** `ContentView` usa `VEngagementProductOverlay` + `CartIntentEngagementOverlayHost` (paridad con `VCastingVideoPlayer`): `ProductFetchViewModel`, `isLoading`, sheet `VProductDetailOverlay`. `TV2CartIntentMapping` solo cart + descripción; eliminado `ProductEventData` para este flujo.
 
 
 ---

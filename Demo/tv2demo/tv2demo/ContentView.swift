@@ -8,6 +8,7 @@
 import SwiftUI
 import VioUI
 import VioCore
+import VioEngagementUI
 import AVFoundation
 
 struct ContentView: View {
@@ -60,31 +61,17 @@ struct ContentView: View {
             )
             .zIndex(999) // Asegurar que esté por encima de todo (video, overlays, etc.)
 
-            // Second-screen cart_intent (e.g. Apple TV tap → iPhone overlay)
+            // Second-screen cart_intent — SDK engagement overlay + ProductFetchViewModel (same pattern as VCastingVideoPlayer)
             if let event = campaignManager.activeCartIntentEvent,
-               let productEvent = TV2CartIntentMapping.productEventData(
-                from: event,
-                currency: cartManager.currency,
-                campaignLogo: campaignManager.currentCampaign?.campaignLogo
-               ) {
-                TV2ProductOverlay(
-                    productEvent: productEvent,
-                    isChatExpanded: false,
+               let pid = event.productId, !pid.isEmpty {
+                CartIntentEngagementOverlayHost(
+                    productId: pid,
+                    fallbackName: event.productName ?? "Product",
                     sdk: commerceSdkClient,
                     currency: cartManager.currency,
                     country: cartManager.country,
-                    onAddToCart: { productDto in
-                        guard let dto = productDto else { return }
-                        let product = TV2CartIntentMapping.product(from: dto)
-                        Task {
-                            await cartManager.addProduct(product, quantity: 1)
-                        }
-                    },
-                    onDismiss: {
-                        campaignManager.dismissCartIntent()
-                    }
+                    onDismiss: { campaignManager.dismissCartIntent() }
                 )
-                .environmentObject(cartManager)
                 .id(cartIntentPresentationID)
                 .zIndex(1000)
             }
@@ -105,6 +92,94 @@ struct ContentView: View {
                 showCastingView = false
             }
         }
+    }
+}
+
+// MARK: - cart_intent → VEngagementProductOverlay
+
+/// Hosts `VEngagementProductOverlay` and `ProductFetchViewModel` for global `cart_intent` (DEV_SESSION / casting parity).
+private struct CartIntentEngagementOverlayHost: View {
+    let productId: String
+    let fallbackName: String
+    let sdk: SdkClient
+    let onDismiss: () -> Void
+
+    @EnvironmentObject private var cartManager: CartManager
+    @StateObject private var viewModel: ProductFetchViewModel
+    @State private var showProductDetail = false
+
+    init(
+        productId: String,
+        fallbackName: String,
+        sdk: SdkClient,
+        currency: String,
+        country: String,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.productId = productId
+        self.fallbackName = fallbackName
+        self.sdk = sdk
+        self.onDismiss = onDismiss
+        _viewModel = StateObject(
+            wrappedValue: ProductFetchViewModel(sdk: sdk, currency: currency, country: country)
+        )
+    }
+
+    var body: some View {
+        VEngagementProductOverlay(
+            product: VEngagementProductData(
+                productId: productId,
+                name: viewModel.product?.title ?? fallbackName,
+                description: TV2CartIntentMapping.engagementLineDescription(from: viewModel.product),
+                price: viewModel.product.map { Self.formatPrice($0.price) } ?? "",
+                imageUrl: viewModel.product?.images.first?.url ?? "",
+                discountPercentage: Self.discountPercent(viewModel.product)
+            ),
+            isChatExpanded: false,
+            isLoading: viewModel.isLoading,
+            onAddToCart: {
+                guard let dto = viewModel.product else { return }
+                let product = TV2CartIntentMapping.product(from: dto)
+                Task {
+                    await cartManager.addProduct(product, quantity: 1)
+                }
+            },
+            onShowDetail: {
+                if viewModel.product != nil {
+                    showProductDetail = true
+                }
+            },
+            onDismiss: onDismiss
+        )
+        .task(id: productId) {
+            await viewModel.fetchProduct(productId: productId)
+        }
+        .sheet(isPresented: $showProductDetail) {
+            if let apiProduct = viewModel.product {
+                VProductDetailOverlay(
+                    product: TV2CartIntentMapping.product(from: apiProduct),
+                    onDismiss: { showProductDetail = false },
+                    onAddToCart: { _ in
+                        showProductDetail = false
+                    }
+                )
+                .environmentObject(cartManager)
+            }
+        }
+    }
+
+    private static func formatPrice(_ price: PriceDto) -> String {
+        let priceToShow = price.amountInclTaxes ?? price.amount
+        return "\(price.currencyCode) \(String(format: "%.2f", priceToShow))"
+    }
+
+    private static func discountPercent(_ product: ProductDto?) -> Int? {
+        guard let product else { return nil }
+        let currentPrice = product.price.amountInclTaxes ?? product.price.amount
+        let originalPrice = product.price.compareAtInclTaxes ?? product.price.compareAt
+        guard let compareAt = originalPrice, compareAt > currentPrice else { return nil }
+        let discount = ((compareAt - currentPrice) / compareAt) * 100
+        return Int(discount.rounded())
     }
 }
 

@@ -5,7 +5,7 @@
 **Qué se implementó**
 
 - **SDK (`VioCore`):** `CampaignManager` expone `@Published activeCartIntentEvent` y `dismissCartIntent()`. En `connectWebSocket` se asigna `onCartIntent` del `CampaignWebSocketManager` para actualizar ese estado en el main actor. Se limpia el evento en `campaign_ended`, `campaign_paused` y `disconnect`. `CartIntentEvent` conforma `Equatable` para observadores SwiftUI.
-- **Demo tv2demo:** `ContentView` observa `CampaignManager.shared`, muestra **`TV2ProductOverlay`** global encima del resto (`zIndex` 1000). Se reutiliza el fetch existente vía **`ProductFetchViewModel`** dentro del overlay. Helper **`TV2CartIntentMapping`:** mapeo `CartIntentEvent` → `ProductEventData` sintético + `ProductDto` → `Product` para el carrito. Cliente GraphQL con `commerceApiKey` cuando existe, igual que `ProductService`.
+- **Demo tv2demo:** `ContentView` / `CartIntentEngagementOverlayHost` observa `CampaignManager.shared`, muestra **`VEngagementProductOverlay`** (`VioEngagementUI`) global (`zIndex` 1000), mismo criterio visual que casting. Fetch vía **`ProductFetchViewModel`** + `VProductDetailOverlay` en sheet. **`TV2CartIntentMapping`:** descripción en texto plano desde GraphQL + `ProductDto` → `Product` para carrito/detalle. Cliente GraphQL con `commerceApiKey` cuando existe.
 
 **Rama:** `feature/cart-intent-overlay` (base: `feature/tv2-sdk-integration` @ `add4ff2`).
 

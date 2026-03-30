@@ -2,32 +2,16 @@ import Foundation
 import VioCore
 import VioUI
 
-/// Maps `CartIntentEvent` (SDK WebSocket) into tv2demo overlay models and `Product` for the cart.
+/// Maps Commerce `ProductDto` → domain `Product` for cart / `VProductDetailOverlay` after `cart_intent`.
 enum TV2CartIntentMapping {
-    /// Builds `ProductEventData` for `TV2ProductOverlay`; returns nil if `productId` is missing.
-    static func productEventData(
-        from event: CartIntentEvent,
-        currency: String,
-        campaignLogo: String?
-    ) -> ProductEventData? {
-        guard let pid = event.productId, !pid.isEmpty else { return nil }
-        let name = event.productName ?? "Product"
-        // price and imageUrl are intentionally empty — TV2ProductOverlay
-        // fetches real product data (image, price, variants) from Commerce GraphQL
-        // using productId. These fields are placeholders to satisfy the model.
-        return ProductEventData(
-            id: pid,
-            productId: pid,
-            name: name,
-            description: "",
-            price: "",
-            currency: currency,
-            imageUrl: "",
-            campaignLogo: campaignLogo
-        )
+    /// Plain-text description for engagement UI (strips HTML from GraphQL).
+    static func engagementLineDescription(from dto: ProductDto?) -> String? {
+        guard let raw = dto?.description, !raw.isEmpty else { return nil }
+        let t = cleanHTMLString(raw)
+        return t.isEmpty ? nil : t
     }
 
-    /// Same conversion path as `TV2ProductOverlay` for add-to-cart from `ProductDto`.
+    /// Same conversion path used across tv2demo for add-to-cart from `ProductDto`.
     static func product(from dto: ProductDto) -> Product {
         let cleanDescription = dto.description.map { cleanHTMLString($0) }
         return Product(
