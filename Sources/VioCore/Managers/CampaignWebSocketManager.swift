@@ -360,6 +360,12 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
         didOpenWithProtocol protocol: String?
     ) {
         Task { @MainActor in
+            // Guard against stale callbacks from previously cancelled tasks
+            // Without this, a cancelled task can still fire didOpen and start a second listenForMessages loop
+            guard webSocketTask === self.webSocketTask else {
+                VioLogger.debug("Ignoring didOpen for stale webSocketTask", component: "CampaignWebSocket")
+                return
+            }
             print("🎯 [CampaignWebSocket] WS connected (didOpenWithProtocol) campaignId: \(self.campaignId)")
             self.isConnected = true
             self.reconnectAttempts = 0
@@ -382,6 +388,11 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
     ) {
         let reasonStr = reason.flatMap { String(data: $0, encoding: .utf8) } ?? "none"
         Task { @MainActor in
+            // Guard against stale callbacks from previously cancelled tasks
+            guard webSocketTask === self.webSocketTask else {
+                VioLogger.debug("Ignoring didClose for stale webSocketTask", component: "CampaignWebSocket")
+                return
+            }
             print("🎯 [CampaignWebSocket] WS closed (code: \(closeCode.rawValue), reason: \(reasonStr)) campaignId: \(self.campaignId)")
             guard self.isConnected else { return }
             self.isConnected = false
