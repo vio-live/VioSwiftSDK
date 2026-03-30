@@ -62,8 +62,7 @@ curl -X POST https://api-dev.vio.live/api/campaigns/36/cart-intent \
 
 ## Cursor — escribe aquí tu estado y preguntas
 
-- **Pull:** `origin/feature/cart-intent-overlay` traído (`dde985a` — instrucciones overlay SDK).
-- **Implementado:** `ContentView` usa `VEngagementProductOverlay` + `CartIntentEngagementOverlayHost` (paridad con `VCastingVideoPlayer`): `ProductFetchViewModel`, `isLoading`, sheet `VProductDetailOverlay`. `TV2CartIntentMapping` solo cart + descripción; eliminado `ProductEventData` para este flujo.
+<!-- Cursor: usa esta sección para reportar compilación, errores, preguntas -->
 
 
 ---
@@ -133,3 +132,78 @@ Ya no es necesario el helper `productEventData()` — reemplazado por mapeo dire
 | Hora | Quién | Qué |
 |------|-------|-----|
 | 23:51 | Amy | Corrección: usar VEngagementProductOverlay, no TV2ProductOverlay |
+
+---
+
+## CORRECCIÓN ARQUITECTURA — URGENTE [Amy — 00:02]
+
+### El problema con lo implementado
+Cursor implementó un sistema nuevo (`activeCartIntentEvent` @Published + overlay custom en ContentView). **Eso está mal.** Ya existe una arquitectura completa en el SDK para esto.
+
+### La arquitectura correcta: DynamicComponentManager
+
+El SDK tiene:
+- `DynamicComponentManager.shared` — singleton que registra/activa/desactiva componentes
+- `DynamicComponentRenderer` — View que observa el manager y renderiza todo automáticamente
+- `FeaturedProductComponentView` — el componente visual de producto ya construido
+- `DynamicComponent(.featuredProduct(FeaturedProductComponentData(product:...)))` — el modelo
+
+`DynamicComponentRenderer` ya está embebido en `VLiveShowOverlay` con zIndex 10,000,000. Es el sistema de overlays dinámicos del SDK.
+
+### Qué hay que hacer — reescribir el approach
+
+**Revertir en `ContentView.swift`:**
+- Eliminar el overlay de `TV2ProductOverlay` / `VEngagementProductOverlay`
+- Eliminar `@ObservedObject var campaignManager`
+- Eliminar `cartIntentPresentationID`
+- Solo añadir: `DynamicComponentRenderer().zIndex(10_000_000)`
+
+**Revertir en `CampaignManager.swift`:**
+- Eliminar `@Published activeCartIntentEvent`
+- Eliminar `dismissCartIntent()`
+
+**Nuevo handler en `CampaignManager` cuando llega `cart_intent`:**
+```swift
+// En el handler de cart_intent del CampaignWebSocketManager:
+campaignWebSocket?.onCartIntent = { [weak self] event in
+    guard let productId = event.productId else { return }
+    Task { @MainActor in
+        // 1. Fetch product from Commerce GraphQL
+        let product = await self?.fetchProduct(id: productId)
+        guard let product = product else { return }
+        
+        // 2. Register + activate via DynamicComponentManager
+        let component = DynamicComponent(
+            id: "cart-intent-\(productId)",
+            type: .featuredProduct,
+            startTime: nil,          // activate immediately
+            endTime: Date().addingTimeInterval(30), // 30s auto-dismiss
+            position: .bottom,
+            triggerOn: .streamStart,
+            data: .featuredProduct(FeaturedProductComponentData(
+                product: product,
+                productId: Int(productId),
+                position: .bottom,
+                startTime: nil,
+                endTime: Date().addingTimeInterval(30),
+                triggerOn: .streamStart
+            ))
+        )
+        DynamicComponentManager.shared.register(component)
+    }
+}
+```
+
+**Commerce GraphQL fetch — reutilizar `ProductService` o `SdkClient`:**
+Ver `Sources/VioUI/Services/ProductService.swift` — ya tiene el fetch por productId.
+
+### Lo que NO hay que tocar
+- `TV2CartIntentMapping` — eliminar completamente (no se necesita)
+- `TAREA_CART_INTENT_OVERLAY.md` — actualizar con la nueva arquitectura
+
+### Confirmar en el archivo cuando termines
+Escribe tu estado + cualquier pregunta sobre el fetch de Commerce o la estructura de `DynamicComponent` abajo.
+
+| Hora | Quién | Qué |
+|------|-------|-----|
+| 00:02 | Amy | Corrección arquitectura — usar DynamicComponentManager, no overlay custom |
