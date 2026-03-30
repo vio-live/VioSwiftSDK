@@ -675,12 +675,9 @@ public class WebSocketManager: ObservableObject {
     }
     
     public func connect() async {
-        // Build WebSocket URL from configuration (same pattern as CampaignWebSocketManager)
-        let baseURL = VioConfiguration.shared.campaignConfiguration.webSocketBaseURL
-        let wsURLString = baseURL
-            .replacingOccurrences(of: "https://", with: "wss://")
-            .replacingOccurrences(of: "http://", with: "ws://")
-        let urlString = "\(wsURLString)/ws/\(campaignId)"
+        // Build WebSocket URL — uses VioConfiguration.wsBaseURL (already wss://)
+        let wsBase = VioConfiguration.shared.wsBaseURL
+        let urlString = "\(wsBase)/ws/\(campaignId)"
         
         guard let url = URL(string: urlString) else {
             return
