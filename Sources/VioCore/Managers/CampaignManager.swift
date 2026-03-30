@@ -815,6 +815,12 @@ public class CampaignManager: ObservableObject {
             
             print("🎯 [CampaignManager] discoverCampaigns - Discovered \(discoveredCampaigns.count) campaigns, \(self.activeComponents.count) components")
             
+            // Connect WebSocket for the active campaign (enables cart_intent, campaign events, etc.)
+            if let activeCampaign = self.currentCampaign, activeCampaign.isPaused != true {
+                print("🎯 [CampaignManager] discoverCampaigns - Connecting WebSocket for campaignId: \(activeCampaign.id)")
+                await connectWebSocket(campaignId: activeCampaign.id)
+            }
+            
         } catch {
             VioLogger.error("Failed to discover campaigns: \(error)", component: "CampaignManager")
         }
