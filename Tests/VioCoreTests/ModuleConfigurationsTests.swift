@@ -77,7 +77,7 @@ final class ModuleConfigurationsTests: XCTestCase {
 
     func testWebSocketBaseURLPointsToVioLive() {
         // Validates the URL updated in commit 85fd6c3 (Maxi, Mar 25)
-        // Default should point to api-dev.vio.live (was socket-qa.reachu.io)
+        // Default should point to api-dev.vio.live
         let config = CampaignConfiguration.default
         XCTAssertTrue(
             config.webSocketBaseURL.contains("vio.live"),

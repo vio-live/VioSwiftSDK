@@ -39,7 +39,7 @@ Android (VioKotlinSDK)  ←→  graph-ql-dev.vio.live (GraphQL / commerce)
 | Backend API       | `https://api-dev.vio.live`               |
 | WebSocket campaña | `wss://api-dev.vio.live/ws/{campaignId}` |
 | Commerce GraphQL  | `https://graph-ql-dev.vio.live/graphql`  |
-| Legacy            | `https://socket-qa.reachu.io`            |
+| Legacy            | *(deprecated — no longer in use)*        |
 
 ## Claves y demos
 
