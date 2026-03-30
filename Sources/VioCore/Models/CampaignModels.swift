@@ -953,7 +953,7 @@ public struct ComponentConfigUpdatedEvent: Codable {
 
 /// Received when the backend routes a cart_intent to this user's WebSocket connection.
 /// Triggered by POST /api/campaigns/:id/cart-intent → wsUserMap lookup → send to device.
-public struct CartIntentEvent: Codable {
+public struct CartIntentEvent: Codable, Equatable {
     public let type: String
     /// Name of the product the user is being prompted to add to cart.
     public let productName: String?

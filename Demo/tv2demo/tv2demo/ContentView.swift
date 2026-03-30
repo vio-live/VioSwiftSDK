@@ -11,9 +11,22 @@ import VioCore
 import AVFoundation
 
 struct ContentView: View {
+    @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var castingManager = CastingManager.shared
     @State private var showCastingView = false
+    @State private var cartIntentPresentationID = UUID()
     @EnvironmentObject var cartManager: CartManager
+
+    private var commerceSdkClient: SdkClient {
+        let config = VioConfiguration.shared
+        let baseURL = URL(string: config.environment.graphQLURL)
+            ?? URL(string: "https://graph-ql-dev.vio.live/graphql")!
+        let commerceKey = config.liveShowConfiguration.commerceApiKey
+        let resolvedApiKey = commerceKey.isEmpty
+            ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)
+            : commerceKey
+        return SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
+    }
     
     var body: some View {
         ZStack {
@@ -46,6 +59,40 @@ struct ContentView: View {
                 )
             )
             .zIndex(999) // Asegurar que esté por encima de todo (video, overlays, etc.)
+
+            // Second-screen cart_intent (e.g. Apple TV tap → iPhone overlay)
+            if let event = campaignManager.activeCartIntentEvent,
+               let productEvent = TV2CartIntentMapping.productEventData(
+                from: event,
+                currency: cartManager.currency,
+                campaignLogo: campaignManager.currentCampaign?.campaignLogo
+               ) {
+                TV2ProductOverlay(
+                    productEvent: productEvent,
+                    isChatExpanded: false,
+                    sdk: commerceSdkClient,
+                    currency: cartManager.currency,
+                    country: cartManager.country,
+                    onAddToCart: { productDto in
+                        guard let dto = productDto else { return }
+                        let product = TV2CartIntentMapping.product(from: dto)
+                        Task {
+                            await cartManager.addProduct(product, quantity: 1)
+                        }
+                    },
+                    onDismiss: {
+                        campaignManager.dismissCartIntent()
+                    }
+                )
+                .environmentObject(cartManager)
+                .id(cartIntentPresentationID)
+                .zIndex(1000)
+            }
+        }
+        .onChange(of: campaignManager.activeCartIntentEvent) { _, newValue in
+            if newValue != nil {
+                cartIntentPresentationID = UUID()
+            }
         }
         .fullScreenCover(isPresented: $showCastingView) {
             if castingManager.isCasting {

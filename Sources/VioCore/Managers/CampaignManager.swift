@@ -24,6 +24,8 @@ public class CampaignManager: ObservableObject {
         set { currentBroadcastContext = newValue }
     }
     @Published public private(set) var activeCampaigns: [Campaign] = []  // Multiple campaigns support
+    /// Latest `cart_intent` from the campaign WebSocket for this `userId` (shoppable / second-screen).
+    @Published public private(set) var activeCartIntentEvent: CartIntentEvent? = nil
     
     // MARK: - Private Properties
     private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
@@ -314,11 +316,17 @@ public class CampaignManager: ObservableObject {
         return activeComponents.filter { $0.type == type && $0.isActive }
     }
     
+    /// Clears cart intent UI state (e.g. after dismiss or when leaving the session).
+    public func dismissCartIntent() {
+        activeCartIntentEvent = nil
+    }
+    
     /// Disconnect from campaign
     public func disconnect() {
         webSocketManager?.disconnect()
         webSocketManager = nil
         isConnected = false
+        activeCartIntentEvent = nil
     }
     
     // MARK: - Private Methods
@@ -1072,6 +1080,12 @@ public class CampaignManager: ObservableObject {
             }
         }
         
+        webSocketManager?.onCartIntent = { [weak self] event in
+            Task { @MainActor in
+                self?.activeCartIntentEvent = event
+            }
+        }
+        
         await webSocketManager?.connect()
         ComponentManager.shared.refreshActiveBannerFromCampaignManager()
     }
@@ -1163,6 +1177,7 @@ public class CampaignManager: ObservableObject {
         
         // Immediately hide ALL components
         activeComponents.removeAll()
+        activeCartIntentEvent = nil
         
         // Get logo before updating campaign (to clear it from cache)
         let campaignLogoToClear = currentCampaign?.campaignLogo
@@ -1224,6 +1239,7 @@ public class CampaignManager: ObservableObject {
         
         // Immediately hide ALL components
         activeComponents.removeAll()
+        activeCartIntentEvent = nil
         
         // Update campaign with paused state, preserve existing campaignLogo if available
         if let campaign = currentCampaign {
