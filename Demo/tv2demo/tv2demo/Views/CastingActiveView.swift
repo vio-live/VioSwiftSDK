@@ -7,7 +7,10 @@ import VioCore
 struct CastingActiveView: View {
     let match: Match
     @StateObject private var castingManager = CastingManager.shared
-    @StateObject private var webSocketManager = WebSocketManager()
+    // Legacy WebSocketManager removed — was opening 2nd WS to same endpoint as SDK
+    @State private var currentPoll: PollEventData? = nil
+    @State private var currentProduct: ProductEventData? = nil
+    @State private var currentContest: ContestEventData? = nil
     @StateObject private var chatManager = ChatManager()
     @EnvironmentObject private var cartManager: CartManager
     @Environment(\.dismiss) private var dismiss
@@ -59,17 +62,17 @@ struct CastingActiveView: View {
                     .frame(minHeight: 40) // Espacio entre controles y eventos
             
                 // Eventos interactivos (DEBAJO de los controles)
-            if let poll = webSocketManager.currentPoll {
+            if let poll = currentPoll {
                     CastingPollCardView(
                     poll: poll,
                     onVote: { option in
                             print("📊 [Poll] Votado: \(option)")
                     },
                     onDismiss: {
-                        webSocketManager.currentPoll = nil
+                        currentPoll = nil
                     }
                 )
-                } else if let productEvent = webSocketManager.currentProduct {
+                } else if let productEvent = currentProduct {
                     // Componente que carga datos desde Vio API
                     CastingProductCardView(
                         productEvent: productEvent,
@@ -82,17 +85,17 @@ struct CastingActiveView: View {
                             }
                     },
                     onDismiss: {
-                        webSocketManager.currentProduct = nil
+                        currentProduct = nil
                     }
                 )
-                } else if let contest = webSocketManager.currentContest {
+                } else if let contest = currentContest {
                     CastingContestCardView(
                     contest: contest,
                     onJoin: {
                             print("🎁 [Contest] Usuario se unió")
                     },
                     onDismiss: {
-                        webSocketManager.currentContest = nil
+                        currentContest = nil
                     }
                 )
             }
@@ -127,11 +130,11 @@ struct CastingActiveView: View {
         }
         .navigationBarHidden(true)
         .onAppear {
-            webSocketManager.connect()
+            // Legacy webSocketManager.connect() removed — SDK handles WS via CampaignManager
             chatManager.startSimulation()
         }
         .onDisappear {
-            webSocketManager.disconnect()
+            // Legacy webSocketManager.disconnect() removed
             chatManager.stopSimulation()
         }
     }
