@@ -976,24 +976,30 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Connect to campaign WebSocket
-    /// Always uses campaignId from configuration file (vio-config.json)
+    /// Uses the passed campaignId (from discovery response). Falls back to config file if 0.
     /// According to backend behavior:
     /// - If campaign is Ended: Backend sends campaign_ended immediately
     /// - If campaign is Upcoming: No event sent, waits for campaign_started
     /// - If campaign is Active: No event sent, can fetch components
     private func connectWebSocket(campaignId: Int) async {
-        // Always use campaignId from configuration file (vio-config.json)
+        // Prefer passed campaignId (from discovery), fallback to config file
         let config = VioConfiguration.shared
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        guard configuredCampaignId > 0 else {
-            VioLogger.warning("No campaignId configured in liveShow.campaignId - skipping WebSocket connection", component: "CampaignManager")
-            return
+        let resolvedCampaignId: Int
+        if campaignId > 0 {
+            resolvedCampaignId = campaignId
+            print("🎯 [CampaignManager] connectWebSocket - Using campaignId from discovery: \(resolvedCampaignId)")
+        } else {
+            let configuredCampaignId = config.liveShowConfiguration.campaignId
+            guard configuredCampaignId > 0 else {
+                VioLogger.warning("No campaignId available (discovery=0, config=0) - skipping WebSocket connection", component: "CampaignManager")
+                return
+            }
+            resolvedCampaignId = configuredCampaignId
+            print("🎯 [CampaignManager] connectWebSocket - Using campaignId from config file: \(resolvedCampaignId)")
         }
         
-        print("🎯 [CampaignManager] connectWebSocket - Using campaignId from config file: \(configuredCampaignId)")
-        
         // Use the campaign WebSocket endpoint, not the GraphQL endpoint
-        webSocketManager = CampaignWebSocketManager(campaignId: configuredCampaignId, baseURL: campaignWebSocketBaseURL, userId: userId)
+        webSocketManager = CampaignWebSocketManager(campaignId: resolvedCampaignId, baseURL: campaignWebSocketBaseURL, userId: userId)
         
         // Setup event handlers
         webSocketManager?.onCampaignStarted = { [weak self] event in
