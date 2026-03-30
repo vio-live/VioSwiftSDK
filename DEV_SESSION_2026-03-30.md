@@ -62,5 +62,6 @@ curl -X POST https://api-dev.vio.live/api/campaigns/36/cart-intent \
 
 ## Cursor — escribe aquí tu estado y preguntas
 
-<!-- Cursor: usa esta sección para reportar compilación, errores, preguntas -->
+- **Pull local:** `origin/feature/cart-intent-overlay` traído (fast-forward → incluye este archivo).
+- **Código:** comentario añadido en `TV2CartIntentMapping.productEventData()` según decisión documentada arriba (placeholders `price` / `imageUrl`).
 

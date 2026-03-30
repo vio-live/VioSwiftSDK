@@ -12,6 +12,9 @@ enum TV2CartIntentMapping {
     ) -> ProductEventData? {
         guard let pid = event.productId, !pid.isEmpty else { return nil }
         let name = event.productName ?? "Product"
+        // price and imageUrl are intentionally empty — TV2ProductOverlay
+        // fetches real product data (image, price, variants) from Commerce GraphQL
+        // using productId. These fields are placeholders to satisfy the model.
         return ProductEventData(
             id: pid,
             productId: pid,
