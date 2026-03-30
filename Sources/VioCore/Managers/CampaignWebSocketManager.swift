@@ -380,18 +380,20 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
             self.reconnectAttempts = 0
             self.onConnectionStatusChanged?(true)
             
-            // Identify + start listen loop only after real connection confirmed
-            await self.sendIdentifyIfNeeded()
-            
-            // If identify failed (Code=57), isConnected was set to false — don't start dead loop
-            guard self.isConnected else {
-                VioLogger.debug("identify failed post-open — skipping listen loop, scheduling reconnect", component: "CampaignWebSocket")
-                await self.attemptReconnect()
-                return
-            }
-            
+            // Start receive loop FIRST — URLSessionWebSocketTask requires receive() to be active
+            // before send() works on iOS. Without this, sendIdentifyIfNeeded fails with Code=57.
             Task {
                 await self.listenForMessages()
+            }
+            
+            // Now send identify — receive() is already active
+            await self.sendIdentifyIfNeeded()
+            
+            // If identify failed, isConnected was set to false — schedule reconnect
+            // (listenForMessages will also exit since isConnected=false)
+            if !self.isConnected {
+                VioLogger.debug("identify failed post-open — scheduling reconnect", component: "CampaignWebSocket")
+                await self.attemptReconnect()
             }
         }
     }
