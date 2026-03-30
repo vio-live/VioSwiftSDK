@@ -801,13 +801,16 @@ public class CampaignManager: ObservableObject {
                 }
             }
             
-            // Fetch offers from /v1/offers for the active campaign (autoDiscover mode).
-            // This ensures offers data is loaded even when campaignId is not hardcoded in vio-config.json.
+            // Fetch offers from /v1/offers ONLY if discovery returned 0 components.
+            // If components came from /v1/sdk/campaigns, skip /v1/offers to avoid overwriting them.
             if let activeCampaign = self.currentCampaign,
                self.campaignState == .active,
-               activeCampaign.isPaused != true {
-                print("🎯 [CampaignManager] discoverCampaigns - Fetching offers for discovered campaignId: \(activeCampaign.id)")
+               activeCampaign.isPaused != true,
+               allComponents.isEmpty {
+                print("🎯 [CampaignManager] discoverCampaigns - No components from discovery, fetching from /v1/offers for campaignId: \(activeCampaign.id)")
                 await fetchActiveComponents(campaignId: activeCampaign.id)
+            } else if !allComponents.isEmpty {
+                print("🎯 [CampaignManager] discoverCampaigns - Using \(allComponents.count) components from discovery, skipping /v1/offers")
             }
             
             // Cache components
