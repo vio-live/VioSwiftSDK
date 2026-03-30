@@ -84,6 +84,13 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             VioLogger.debug("Using API Key: \(config.apiKey.prefix(8))...", component: "CampaignWebSocket")
         }
         
+        // Guard: skip if already connected and running — prevents double-connect from
+        // simultaneous onAppear calls (ContentView + TV2VideoPlayer both call discoverCampaigns)
+        if let existing = webSocketTask, existing.state == .running {
+            VioLogger.debug("connect() skipped — task already running (state: \(existing.state.rawValue))", component: "CampaignWebSocket")
+            return
+        }
+        
         // Cancel any existing task before creating a new one
         // Without this, the old task fires Code=57 during reconnect and creates a loop
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
@@ -297,6 +304,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
+            // Mark as disconnected so listenForMessages doesn't start on a dead socket
+            isConnected = false
         }
     }
     
@@ -373,6 +382,14 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
             
             // Identify + start listen loop only after real connection confirmed
             await self.sendIdentifyIfNeeded()
+            
+            // If identify failed (Code=57), isConnected was set to false — don't start dead loop
+            guard self.isConnected else {
+                VioLogger.debug("identify failed post-open — skipping listen loop, scheduling reconnect", component: "CampaignWebSocket")
+                await self.attemptReconnect()
+                return
+            }
+            
             Task {
                 await self.listenForMessages()
             }
