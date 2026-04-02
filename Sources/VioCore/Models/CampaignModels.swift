@@ -345,6 +345,19 @@ internal struct SDKConfigResponse: Codable {
     }
 }
 
+/// Minimal decode for GET /v1/sdk/config zero-config bootstrap (`commerce` + `endpoints`).
+internal struct SdkBootstrapResponse: Codable {
+    struct CommerceBlock: Codable {
+        let apiKey: String
+        let endpoint: String?
+    }
+    struct EndpointsBlock: Codable {
+        let commerceGraphQL: String?
+    }
+    let commerce: CommerceBlock?
+    let endpoints: EndpointsBlock?
+}
+
 /// Campaigns Discovery Response from GET /v1/sdk/campaigns
 /// Used for auto-discovery of campaigns using only the Vio SDK API key
 internal struct CampaignsDiscoveryResponse: Codable {

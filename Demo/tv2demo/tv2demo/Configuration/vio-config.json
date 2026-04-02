@@ -115,8 +115,7 @@
     "flag": "https://flagcdn.com/w320/no.png"
   },
   "liveShow": {
-    "campaignId": 36,
-    "commerceApiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S"
+    "campaignId": 36
   },
   "localization": {
     "defaultLanguage": "no",

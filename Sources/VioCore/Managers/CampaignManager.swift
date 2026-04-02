@@ -142,6 +142,9 @@ public class CampaignManager: ObservableObject {
         
         print("🎯 [CampaignManager] initializeCampaign - Starting initialization for campaignId: \(campaignId)")
         
+        // Commerce GraphQL credentials from GET /v1/sdk/config (no local commerce key required)
+        await fetchAndApplySdkBootstrap(usingSdkApiKey: VioConfiguration.shared.apiKey)
+        
         // 0. Load dynamic configuration from backend
         var dynamicSponsorLogoUrl: String? = nil
         if let config = await DynamicConfigurationManager.shared.loadCampaignConfig(
@@ -407,6 +410,42 @@ public class CampaignManager: ObservableObject {
         }
     }
     
+    /// Loads `GET /v1/sdk/config` and applies `commerce.apiKey` / `commerce.endpoint` for ProductService (GraphQL).
+    private func fetchAndApplySdkBootstrap(usingSdkApiKey apiKey: String) async {
+        guard !apiKey.isEmpty else {
+            VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
+            return
+        }
+        var urlComponents = URLComponents(string: "\(campaignRestAPIBaseURL)/v1/sdk/config")
+        urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
+        guard let url = urlComponents?.url else {
+            VioLogger.warning("Invalid SDK bootstrap URL", component: "CampaignManager")
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10.0
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                VioLogger.warning("SDK bootstrap HTTP error", component: "CampaignManager")
+                return
+            }
+            let bootstrap = try JSONDecoder().decode(SdkBootstrapResponse.self, from: data)
+            let key = bootstrap.commerce?.apiKey
+            let gql = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
+            VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: key, graphQLURL: gql)
+            if key != nil {
+                VioLogger.debug("SDK bootstrap: commerce GraphQL key applied from backend", component: "CampaignManager")
+            } else {
+                VioLogger.debug("SDK bootstrap: no commerce in response — ProductService uses local/env fallbacks", component: "CampaignManager")
+            }
+        } catch {
+            VioLogger.warning("SDK bootstrap failed: \(error.localizedDescription)", component: "CampaignManager")
+        }
+    }
+    
     /// Fetch campaign information from API using new v1 endpoint
     /// Always uses campaignId from configuration file (vio-config.json)
     private func fetchCampaignInfo(campaignId: Int) async {
@@ -668,6 +707,9 @@ public class CampaignManager: ObservableObject {
                     return
                 }
             }
+            
+            // GraphQL commerce key + endpoint from backend (before WS / cart_intent)
+            await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
             
             // Decode campaigns discovery response
             let discoveryResponse = try JSONDecoder().decode(CampaignsDiscoveryResponse.self, from: data)

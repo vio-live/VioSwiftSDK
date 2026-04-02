@@ -51,6 +51,11 @@ public class VioConfiguration: ObservableObject {
     /// Prod default: wss://ws.vio.live
     /// Set by ConfigurationLoader from vio-config.json campaigns.wsBaseURL / campaigns.devWsBaseURL
     @Published public private(set) var wsBaseURL: String = "wss://ws-dev.vio.live"
+    
+    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides local `liveShow.commerceApiKey`).
+    @Published public private(set) var sdkBootstrapCommerceApiKey: String?
+    /// Commerce GraphQL URL from bootstrap (`commerce.endpoint` or `endpoints.commerceGraphQL`).
+    @Published public private(set) var sdkBootstrapCommerceGraphQLURL: String?
 
     @Published public private(set) var isConfigured: Bool = false
     @Published public private(set) var isMarketAvailable: Bool = true  // If false, SDK should not be used
@@ -240,6 +245,35 @@ public class VioConfiguration: ObservableObject {
     /// Check if SDK should be used (market is available)
     public var shouldUseSDK: Bool {
         return isConfigured && isMarketAvailable
+    }
+    
+    /// Resolved commerce GraphQL URL: bootstrap from backend, then environment default.
+    public var resolvedCommerceGraphQLURL: String {
+        if let u = sdkBootstrapCommerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !u.isEmpty,
+           URL(string: u) != nil
+        {
+            return u
+        }
+        return environment.graphQLURL
+    }
+    
+    /// Resolved GraphQL `Authorization`: bootstrap overrides `liveShow.commerceApiKey`, then SDK `apiKey` (legacy).
+    public var resolvedCommerceApiKey: String {
+        if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
+            return k
+        }
+        let live = liveShowConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !live.isEmpty { return live }
+        return apiKey.isEmpty ? "DEMO_KEY" : apiKey
+    }
+    
+    /// Apply commerce credentials from `GET /v1/sdk/config`. Pass `nil` fields to clear bootstrap overrides.
+    internal func applySdkBootstrapCommerce(apiKey: String?, graphQLURL: String?) {
+        let k = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let u = graphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines)
+        sdkBootstrapCommerceApiKey = (k?.isEmpty == false) ? k : nil
+        sdkBootstrapCommerceGraphQLURL = (u?.isEmpty == false) ? u : nil
     }
     
     /// Update specific configurations after initial setup

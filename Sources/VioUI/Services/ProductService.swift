@@ -18,34 +18,35 @@ public class ProductService {
     // MARK: - SDK Client Management
     
     /// Get or create SDK client.
-    /// Always uses `commerceApiKey` when available.
-    /// Recreates the client if the resolved key differs from the one used at cache time.
+    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `liveShow.commerceApiKey` → `apiKey`).
+    /// Recreates the client if the resolved key or GraphQL URL changes.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
+        let graphQLURLString = config.resolvedCommerceGraphQLURL
         
-        guard let baseURL = URL(string: config.environment.graphQLURL) else {
-            throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(config.environment.graphQLURL)")
+        guard let baseURL = URL(string: graphQLURLString) else {
+            throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(graphQLURLString)")
         }
         
-        // Prefer commerceApiKey; fall back to SDK apiKey only as last resort
-        let commerceKey = config.liveShowConfiguration.commerceApiKey
-        let resolvedApiKey = commerceKey.isEmpty ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey) : commerceKey
+        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then `liveShow.commerceApiKey`, then SDK `apiKey`
+        let resolvedApiKey = config.resolvedCommerceApiKey
         
-        // Invalidate cache if the key or URL has changed (e.g. config loaded after first call)
+        // Invalidate cache if the key or URL has changed (e.g. bootstrap loaded after first call)
         if let cached = cachedSdkClient {
             let cachedKeyMatches = cached.apiKey == resolvedApiKey
             let cachedURLMatches = cached.baseUrl == baseURL
             if cachedKeyMatches && cachedURLMatches {
                 return cached
             }
-            VioLogger.debug("SDK client config changed — recreating (commerceKey present: \(!commerceKey.isEmpty))", component: "ProductService")
+            let fromBootstrap = config.sdkBootstrapCommerceApiKey != nil
+            VioLogger.debug("SDK client config changed — recreating (bootstrap commerce: \(fromBootstrap))", component: "ProductService")
             cachedSdkClient = nil
         }
         
         let client = SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
         cachedSdkClient = client
         
-        VioLogger.debug("Created SDK client (commerceKey present: \(!commerceKey.isEmpty))", component: "ProductService")
+        VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
         
         return client
     }
