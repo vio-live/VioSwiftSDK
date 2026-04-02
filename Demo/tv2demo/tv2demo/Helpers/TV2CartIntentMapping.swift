@@ -2,15 +2,8 @@ import Foundation
 import VioCore
 import VioUI
 
-/// Maps Commerce `ProductDto` → domain `Product` for cart / `VProductDetailOverlay` after `cart_intent`.
+/// Maps Commerce `ProductDto` → domain `Product` (cart, `VProductDetailOverlay`) for tv2demo.
 enum TV2CartIntentMapping {
-    /// Plain-text description for engagement UI (strips HTML from GraphQL).
-    static func engagementLineDescription(from dto: ProductDto?) -> String? {
-        guard let raw = dto?.description, !raw.isEmpty else { return nil }
-        let t = cleanHTMLString(raw)
-        return t.isEmpty ? nil : t
-    }
-
     /// Same conversion path used across tv2demo for add-to-cart from `ProductDto`.
     static func product(from dto: ProductDto) -> Product {
         let cleanDescription = dto.description.map { cleanHTMLString($0) }
