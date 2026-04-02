@@ -1,6 +1,7 @@
 import SwiftUI
 import VioCore
 import VioUI
+import VioCastingUI
 
 /// Wrapper de TV2ProductOverlay.productCard con ProductFetchViewModel propio
 /// Carga datos desde Vio API y los muestra

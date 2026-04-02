@@ -1,6 +1,7 @@
 import SwiftUI
 import VioCore
 import VioUI
+import VioCastingUI
 
 /// Componente para mostrar un producto individual
 /// Estilo basado en las cards del SDK de Vio

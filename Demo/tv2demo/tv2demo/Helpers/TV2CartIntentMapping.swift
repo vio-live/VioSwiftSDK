@@ -2,8 +2,31 @@ import Foundation
 import VioCore
 import VioUI
 
-/// Maps Commerce `ProductDto` → domain `Product` (cart, `VProductDetailOverlay`) for tv2demo.
+/// Maps Commerce `ProductDto` → domain `Product` and display strings for SDK overlays (tv2demo).
 enum TV2CartIntentMapping {
+    /// Price string for `VEngagementProductData` (tax-inclusive when available).
+    static func formatDisplayPrice(_ price: PriceDto) -> String {
+        let priceToShow = price.amountInclTaxes ?? price.amount
+        return "\(price.currencyCode) \(String(format: "%.2f", priceToShow))"
+    }
+
+    /// Discount % for `VEngagementProductData` / badges.
+    static func discountPercentage(from product: ProductDto?) -> Int? {
+        guard let product else { return nil }
+        let currentPrice = product.price.amountInclTaxes ?? product.price.amount
+        let originalPrice = product.price.compareAtInclTaxes ?? product.price.compareAt
+        guard let compareAt = originalPrice, compareAt > currentPrice else { return nil }
+        let discount = ((compareAt - currentPrice) / compareAt) * 100
+        return Int(discount.rounded())
+    }
+
+    /// Plain description for engagement overlay (strips HTML from GraphQL).
+    static func engagementDescription(from dto: ProductDto?) -> String? {
+        guard let raw = dto?.description, !raw.isEmpty else { return nil }
+        let t = cleanHTMLString(raw)
+        return t.isEmpty ? nil : t
+    }
+
     /// Same conversion path used across tv2demo for add-to-cart from `ProductDto`.
     static func product(from dto: ProductDto) -> Product {
         let cleanDescription = dto.description.map { cleanHTMLString($0) }

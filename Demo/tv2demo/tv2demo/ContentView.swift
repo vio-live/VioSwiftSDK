@@ -8,6 +8,8 @@
 import SwiftUI
 import VioUI
 import VioCore
+import VioEngagementUI
+import VioCastingUI
 import AVFoundation
 
 struct ContentView: View {
@@ -27,7 +29,7 @@ struct ContentView: View {
             : commerceKey
         return SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
     }
-    
+
     var body: some View {
         ZStack {
             // Main app content
@@ -40,7 +42,7 @@ struct ContentView: View {
                         print("🎯 [ContentView] Campaigns found: \(CampaignManager.shared.activeCampaigns.count), WS connected: \(CampaignManager.shared.isConnected)")
                     }
                 }
-            
+
             // Mini player de casting - SIEMPRE visible cuando hay casting (persistente)
             if castingManager.isCasting {
                 CastingMiniPlayer {
@@ -48,7 +50,7 @@ struct ContentView: View {
                 }
                 .zIndex(998) // Por debajo del cart (999) pero por encima del resto
             }
-            
+
             // Global floating cart indicator - always on top
             VFloatingCartIndicator(
                 customPadding: EdgeInsets(
@@ -60,10 +62,11 @@ struct ContentView: View {
             )
             .zIndex(999) // Asegurar que esté por encima de todo (video, overlays, etc.)
 
-            // Second-screen cart_intent — solo `VProductDetailOverlay` (VioUI) tras fetch; sin tarjetas demo ni casting
+            // Second-screen cart_intent — mismo patrón que `VCastingVideoPlayer` / Viaplay casting
             if let event = campaignManager.activeCartIntentEvent,
                let productId = event.productId, !productId.isEmpty {
-                CartIntentVProductDetailHost(
+                CartIntentEngagementProductHost(
+                    event: event,
                     productId: productId,
                     sdk: commerceSdkClient,
                     currency: cartManager.currency,
@@ -93,58 +96,79 @@ struct ContentView: View {
     }
 }
 
-// MARK: - cart_intent → VProductDetailOverlay (commerce)
+// MARK: - cart_intent → VEngagementProductOverlay + VProductDetailOverlay (igual que VCastingVideoPlayer)
 
-private struct CartIntentVProductDetailHost: View {
+private struct CartIntentEngagementProductHost: View {
+    let event: CartIntentEvent
     let productId: String
     let sdk: SdkClient
     let onDismiss: () -> Void
 
     @EnvironmentObject private var cartManager: CartManager
     @StateObject private var viewModel: ProductFetchViewModel
+    @State private var showProductDetail = false
 
     init(
+        event: CartIntentEvent,
         productId: String,
         sdk: SdkClient,
         currency: String,
         country: String,
         onDismiss: @escaping () -> Void
     ) {
+        self.event = event
         self.productId = productId
         self.sdk = sdk
         self.onDismiss = onDismiss
         _viewModel = StateObject(
-            wrappedValue: ProductFetchViewModel(sdk: sdk, currency: currency, country: country)
+            wrappedValue: ProductFetchViewModel(
+                sdk: sdk,
+                currency: currency,
+                country: country
+            )
         )
     }
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-
+        VEngagementProductOverlay(
+            product: VEngagementProductData(
+                productId: productId,
+                name: viewModel.product?.title ?? event.productName ?? "Product",
+                description: TV2CartIntentMapping.engagementDescription(from: viewModel.product),
+                price: viewModel.product.map { TV2CartIntentMapping.formatDisplayPrice($0.price) } ?? "",
+                imageUrl: viewModel.product?.images.first?.url ?? "",
+                discountPercentage: TV2CartIntentMapping.discountPercentage(from: viewModel.product)
+            ),
+            isChatExpanded: false,
+            isLoading: viewModel.isLoading,
+            onAddToCart: {
+                guard let dto = viewModel.product else { return }
+                let product = TV2CartIntentMapping.product(from: dto)
+                Task {
+                    await cartManager.addProduct(product, quantity: 1)
+                }
+            },
+            onShowDetail: {
+                if viewModel.product != nil {
+                    showProductDetail = true
+                }
+            },
+            onDismiss: onDismiss
+        )
+        .task(id: productId) {
+            viewModel.currency = cartManager.currency
+            viewModel.country = cartManager.country
+            await viewModel.fetchProduct(productId: productId)
+        }
+        .sheet(isPresented: $showProductDetail) {
             if let dto = viewModel.product {
                 VProductDetailOverlay(
                     product: TV2CartIntentMapping.product(from: dto),
-                    onDismiss: onDismiss,
-                    onAddToCart: { _ in onDismiss() }
+                    onDismiss: { showProductDetail = false },
+                    onAddToCart: { _ in showProductDetail = false }
                 )
                 .environmentObject(cartManager)
-            } else if viewModel.isLoading {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
-            } else {
-                VStack(spacing: 16) {
-                    Text("Could not load product")
-                        .foregroundStyle(.white)
-                    Button("Close", action: onDismiss)
-                        .buttonStyle(.borderedProminent)
-                }
             }
-        }
-        .task(id: productId) {
-            await viewModel.fetchProduct(productId: productId)
         }
     }
 }
