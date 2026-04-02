@@ -975,10 +975,26 @@ public struct CartIntentEvent: Codable, Equatable {
     /// Optional campaign ID for context.
     public let campaignId: Int?
     
+    public init(type: String, productName: String?, productId: String?, campaignId: Int?) {
+        self.type = type
+        self.productName = productName
+        self.productId = productId
+        self.campaignId = campaignId
+    }
+    
     enum CodingKeys: String, CodingKey {
         case type
         case productName = "productName"
         case productId   = "productId"
         case campaignId  = "campaignId"
     }
+}
+
+/// Keys in `UNNotificationContent.userInfo` for local `cart_intent` notifications.
+public enum CartIntentNotificationKeys {
+    public static let kind = "vio_cartIntent_kind"
+    public static let productId = "vio_cartIntent_productId"
+    public static let productName = "vio_cartIntent_productName"
+    public static let campaignId = "vio_cartIntent_campaignId"
+    public static let kindValueCartIntent = "cart_intent"
 }

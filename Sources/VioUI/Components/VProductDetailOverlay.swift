@@ -705,6 +705,21 @@ public struct VProductDetailOverlay: View {
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
             .background(VioColors.surface.opacity(0.95))
+
+            #if os(iOS)
+            if isInStock {
+                VApplePayButton(
+                    productName: product.title,
+                    productImageUrl: displayImages.first?.url,
+                    amount: Double(currentPriceWithTaxes) * Double(quantity),
+                    onPaymentComplete: { dismiss() }
+                )
+                .environmentObject(cartManager)
+                .padding(.horizontal, VioSpacing.lg)
+                .padding(.top, VioSpacing.sm)
+                .padding(.bottom, VioSpacing.sm)
+            }
+            #endif
         }
     }
     

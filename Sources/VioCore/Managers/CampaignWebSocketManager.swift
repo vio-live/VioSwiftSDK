@@ -1,6 +1,9 @@
 import Foundation
 import UserNotifications
-import VioCore
+
+#if canImport(UIKit) && os(iOS)
+import UIKit
+#endif
 
 /// WebSocket Manager for Campaign Lifecycle Events
 @MainActor
@@ -61,7 +64,10 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         let wsBase = VioConfiguration.shared.wsBaseURL
         var urlString = "\(wsBase)/ws/\(campaignId)"
         if let uid = userId, !uid.isEmpty {
-            urlString += "?userId=\(uid)"
+            var allowed = CharacterSet.urlQueryAllowed
+            allowed.remove(charactersIn: "&+=")
+            let enc = uid.addingPercentEncoding(withAllowedCharacters: allowed) ?? uid
+            urlString += "?userId=\(enc)"
         }
         
         guard let url = URL(string: urlString) else {
@@ -247,7 +253,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
                 let event = try JSONDecoder().decode(CartIntentEvent.self, from: data)
                 VioLogger.success("Decoded cart_intent event (productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
                 onCartIntent?(event)
-                scheduleCartIntentNotification(productName: event.productName)
+                scheduleCartIntentNotification(for: event)
 
             case "ping":
                 // App-level heartbeat — respond immediately with pong
@@ -309,17 +315,38 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     // MARK: - Local Notifications
     
-    /// Fires a local notification when a cart_intent event is received via WebSocket.
-    private func scheduleCartIntentNotification(productName: String?) {
+    /// When the app is active, the in-app overlay already shows — skip local notification to avoid duplicate prompts.
+    private func shouldSkipCartIntentLocalNotification() -> Bool {
+        #if canImport(UIKit) && os(iOS)
+        return UIApplication.shared.applicationState == .active
+        #else
+        return false
+        #endif
+    }
+    
+    /// Fires a local notification when a cart_intent is received (for users in background or after switching apps).
+    private func scheduleCartIntentNotification(for event: CartIntentEvent) {
+        if shouldSkipCartIntentLocalNotification() {
+            VioLogger.debug("cart_intent: skipping local notification — app is active", component: "CampaignWebSocket")
+            return
+        }
+        
         let content = UNMutableNotificationContent()
         content.title = "Tienes un artículo esperando"
-        content.body = productName ?? "Un producto está listo para añadir al carrito"
+        content.body = event.productName ?? "Un producto está listo para añadir al carrito"
         content.sound = .default
+        var info: [String: Any] = [
+            CartIntentNotificationKeys.kind: CartIntentNotificationKeys.kindValueCartIntent
+        ]
+        if let pid = event.productId, !pid.isEmpty { info[CartIntentNotificationKeys.productId] = pid }
+        if let name = event.productName { info[CartIntentNotificationKeys.productName] = name }
+        if let cid = event.campaignId { info[CartIntentNotificationKeys.campaignId] = cid }
+        content.userInfo = info
         
         let request = UNNotificationRequest(
             identifier: "cart_intent_\(UUID().uuidString)",
             content: content,
-            trigger: nil // deliver immediately
+            trigger: nil
         )
         
         UNUserNotificationCenter.current().add(request) { error in

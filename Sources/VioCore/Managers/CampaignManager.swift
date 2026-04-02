@@ -324,6 +324,30 @@ public class CampaignManager: ObservableObject {
         activeCartIntentEvent = nil
     }
     
+    /// Presents the cart-intent product flow from a local notification (`userInfo` uses `CartIntentNotificationKeys`).
+    /// Call after `discoverCampaigns` when possible so commerce bootstrap is ready for `ProductService`.
+    public func presentCartIntentFromNotification(userInfo: [AnyHashable: Any]) {
+        guard let rawId = userInfo[CartIntentNotificationKeys.productId] as? String,
+              !rawId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            VioLogger.warning("cart_intent notification missing \(CartIntentNotificationKeys.productId)", component: "CampaignManager")
+            return
+        }
+        let pid = rawId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = userInfo[CartIntentNotificationKeys.productName] as? String
+        let campaignId: Int? = {
+            if let n = userInfo[CartIntentNotificationKeys.campaignId] as? Int { return n }
+            if let s = userInfo[CartIntentNotificationKeys.campaignId] as? String { return Int(s) }
+            return nil
+        }()
+        activeCartIntentEvent = CartIntentEvent(
+            type: "cart_intent",
+            productName: name,
+            productId: pid,
+            campaignId: campaignId
+        )
+    }
+    
     /// Disconnect from campaign
     public func disconnect() {
         webSocketManager?.disconnect()

@@ -6,11 +6,14 @@
 //
 
 import SwiftUI
+import UserNotifications
 import VioCore
 import VioUI
 
 @main
 struct tv2demoApp: App {
+    /// Strong reference; `UNUserNotificationCenter` delegate is weak.
+    private static let notificationCenterDelegate = TV2NotificationCenterDelegate()
     // MARK: - Global State Managers
     // These are initialized once and shared across the entire app
     @StateObject private var cartManager = CartManager()
@@ -46,6 +49,8 @@ struct tv2demoApp: App {
         // In production replace with real user identity (e.g. JWT sub claim)
         CampaignManager.shared.userId = "tv2_demo_user"
         print("👤 [TV2Demo] userId set: tv2_demo_user")
+
+        UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
         
         if campaignId > 0 {
             let ws = "\(cfg.wsBaseURL)/ws/\(campaignId)?userId=\(CampaignManager.shared.userId ?? "")"
