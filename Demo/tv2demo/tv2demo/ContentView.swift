@@ -13,7 +13,6 @@ struct ContentView: View {
     @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var castingManager = CastingManager.shared
     @State private var showCastingView = false
-    @State private var cartIntentPresentationID = UUID()
     @EnvironmentObject var cartManager: CartManager
 
     var body: some View {
@@ -55,13 +54,7 @@ struct ContentView: View {
                     productId: productId,
                     onDismissIntent: { campaignManager.dismissCartIntent() }
                 )
-                .id(cartIntentPresentationID)
                 .zIndex(1000)
-            }
-        }
-        .onChange(of: campaignManager.activeCartIntentEvent) { _, newValue in
-            if newValue != nil {
-                cartIntentPresentationID = UUID()
             }
         }
         .fullScreenCover(isPresented: $showCastingView) {
@@ -133,8 +126,14 @@ private struct CartIntentProductDetailHost: View {
                 country: cartManager.country
             )
             loadedProduct = product
+        } catch is CancellationError {
+            // Task cancelled (e.g. view identity churn) — do not clear cart intent.
         } catch {
-            print("❌ [cart_intent] ProductService.loadProduct failed: \(error.localizedDescription)")
+            if let sdk = error as? SdkException {
+                print("❌ [cart_intent] ProductService.loadProduct failed: \(sdk.description) details=\(String(describing: sdk.details))")
+            } else {
+                print("❌ [cart_intent] ProductService.loadProduct failed: \(String(describing: error))")
+            }
             onDismissIntent()
         }
     }
