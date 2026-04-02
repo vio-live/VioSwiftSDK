@@ -8,9 +8,6 @@
 import SwiftUI
 import VioUI
 import VioCore
-import VioEngagementUI
-import VioCastingUI
-import AVFoundation
 
 struct ContentView: View {
     @ObservedObject private var campaignManager = CampaignManager.shared
@@ -18,17 +15,6 @@ struct ContentView: View {
     @State private var showCastingView = false
     @State private var cartIntentPresentationID = UUID()
     @EnvironmentObject var cartManager: CartManager
-
-    private var commerceSdkClient: SdkClient {
-        let config = VioConfiguration.shared
-        let baseURL = URL(string: config.environment.graphQLURL)
-            ?? URL(string: "https://graph-ql-dev.vio.live/graphql")!
-        let commerceKey = config.liveShowConfiguration.commerceApiKey
-        let resolvedApiKey = commerceKey.isEmpty
-            ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)
-            : commerceKey
-        return SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
-    }
 
     var body: some View {
         ZStack {
@@ -62,16 +48,12 @@ struct ContentView: View {
             )
             .zIndex(999) // Asegurar que esté por encima de todo (video, overlays, etc.)
 
-            // Second-screen cart_intent — mismo patrón que `VCastingVideoPlayer` / Viaplay casting
+            // cart_intent → ProductService (GraphQL) → VProductDetailOverlay en .sheet (mismo contrato que VProductCarousel)
             if let event = campaignManager.activeCartIntentEvent,
                let productId = event.productId, !productId.isEmpty {
-                CartIntentEngagementProductHost(
-                    event: event,
+                CartIntentProductDetailHost(
                     productId: productId,
-                    sdk: commerceSdkClient,
-                    currency: cartManager.currency,
-                    country: cartManager.country,
-                    onDismiss: { campaignManager.dismissCartIntent() }
+                    onDismissIntent: { campaignManager.dismissCartIntent() }
                 )
                 .id(cartIntentPresentationID)
                 .zIndex(1000)
@@ -96,79 +78,64 @@ struct ContentView: View {
     }
 }
 
-// MARK: - cart_intent → VEngagementProductOverlay + VProductDetailOverlay (igual que VCastingVideoPlayer)
+// MARK: - cart_intent → ProductService + VProductDetailOverlay (VioUI, sin Engagement)
 
-private struct CartIntentEngagementProductHost: View {
-    let event: CartIntentEvent
+private struct CartIntentProductDetailHost: View {
     let productId: String
-    let sdk: SdkClient
-    let onDismiss: () -> Void
+    let onDismissIntent: () -> Void
 
     @EnvironmentObject private var cartManager: CartManager
-    @StateObject private var viewModel: ProductFetchViewModel
-    @State private var showProductDetail = false
-
-    init(
-        event: CartIntentEvent,
-        productId: String,
-        sdk: SdkClient,
-        currency: String,
-        country: String,
-        onDismiss: @escaping () -> Void
-    ) {
-        self.event = event
-        self.productId = productId
-        self.sdk = sdk
-        self.onDismiss = onDismiss
-        _viewModel = StateObject(
-            wrappedValue: ProductFetchViewModel(
-                sdk: sdk,
-                currency: currency,
-                country: country
-            )
-        )
-    }
+    @State private var loadedProduct: Product?
+    @State private var isLoading = false
 
     var body: some View {
-        VEngagementProductOverlay(
-            product: VEngagementProductData(
-                productId: productId,
-                name: viewModel.product?.title ?? event.productName ?? "Product",
-                description: TV2CartIntentMapping.engagementDescription(from: viewModel.product),
-                price: viewModel.product.map { TV2CartIntentMapping.formatDisplayPrice($0.price) } ?? "",
-                imageUrl: viewModel.product?.images.first?.url ?? "",
-                discountPercentage: TV2CartIntentMapping.discountPercentage(from: viewModel.product)
-            ),
-            isChatExpanded: false,
-            isLoading: viewModel.isLoading,
-            onAddToCart: {
-                guard let dto = viewModel.product else { return }
-                let product = TV2CartIntentMapping.product(from: dto)
-                Task {
-                    await cartManager.addProduct(product, quantity: 1)
+        ZStack {
+            Color.black.opacity(isLoading ? 0.4 : 0.001)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    if isLoading {
+                        onDismissIntent()
+                    }
                 }
-            },
-            onShowDetail: {
-                if viewModel.product != nil {
-                    showProductDetail = true
-                }
-            },
-            onDismiss: onDismiss
-        )
-        .task(id: productId) {
-            viewModel.currency = cartManager.currency
-            viewModel.country = cartManager.country
-            await viewModel.fetchProduct(productId: productId)
-        }
-        .sheet(isPresented: $showProductDetail) {
-            if let dto = viewModel.product {
-                VProductDetailOverlay(
-                    product: TV2CartIntentMapping.product(from: dto),
-                    onDismiss: { showProductDetail = false },
-                    onAddToCart: { _ in showProductDetail = false }
-                )
-                .environmentObject(cartManager)
+
+            if isLoading {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(.white)
             }
+        }
+        .task(id: productId) {
+            await loadProduct()
+        }
+        .sheet(item: $loadedProduct, onDismiss: {
+            onDismissIntent()
+        }, content: { product in
+            VProductDetailOverlay(
+                product: product,
+                onDismiss: {
+                    loadedProduct = nil
+                }
+            )
+            .environmentObject(cartManager)
+        })
+    }
+
+    @MainActor
+    private func loadProduct() async {
+        isLoading = true
+        loadedProduct = nil
+        defer { isLoading = false }
+
+        do {
+            let product = try await ProductService.shared.loadProduct(
+                productId: productId,
+                currency: cartManager.currency,
+                country: cartManager.country
+            )
+            loadedProduct = product
+        } catch {
+            print("❌ [cart_intent] ProductService.loadProduct failed: \(error.localizedDescription)")
+            onDismissIntent()
         }
     }
 }
