@@ -336,7 +336,9 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         content.body = event.productName ?? "Un producto está listo para añadir al carrito"
         content.sound = .default
         var info: [String: Any] = [
-            CartIntentNotificationKeys.kind: CartIntentNotificationKeys.kindValueCartIntent
+            VioNotificationUserInfoKeys.notificationVersion: 1,
+            VioNotificationUserInfoKeys.eventType: VioPushEventType.cartIntent.rawValue,
+            CartIntentNotificationKeys.kind: CartIntentNotificationKeys.kindValueCartIntent,
         ]
         if let pid = event.productId, !pid.isEmpty { info[CartIntentNotificationKeys.productId] = pid }
         if let name = event.productName { info[CartIntentNotificationKeys.productName] = name }
