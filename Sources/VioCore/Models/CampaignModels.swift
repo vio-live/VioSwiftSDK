@@ -990,7 +990,22 @@ public struct CartIntentEvent: Codable, Equatable {
     }
 }
 
-/// Keys in `UNNotificationContent.userInfo` for local `cart_intent` notifications.
+// MARK: - Push / notification envelope (canonical)
+
+/// Stable string values for `vio_event_type` in notification `userInfo` (APNs, local, FCM data map).
+public enum VioPushEventType: String, Sendable, CaseIterable {
+    case cartIntent = "cart_intent"
+}
+
+/// Top-level keys present on every Vio-originated or partner push that follows the integration contract.
+public enum VioNotificationUserInfoKeys {
+    /// Integer schema version for the envelope (currently `1`).
+    public static let notificationVersion = "vio_notification_version"
+    /// Discriminator; use `VioPushEventType.rawValue`.
+    public static let eventType = "vio_event_type"
+}
+
+/// Keys in `UNNotificationContent.userInfo` for type-specific `cart_intent` payload (alongside the envelope).
 public enum CartIntentNotificationKeys {
     public static let kind = "vio_cartIntent_kind"
     public static let productId = "vio_cartIntent_productId"

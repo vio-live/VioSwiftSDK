@@ -324,10 +324,54 @@ public class CampaignManager: ObservableObject {
         activeCartIntentEvent = nil
     }
     
-    /// Presents the cart-intent product flow from a local notification (`userInfo` uses `CartIntentNotificationKeys`).
+    /// Preferred entry point for **remote or local** notification taps: reads `vio_notification_version` / `vio_event_type`, then dispatches.
+    /// Falls back to legacy `vio_cartIntent_kind` when `vio_event_type` is absent.
     /// Call after `discoverCampaigns` when possible so commerce bootstrap is ready for `ProductService`.
+    public func handlePushNotificationUserInfo(_ userInfo: [AnyHashable: Any]) {
+        guard let resolved = Self.resolveVioEventType(from: userInfo) else {
+            VioLogger.warning("Vio notification missing \(VioNotificationUserInfoKeys.eventType) and no legacy cart_intent marker", component: "CampaignManager")
+            return
+        }
+        switch resolved {
+        case VioPushEventType.cartIntent.rawValue:
+            applyCartIntentFromNotificationUserInfo(userInfo)
+        default:
+            VioLogger.debug("Unhandled vio_event_type: \(resolved)", component: "CampaignManager")
+        }
+    }
+    
+    /// Legacy convenience: applies cart-intent UI state without envelope routing (caller guarantees type).
+    /// Prefer ``handlePushNotificationUserInfo(_:)`` for APNs / unified handling.
     public func presentCartIntentFromNotification(userInfo: [AnyHashable: Any]) {
-        guard let rawId = userInfo[CartIntentNotificationKeys.productId] as? String,
+        applyCartIntentFromNotificationUserInfo(userInfo)
+    }
+    
+    /// Returns whether `userInfo` should be treated as a Vio cart-intent notification (canonical or legacy).
+    public static func isVioCartIntentNotificationUserInfo(_ userInfo: [AnyHashable: Any]) -> Bool {
+        if let t = userInfo[VioNotificationUserInfoKeys.eventType] as? String,
+           t == VioPushEventType.cartIntent.rawValue {
+            return true
+        }
+        if userInfo[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent {
+            return true
+        }
+        return false
+    }
+    
+    /// Resolves `vio_event_type`, or legacy cart_intent when only older keys are present.
+    private static func resolveVioEventType(from userInfo: [AnyHashable: Any]) -> String? {
+        if let raw = userInfo[VioNotificationUserInfoKeys.eventType] as? String,
+           !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if userInfo[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent {
+            return VioPushEventType.cartIntent.rawValue
+        }
+        return nil
+    }
+    
+    private func applyCartIntentFromNotificationUserInfo(_ userInfo: [AnyHashable: Any]) {
+        guard let rawId = Self.stringFromUserInfo(userInfo, key: CartIntentNotificationKeys.productId),
               !rawId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
             VioLogger.warning("cart_intent notification missing \(CartIntentNotificationKeys.productId)", component: "CampaignManager")
@@ -338,14 +382,22 @@ public class CampaignManager: ObservableObject {
         let campaignId: Int? = {
             if let n = userInfo[CartIntentNotificationKeys.campaignId] as? Int { return n }
             if let s = userInfo[CartIntentNotificationKeys.campaignId] as? String { return Int(s) }
+            if let n = userInfo[CartIntentNotificationKeys.campaignId] as? NSNumber { return n.intValue }
             return nil
         }()
         activeCartIntentEvent = CartIntentEvent(
-            type: "cart_intent",
+            type: VioPushEventType.cartIntent.rawValue,
             productName: name,
             productId: pid,
             campaignId: campaignId
         )
+    }
+    
+    private static func stringFromUserInfo(_ userInfo: [AnyHashable: Any], key: String) -> String? {
+        if let s = userInfo[key] as? String { return s }
+        if let n = userInfo[key] as? Int { return String(n) }
+        if let n = userInfo[key] as? NSNumber { return n.stringValue }
+        return nil
     }
     
     /// Disconnect from campaign
