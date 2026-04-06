@@ -75,6 +75,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             return
         }
         
+        print("🎯 [CampaignWebSocket] connect → \(urlString)")
+        print("🎯 [CampaignWebSocket] connect    esperado: handshake WebSocket OK; luego envío identify con userId si aplica")
         VioLogger.debug("Connecting to: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
         
         // Create URLRequest with potential authentication headers
@@ -305,6 +307,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
         do {
             try await task.send(.string(text))
+            print("🎯 [CampaignWebSocket] identify → enviado \(text) (servidor registra userId en wsUserMap)")
             VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
@@ -402,7 +405,7 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
                 VioLogger.debug("Ignoring didOpen for stale webSocketTask", component: "CampaignWebSocket")
                 return
             }
-            print("🎯 [CampaignWebSocket] WS connected (didOpenWithProtocol) campaignId: \(self.campaignId)")
+            print("🎯 [CampaignWebSocket] ← WebSocket abierto campaignId=\(self.campaignId) (equivalente HTTP 101 Switching Protocols)")
             self.isConnected = true
             self.reconnectAttempts = 0
             self.onConnectionStatusChanged?(true)

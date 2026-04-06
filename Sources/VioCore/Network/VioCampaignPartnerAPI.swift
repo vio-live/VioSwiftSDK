@@ -96,5 +96,7 @@ public enum VioCampaignPartnerAPI {
             let text = String(data: data, encoding: .utf8)
             throw VioCampaignPartnerAPIError.httpError(statusCode: http.statusCode, body: text)
         }
+        let preview = String(data: data, encoding: .utf8).map { String($0.prefix(160)) } ?? ""
+        print("🎯 [VioCampaignPartnerAPI] register-device ← HTTP \(http.statusCode) body: \(preview)")
     }
 }

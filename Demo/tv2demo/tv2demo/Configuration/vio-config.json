@@ -206,12 +206,12 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
   "campaigns": {
-    "webSocketBaseURL": "wss://ws-dev.vio.live",
+    "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
     "devWebSocketBaseURL": "ws://127.0.0.1:5001",
     "devRestAPIBaseURL": "http://127.0.0.1:5001",
     "autoDiscover": true,
-    "wsBaseURL": "wss://ws.vio.live",
-    "devWsBaseURL": "wss://ws-dev.vio.live"
+    "wsBaseURL": "wss://api.vio.live",
+    "devWsBaseURL": "ws://127.0.0.1:5001"
   }
 }

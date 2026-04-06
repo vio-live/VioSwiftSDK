@@ -34,6 +34,8 @@ public class CampaignManager: ObservableObject {
     /// Set before calling `discoverCampaigns`.
     /// Example: `CampaignManager.shared.userId = jwtPayload.sub`
     public var userId: String?
+    /// Zero-config: APNs hex from the app; `register-device` runs only after `discoverCampaigns` sets `currentCampaign`.
+    private var pendingApnsDeviceTokenHex: String?
     private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
     
     /// Called when backend sends a `lineup_show` WS event.
@@ -66,6 +68,43 @@ public class CampaignManager: ObservableObject {
         VioLogger.debug("CampaignManager ready — call discoverCampaigns for campaign resolution", component: "CampaignManager")
     }
     
+    // MARK: - Partner APNs registration (zero-config)
+    
+    /// Queues the APNs device token and attempts `POST .../register-device` when `currentCampaign` exists (after `discoverCampaigns`).
+    /// Call from `AppDelegate`; do not pass a campaign id — it comes from `GET /v1/sdk/campaigns` like the rest of the SDK.
+    public func submitApnsDeviceTokenForVioRegister(_ deviceTokenHex: String) {
+        let trimmed = deviceTokenHex.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        pendingApnsDeviceTokenHex = trimmed
+        Task { await self.flushPendingApnsDeviceTokenRegistrationWithVio() }
+    }
+    
+    private func flushPendingApnsDeviceTokenRegistrationWithVio() async {
+        guard let hex = pendingApnsDeviceTokenHex, !hex.isEmpty else { return }
+        guard let campaignId = currentCampaign?.id, campaignId > 0 else { return }
+        let uid = userId?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !uid.isEmpty else {
+            VioLogger.warning("APNs register-device skipped: set CampaignManager.userId before or with discovery", component: "CampaignManager")
+            return
+        }
+        let src = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        print("🎯 [CampaignManager] register-device → POST \(src)/api/campaigns/\(campaignId)/register-device (x-api-key)")
+        print("🎯 [CampaignManager] register-device    esperado: HTTP 200, { \"success\": true } (+ forward al partner en servidor si está configurado)")
+        do {
+            try await VioCampaignPartnerAPI.registerDevice(
+                campaignId: campaignId,
+                userId: uid,
+                deviceToken: hex,
+                platform: "ios"
+            )
+            pendingApnsDeviceTokenHex = nil
+            print("🎯 [CampaignManager] register-device ← OK (token entregado al backend para campaign \(campaignId))")
+        } catch {
+            print("🎯 [CampaignManager] register-device ← fallo: \(error.localizedDescription)")
+            VioLogger.error("APNs register-device failed: \(error.localizedDescription)", component: "CampaignManager")
+        }
+    }
+    
     // MARK: - Public Methods
     
     /// Reinitialize campaign manager with current configuration
@@ -73,6 +112,7 @@ public class CampaignManager: ObservableObject {
     public func reinitialize() {
         VioLogger.debug("Reinitializing", component: "CampaignManager")
         disconnect()
+        pendingApnsDeviceTokenHex = nil
         
         let config = VioConfiguration.shared
         
@@ -460,12 +500,17 @@ public class CampaignManager: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 10.0
+        print("🎯 [CampaignManager] sdk/bootstrap → GET \(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=<redacted>")
+        print("🎯 [CampaignManager] sdk/bootstrap    esperado: HTTP 200 (commerce / endpoints opcionales)")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                print("🎯 [CampaignManager] sdk/bootstrap ← HTTP \(code) (omitido o error)")
                 VioLogger.warning("SDK bootstrap HTTP error", component: "CampaignManager")
                 return
             }
+            print("🎯 [CampaignManager] sdk/bootstrap ← HTTP \(http.statusCode) OK")
             let bootstrap = try JSONDecoder().decode(SdkBootstrapResponse.self, from: data)
             let key = bootstrap.commerce?.apiKey
             let gql = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
@@ -729,22 +774,28 @@ public class CampaignManager: ObservableObject {
         request.timeoutInterval = 10.0
         
         do {
-            print("🎯 [CampaignManager] discoverCampaigns - Starting discovery request...")
+            let safeUrlForLog = "\(campaignRestAPIBaseURL)/v1/sdk/campaigns?apiKey=<redacted>"
+            print("🎯 [CampaignManager] discoverCampaigns → GET \(safeUrlForLog)")
+            print("🎯 [CampaignManager] discoverCampaigns    esperado: HTTP 200, JSON con array \"campaigns\" (campaignId, components, …)")
             let (data, response) = try await URLSession.shared.data(for: request)
             
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             if let httpResponse = response as? HTTPURLResponse {
                 guard (200...299).contains(httpResponse.statusCode) else {
                     let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
+                    print("🎯 [CampaignManager] discoverCampaigns ← HTTP \(httpResponse.statusCode) (error). Body: \(responseString.prefix(300))")
                     VioLogger.error("Campaigns discovery failed with status \(httpResponse.statusCode): \(responseString)", component: "CampaignManager")
                     return
                 }
             }
+            print("🎯 [CampaignManager] discoverCampaigns ← HTTP \(statusCode) OK")
             
             // GraphQL commerce key + endpoint from backend (before WS / cart_intent)
             await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
             
             // Decode campaigns discovery response
             let discoveryResponse = try JSONDecoder().decode(CampaignsDiscoveryResponse.self, from: data)
+            print("🎯 [CampaignManager] discoverCampaigns    decodificado: \(discoveryResponse.campaigns.count) fila(s) en \"campaigns\"")
             
             // Convert discovery items to Campaign models
             var discoveredCampaigns: [Campaign] = []
@@ -881,6 +932,8 @@ public class CampaignManager: ObservableObject {
                         }
                     }
                 }
+            } else if !discoveredCampaigns.isEmpty {
+                print("🎯 [CampaignManager] discoverCampaigns - No active campaign (requires state .active and not paused). Skipping currentCampaign update, /v1/offers fallback, and WebSocket. Got: \(discoveredCampaigns.map { "id:\($0.id) state:\($0.currentState) paused:\($0.isPaused ?? false)" }.joined(separator: ", "))")
             }
             
             // Fetch offers from /v1/offers ONLY if discovery returned 0 components.
@@ -906,6 +959,8 @@ public class CampaignManager: ObservableObject {
                 print("🎯 [CampaignManager] discoverCampaigns - Connecting WebSocket for campaignId: \(activeCampaign.id)")
                 await connectWebSocket(campaignId: activeCampaign.id)
             }
+            
+            await flushPendingApnsDeviceTokenRegistrationWithVio()
             
         } catch {
             VioLogger.error("Failed to discover campaigns: \(error)", component: "CampaignManager")

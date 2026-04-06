@@ -18,6 +18,10 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
     ) {
         let info = notification.request.content.userInfo
         if CampaignManager.isVioCartIntentNotificationUserInfo(info) {
+            Task { @MainActor in
+                await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
+                CampaignManager.shared.handlePushNotificationUserInfo(info)
+            }
             completionHandler([.banner, .sound])
             return
         }
