@@ -114,9 +114,6 @@
     "phoneCode": "+47",
     "flag": "https://flagcdn.com/w320/no.png"
   },
-  "liveShow": {
-    "campaignId": 36
-  },
   "localization": {
     "defaultLanguage": "no",
     "fallbackLanguage": "en",
@@ -211,9 +208,8 @@
   "campaigns": {
     "webSocketBaseURL": "wss://ws-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "wss://ws-dev.vio.live",
-    "devRestAPIBaseURL": "https://api-dev.vio.live",
-    "campaignApiKey": "tv2_api_key_91b4fbf634af4bc5",
+    "devWebSocketBaseURL": "ws://127.0.0.1:5001",
+    "devRestAPIBaseURL": "http://127.0.0.1:5001",
     "autoDiscover": true,
     "wsBaseURL": "wss://ws.vio.live",
     "devWsBaseURL": "wss://ws-dev.vio.live"

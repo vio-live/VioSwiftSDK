@@ -16,7 +16,7 @@ extension SdkClient: CartManagingSDK {
 }
 
 @MainActor
-public class CartManager: ObservableObject, LiveShowCartManaging {
+public class CartManager: ObservableObject {
 
     @Published public var items: [CartItem] = []
     @Published public var isCheckoutPresented = false

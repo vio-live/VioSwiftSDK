@@ -92,7 +92,7 @@ struct HighlightsListView: View {
                 title: "MÅL: A. Diallo",
                 description: "Nydelig avslutning!",
                 thumbnailUrl: nil,
-                clipUrl: "https://firebasestorage.googleapis.com/v0/b/tipio-1ec97.appspot.com/o/1.MP4?alt=media&token=898b7836-5e27-492d-82bb-9d7bb50f9d66",
+                clipUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                 highlightType: .goal,
                 metadata: nil
             )

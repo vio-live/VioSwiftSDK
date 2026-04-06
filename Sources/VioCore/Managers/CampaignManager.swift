@@ -28,11 +28,10 @@ public class CampaignManager: ObservableObject {
     @Published public private(set) var activeCartIntentEvent: CartIntentEvent? = nil
     
     // MARK: - Private Properties
-    private var campaignId: Int?  // Legacy: single campaign ID (for backward compatibility)
     private var webSocketManager: CampaignWebSocketManager?
     
     /// User ID passed to WebSocket for targeted notifications (wsUserMap).
-    /// Set before calling `discoverCampaigns` / `initializeCampaign`.
+    /// Set before calling `discoverCampaigns`.
     /// Example: `CampaignManager.shared.userId = jwtPayload.sub`
     public var userId: String?
     private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
@@ -61,23 +60,10 @@ public class CampaignManager: ObservableObject {
             .replacingOccurrences(of: "/graphql", with: "")
             .replacingOccurrences(of: "/v1/graphql", with: "")
         
-        if config.campaignConfiguration.autoDiscover {
-            // Auto-discovery: campaigns resolved at runtime via setBroadcastContext
-            self.isCampaignActive = true
-            self.campaignState = .active
-            VioLogger.debug("Auto-discovery mode — waiting for setBroadcastContext", component: "CampaignManager")
-        } else {
-            // Legacy mode (backward compat)
-            let configuredCampaignId = config.liveShowConfiguration.campaignId
-            if configuredCampaignId > 0 {
-                self.campaignId = configuredCampaignId
-                VioLogger.debug("Legacy mode — campaignId: \(configuredCampaignId)", component: "CampaignManager")
-                Task { await initializeCampaign() }
-            } else {
-                self.isCampaignActive = true
-                self.campaignState = .active
-            }
-        }
+        // Zero-config: campaign id comes from GET /v1/sdk/campaigns after discoverCampaigns.
+        self.isCampaignActive = true
+        self.campaignState = .active
+        VioLogger.debug("CampaignManager ready — call discoverCampaigns for campaign resolution", component: "CampaignManager")
     }
     
     // MARK: - Public Methods
@@ -95,35 +81,16 @@ public class CampaignManager: ObservableObject {
             .replacingOccurrences(of: "/graphql", with: "")
             .replacingOccurrences(of: "/v1/graphql", with: "")
         
-        // Auto-discovery mode: campaigns are resolved at runtime via setBroadcastContext.
-        // Do NOT read campaignId from config — it will be discovered from broadcastId + apiKey.
-        if config.campaignConfiguration.autoDiscover {
-            self.campaignId = nil
-            self.isCampaignActive = true
-            self.campaignState = .active
-            self.activeComponents.removeAll()
-            VioLogger.debug("Auto-discovery mode — waiting for setBroadcastContext", component: "CampaignManager")
-            return
-        }
-        
-        // Legacy mode (backward compat): use hardcoded campaignId from config
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        if configuredCampaignId > 0 {
-            self.campaignId = configuredCampaignId
-            VioLogger.debug("Legacy mode — campaignId: \(configuredCampaignId)", component: "CampaignManager")
-            Task { await initializeCampaign() }
-        } else {
-            self.campaignId = nil
-            self.isCampaignActive = true
-            self.campaignState = .active
-            self.activeComponents.removeAll()
-        }
+        self.isCampaignActive = true
+        self.campaignState = .active
+        self.activeComponents.removeAll()
+        VioLogger.debug("Reinitialized — run discoverCampaigns to resolve campaign", component: "CampaignManager")
     }
     
     /// Initialize campaign connection (called automatically if campaignId > 0)
     public func initializeCampaign() async {
-        guard let campaignId = campaignId, campaignId > 0 else {
-            print("🎯 [CampaignManager] initializeCampaign - No campaignId, skipping")
+        guard let campaignId = currentCampaign?.id, campaignId > 0 else {
+            print("🎯 [CampaignManager] initializeCampaign - No discovered campaignId, skipping")
             return
         }
         
@@ -208,16 +175,7 @@ public class CampaignManager: ObservableObject {
     
     /// Refresh campaigns and components for a specific broadcast context
     private func refreshCampaignsForContext(_ context: BroadcastContext) async {
-        let config = VioConfiguration.shared
-        
-        // Check if auto-discovery is enabled
-        if config.campaignConfiguration.autoDiscover {
-            // Use auto-discovery
-            await discoverCampaigns(broadcastId: context.broadcastId)
-        } else if let campaignId = campaignId, campaignId > 0 {
-            // Use legacy single campaign mode
-            await initializeCampaign()
-        }
+        await discoverCampaigns(broadcastId: context.broadcastId)
         
         // Filter components by context
         filterComponentsByContext(context)
@@ -261,8 +219,8 @@ public class CampaignManager: ObservableObject {
     
     /// Check if a component should be displayed based on campaign state and context
     public func shouldShowComponent(type: String) -> Bool {
-        // If no campaign configured, show everything
-        guard campaignId != nil && campaignId! > 0 else {
+        // If no campaign discovered yet, show everything
+        guard let cid = currentCampaign?.id, cid > 0 else {
             return true
         }
         
@@ -413,7 +371,7 @@ public class CampaignManager: ObservableObject {
     /// Load campaign and components from cache for instant UI update
     private func loadFromCache() {
         let config = VioConfiguration.shared
-        let currentCampaignId = config.liveShowConfiguration.campaignId
+        let currentCampaignId = currentCampaign?.id ?? 0
         let currentApiKey = config.campaignConfiguration.campaignAdminApiKey.isEmpty 
             ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)
             : config.campaignConfiguration.campaignAdminApiKey
@@ -523,7 +481,7 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Fetch campaign information from API using new v1 endpoint
-    /// Always uses campaignId from configuration file (vio-config.json)
+    /// Uses campaign id from discovery (`discoverCampaigns` / `initializeCampaign`).
     private func fetchCampaignInfo(campaignId: Int) async {
         let config = VioConfiguration.shared
         
@@ -532,16 +490,14 @@ public class CampaignManager: ObservableObject {
             ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)  // Fallback to SDK API key if not configured
             : config.campaignConfiguration.campaignAdminApiKey
         
-        // Always use campaignId from configuration file (vio-config.json)
-        let configuredCampaignId = config.liveShowConfiguration.campaignId
-        print("🎯 [CampaignManager] fetchCampaignInfo - Using campaignId from config: \(configuredCampaignId)")
+        print("🎯 [CampaignManager] fetchCampaignInfo - Using campaignId: \(campaignId)")
         print("🎯 [CampaignManager] fetchCampaignInfo - campaignAdminApiKey: \(campaignAdminApiKey.prefix(20))...")
-        guard configuredCampaignId > 0 else {
-            VioLogger.warning("No campaignId configured in liveShow.campaignId - skipping campaign info fetch", component: "CampaignManager")
+        guard campaignId > 0 else {
+            VioLogger.warning("No campaignId — skipping campaign info fetch", component: "CampaignManager")
             return
         }
         
-        let urlString = "\(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=\(campaignAdminApiKey)&campaignId=\(configuredCampaignId)"
+        let urlString = "\(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=\(campaignAdminApiKey)&campaignId=\(campaignId)"
         print("🎯 [CampaignManager] fetchCampaignInfo - Request URL: \(urlString)")
         
         guard let url = URL(string: urlString) else {
@@ -616,7 +572,7 @@ public class CampaignManager: ObservableObject {
             let existingCampaign = self.currentCampaign
             print("🎯 [CampaignManager] Existing campaign before update: ID=\(existingCampaign?.id ?? -1), logo=\(existingCampaign?.campaignLogo ?? "nil")")
             
-            let resolvedCampaignId = sdkConfig.campaignId ?? config.liveShowConfiguration.campaignId
+            let resolvedCampaignId = sdkConfig.campaignId ?? existingCampaign?.id ?? campaignId
             let resolvedLogo = sdkConfig.campaignLogo ?? pendingSponsorLogoUrl
             let campaign = Campaign(
                 id: resolvedCampaignId,
@@ -1121,20 +1077,13 @@ public class CampaignManager: ObservableObject {
             return
         }
         
-        // Prefer passed campaignId (from discovery), fallback to config file
-        let config = VioConfiguration.shared
         let resolvedCampaignId: Int
         if campaignId > 0 {
             resolvedCampaignId = campaignId
             print("🎯 [CampaignManager] connectWebSocket - Using campaignId from discovery: \(resolvedCampaignId)")
         } else {
-            let configuredCampaignId = config.liveShowConfiguration.campaignId
-            guard configuredCampaignId > 0 else {
-                VioLogger.warning("No campaignId available (discovery=0, config=0) - skipping WebSocket connection", component: "CampaignManager")
-                return
-            }
-            resolvedCampaignId = configuredCampaignId
-            print("🎯 [CampaignManager] connectWebSocket - Using campaignId from config file: \(resolvedCampaignId)")
+            VioLogger.warning("No campaignId from discovery — skipping WebSocket connection", component: "CampaignManager")
+            return
         }
         
         // Use the campaign WebSocket endpoint, not the GraphQL endpoint

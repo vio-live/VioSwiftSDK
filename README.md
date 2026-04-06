@@ -10,9 +10,9 @@ This SDK is designed with a modular architecture that allows you to import only 
 
 - **VioCore** (Required) - Core ecommerce functionality, models, and configuration
 - **VioUI** (Optional) - SwiftUI ecommerce components (Product Cards, Sliders, Cart, Checkout)
-- **VioLiveShow** (Optional) - Livestream shopping logic and data models
-- **VioLiveUI** (Optional) - Livestream UI components (Video player, Chat, Shopping overlays)
-- **VioComplete** (All-in-One) - All modules included
+- **VioEngagementSystem** / **VioEngagementUI** (Optional) - Polls, contests, engagement UI
+- **VioCastingUI** (Optional) - Live match casting, timeline, and player integration
+- **VioComplete** (All-in-One) - All public modules included (Core, Network, DesignSystem, UI, Engagement, CastingUI)
 
 ## 📦 Installation
 
@@ -48,7 +48,7 @@ Then add the products you need to your target:
     name: "YourApp",
     dependencies: [
         .product(name: "VioUI", package: "VioSwiftSDK"),
-        // or other modules: VioCore, VioLiveShow, VioLiveUI
+        // or other modules: VioCore, VioEngagementUI, VioCastingUI, VioComplete
     ]
 )
 ```
@@ -159,12 +159,6 @@ Import only what you need:
 // Core + UI Components (ecommerce: cards, sliders, cart, checkout)
 .product(name: "VioUI", package: "VioSwiftSDK")
 
-// Core + LiveShow Logic (livestream data models and manager)
-.product(name: "VioLiveShow", package: "VioSwiftSDK")
-
-// Core + LiveShow + UI Components (full livestream experience)
-.product(name: "VioLiveUI", package: "VioSwiftSDK")
-
 // Everything (complete SDK with all features)
 .product(name: "VioComplete", package: "VioSwiftSDK")
 ```
@@ -186,26 +180,6 @@ Horizontal scrolling component with 6 layouts:
 - **Wide**: Extended cards for detailed view (320pt)
 - **Showcase**: Premium cards for special collections (240pt)
 - **Micro**: Ultra-compact for space-constrained areas (100pt)
-
-## 🎬 LiveShow Components
-
-### VLiveStreamOverlay
-Global livestream system with 3 layout options:
-- **Full Screen**: TikTok/Instagram-style immersive experience
-- **Bottom Sheet**: Compact overlay with expandable controls
-- **Modal**: Traditional video player with organized tabs
-
-### VLiveMiniPlayer
-Draggable mini-player for multitasking:
-- **Draggable**: Position anywhere on screen
-- **Snap to edges**: Automatic edge snapping
-- **Expandable**: Tap to return to full experience
-
-### VLiveShowFloatingIndicator
-Removable floating indicator for active streams:
-- **Auto-show**: Appears when streams are active
-- **Dismissable**: User can hide/show manually
-- **Configurable position**: 4 corner options
 
 ## 🚀 Quick Start
 
@@ -257,28 +231,6 @@ struct ProductView: View {
 }
 ```
 
-### LiveShow Integration
-```swift
-import SwiftUI
-import VioLiveShow
-import VioLiveUI
-
-struct MainAppView: View {
-    var body: some View {
-        YourMainContent()
-            // Add global livestream overlay
-            .overlay {
-                VLiveStreamOverlay()
-            }
-    }
-}
-
-// Show a livestream from anywhere in your app
-Button("Join Live Show") {
-    LiveShowManager.shared.showLiveStream(stream, layout: .fullScreenOverlay)
-}
-```
-
 ## 📱 Demos
 
 Demos are managed in the `VioSwiftSDK-Demos` repository. Each demo consumes the SDK via SPM pinned to a version tag (`vX.Y.Z`).
@@ -293,8 +245,8 @@ Demos are managed in the `VioSwiftSDK-Demos` repository. Each demo consumes the 
 ### Current Status
 - ✅ **VioCore**: Core models, business logic, and configuration system
 - ✅ **VioUI**: Complete ecommerce components (Cards, Sliders, Cart, Checkout)
-- ✅ **VioLiveShow**: Livestream logic and data models
-- ✅ **VioLiveUI**: Livestream UI components (3 layouts, mini-player, indicators)
+- ✅ **VioEngagementSystem** / **VioEngagementUI**: Polls, contests, engagement UI
+- ✅ **VioCastingUI**: Live match casting and player integration
 - ✅ **VioDesignSystem**: Complete design tokens and base components  
 - ✅ **Demo App**: Fully functional iOS app with all features
 - ✅ **Documentation**: Professional docs integrated with Docusaurus
@@ -305,9 +257,7 @@ Demos are managed in the `VioSwiftSDK-Demos` repository. Each demo consumes the 
 ```bash
 # Build individual modules
 swift build --target VioCore
-swift build --target VioUI  
-swift build --target VioLiveShow
-swift build --target VioLiveUI
+swift build --target VioUI
 
 # Build complete SDK
 swift build --product VioComplete

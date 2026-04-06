@@ -603,7 +603,7 @@ public struct VOfferBannerDynamic: View {
         }
         
         // Check campaign state
-        let campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
+        let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             // No campaign configured - show component (legacy behavior)
             return true

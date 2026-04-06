@@ -35,14 +35,7 @@ struct tv2demoApp: App {
         print("🎨 [TV2Demo] GraphQL: \(cfg.environment.graphQLURL)")
         print("🎨 [TV2Demo] REST: \(cfg.campaignConfiguration.restAPIBaseURL)")
         print("🎨 [TV2Demo] WebSocket: \(cfg.wsBaseURL)")
-        let campaignId = cfg.liveShowConfiguration.campaignId
-        if campaignId > 0 {
-            print("🎨 [TV2Demo] campaignId (config): \(campaignId)")
-        }
         print("🎨 [TV2Demo] autoDiscover: \(cfg.campaignConfiguration.autoDiscover)")
-        if !cfg.liveShowConfiguration.commerceBaseUrl.isEmpty {
-            print("🎨 [TV2Demo] Commerce: \(cfg.liveShowConfiguration.commerceBaseUrl)")
-        }
         print("🎨 [TV2Demo] apiKey: \(cfg.apiKey.prefix(10))…")
         
         // Set demo userId for WS identify — backend uses this to route cart_intent events
@@ -51,11 +44,6 @@ struct tv2demoApp: App {
         print("👤 [TV2Demo] userId set: tv2_demo_user")
 
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
-        
-        if campaignId > 0 {
-            let ws = "\(cfg.wsBaseURL)/ws/\(campaignId)?userId=\(CampaignManager.shared.userId ?? "")"
-            print("🎨 [TV2Demo] WebSocket URL: \(ws)")
-        }
     }
     
     var body: some Scene {

@@ -304,7 +304,7 @@ final class VGVideoPlayerViewModel: ObservableObject {
             return
         }
         
-        let remote = "https://firebasestorage.googleapis.com/v0/b/tipio-1ec97.appspot.com/o/bar.v.psg.1.ucl.01.10.2025.fullmatchsports.com.1080p.mp4?alt=media&token=593ce8a1-0462-4c37-98c3-e399f25e3853"
+        let remote = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
         guard let url = URL(string: remote) else { return }
         initializePlayer(with: url)
     }

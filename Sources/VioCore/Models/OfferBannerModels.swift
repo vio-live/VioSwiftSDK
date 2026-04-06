@@ -489,7 +489,10 @@ public class ComponentManager: ObservableObject {
     @Published public private(set) var activeBanner: OfferBannerConfig?
     @Published public private(set) var isConnected = false
     
-    public let campaignId: Int
+    /// Resolved from `CampaignManager` after `discoverCampaigns` (zero-config).
+    public var campaignId: Int {
+        CampaignManager.shared.currentCampaign?.id ?? 0
+    }
     private let baseURL = "https://event-streamer-angelo100.replit.app"
     private var webSocketManager: WebSocketManager?
     
@@ -497,7 +500,6 @@ public class ComponentManager: ObservableObject {
     public static let shared = ComponentManager()
     
     private init() {
-        self.campaignId = VioConfiguration.shared.liveShowConfiguration.campaignId
         // Do not auto-connect: avoids a second WebSocket before CampaignManager runs discoverCampaigns.
         // Call `connect()` from UI (e.g. HomeView.onAppear) when needed.
     }

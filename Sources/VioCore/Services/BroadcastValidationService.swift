@@ -14,10 +14,7 @@ public enum BroadcastValidationService {
         let config = VioConfiguration.shared
         let baseURL = config.campaignConfiguration.restAPIBaseURL
 
-        // Use campaignApiKey if defined, otherwise apiKey
-        let apiKey = config.campaignConfiguration.campaignApiKey.isEmpty
-            ? config.apiKey
-            : config.campaignConfiguration.campaignApiKey
+        let apiKey = config.resolvedSdkApiKey
 
         guard !apiKey.isEmpty else {
             VioLogger.warning("BroadcastValidationService: No API key configured", component: "BroadcastValidationService")

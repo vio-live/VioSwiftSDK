@@ -42,7 +42,7 @@ public struct VEngagementCardBase<Content: View>: View {
                 )
         )
         .shadow(color: .black.opacity(0.6), radius: 20, x: 0, y: 8)
-        .frame(maxWidth: UIScreen.main.bounds.width - 40)
+        .frame(maxWidth: EngagementCardLayout.maxCardWidth)
         .offset(y: dragOffset)
         .gesture(
             DragGesture()

@@ -46,31 +46,12 @@ let package = Package(
             targets: ["VioEngagementSystem", "VioEngagementUI"]
         ),
 
-        // LiveShow - optional target (FASE 3)
-        // .library(
-        //     name: "VioLiveShow",
-        //     targets: ["VioCore", "VioLiveShow"]
-        // ),
-
         // Testing utilities - internal testing helpers
         .library(
             name: "VioTesting",
             targets: ["VioTesting"]
         ),
 
-        // LiveShow UI Components - optional target (FASE 3)
-        // .library(
-        //     name: "VioLiveUI",
-        //     targets: ["VioCore", "VioLiveShow", "VioLiveUI"]
-        // ),
-
-        // Complete SDK - everything included
-        // .library(
-        //     name: "VioComplete",
-        //     targets: [
-        //         "VioCore", "VioDesignSystem", "VioUI", "VioLiveShow", "VioLiveUI",
-        //     ]
-        // ),
         // Casting UI - live match casting components
         .library(
             name: "VioCastingUI",
@@ -94,9 +75,6 @@ let package = Package(
         // GraphQL client for Vio API
         .package(url: "https://github.com/apollographql/apollo-ios.git", from: "1.0.0"),
 
-        // WebSocket for LiveShow real-time features
-        .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0"),
-
         // Image caching for UI components
         .package(url: "https://github.com/kean/Nuke.git", from: "12.0.0"),
 
@@ -106,9 +84,7 @@ let package = Package(
             url: "https://github.com/klarna/klarna-mobile-sdk-spm.git",
             exact: "2.8.0"
         ),
-        // Socket.IO client for Tipio realtime backend
-        .package(url: "https://github.com/socketio/socket.io-client-swift", from: "16.0.0"),
-        
+
         // Mixpanel for analytics tracking
         .package(url: "https://github.com/mixpanel/mixpanel-swift", from: "4.0.0"),
 
@@ -186,30 +162,6 @@ let package = Package(
             ]
         ),
 
-        // MARK: - FASE 3: LiveShow Target (Optional)
-        .target(
-            name: "VioLiveShow",
-            dependencies: [
-                "VioCore",
-                "VioNetwork",
-                .product(name: "Starscream", package: "Starscream"),
-                .product(name: "SocketIO", package: "socket.io-client-swift"),
-            ],
-            path: "Sources/VioLiveShow"
-        ),
-
-        // MARK: - FASE 3: LiveShow UI Target (Optional)
-        .target(
-            name: "VioLiveUI",
-            dependencies: [
-                "VioCore",
-                "VioLiveShow",
-                "VioUI",
-                "VioDesignSystem",
-            ],
-            path: "Sources/VioLiveUI"
-        ),
-
         // MARK: - FASE 4: Engagement System Target (Optional)
         .target(
             name: "VioEngagementSystem",
@@ -264,7 +216,7 @@ let package = Package(
         // VioUITests requires iOS simulator (UIKit) — re-enable when running on iOS
         // .testTarget(
         //     name: "VioUITests",
-        //     dependencies: ["VioUI", "VioCore", "VioDesignSystem", "VioLiveShow"],
+        //     dependencies: ["VioUI", "VioCore", "VioDesignSystem"],
         //     path: "Tests/VioUITests"
         // )
     ]

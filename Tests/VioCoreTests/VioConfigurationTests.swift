@@ -156,6 +156,24 @@ final class VioConfigurationTests: XCTestCase {
         XCTAssertFalse(engagement.demoMode)
     }
 
+    func testResolvedSdkApiKeyMatchesRootWhenCampaignOverrideEmpty() {
+        VioConfiguration.configure(apiKey: "root-only-key")
+        XCTAssertEqual(VioConfiguration.shared.resolvedSdkApiKey, "root-only-key")
+    }
+
+    func testResolvedSdkApiKeyUsesCampaignOverrideWhenNonEmpty() {
+        let campaign = CampaignConfiguration(
+            webSocketBaseURL: "wss://api-dev.vio.live",
+            restAPIBaseURL: "https://api-dev.vio.live",
+            campaignApiKey: "override-key"
+        )
+        VioConfiguration.configure(
+            apiKey: "root-key",
+            campaignConfig: campaign
+        )
+        XCTAssertEqual(VioConfiguration.shared.resolvedSdkApiKey, "override-key")
+    }
+
     // MARK: - Singleton
 
     func testSharedInstanceIsSingleton() {

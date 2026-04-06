@@ -1217,7 +1217,7 @@ public struct TimelineDataGenerator {
             title: "MÅL: A. Diallo",
             description: "Nydelig avslutning fra Diallo!",
             thumbnailUrl: nil,
-            clipUrl: "https://firebasestorage.googleapis.com/v0/b/tipio-1ec97.appspot.com/o/1.MP4?alt=media&token=898b7836-5e27-492d-82bb-9d7bb50f9d66",
+            clipUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
             highlightType: .goal,
             metadata: ["score": "1-0", "player": "A. Diallo"]
         )))
@@ -1229,7 +1229,7 @@ public struct TimelineDataGenerator {
             title: "Stor sjanse!",
             description: "Nesten 2-0 for Barcelona!",
             thumbnailUrl: nil,
-            clipUrl: "https://firebasestorage.googleapis.com/v0/b/tipio-1ec97.appspot.com/o/2.MP4?alt=media&token=9011a94a-1085-4b69-bd41-3b1432ca577a",
+            clipUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
             highlightType: .chance,
             metadata: ["team": "home"]
         )))
@@ -1241,7 +1241,7 @@ public struct TimelineDataGenerator {
             title: "Gult kort: Casemiro",
             description: "Falta táctica fra Casemiro",
             thumbnailUrl: nil,
-            clipUrl: "https://firebasestorage.googleapis.com/v0/b/tipio-1ec97.appspot.com/o/3.MP4?alt=media&token=f28dadf8-05df-4544-a21f-a4c45836793f",
+            clipUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
             highlightType: .yellowCard,
             metadata: ["player": "Casemiro", "team": "home"]
         )))

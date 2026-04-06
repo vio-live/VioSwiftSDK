@@ -20,7 +20,7 @@ Trabajas **solo** en este Swift Package (iOS / macOS / tvOS / watchOS). El backe
 
 ## Módulos SPM (resumen)
 
-Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio mentalmente), **VioNetwork**, **VioDesignSystem**, **VioUI**, **VioEngagementSystem**, **VioEngagementUI**, **VioCastingUI**, **VioComplete**. Targets **VioLiveShow** / **VioLiveUI** pueden existir en el manifiesto; productos públicos pueden estar comentados.
+Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio mentalmente), **VioNetwork**, **VioDesignSystem**, **VioUI**, **VioEngagementSystem**, **VioEngagementUI**, **VioCastingUI**, **VioComplete**. No hay módulos separados de live shopping / live show en el package.
 
 ## Inicialización (código real)
 

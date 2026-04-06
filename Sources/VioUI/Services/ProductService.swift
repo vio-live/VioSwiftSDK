@@ -18,7 +18,7 @@ public class ProductService {
     // MARK: - SDK Client Management
     
     /// Get or create SDK client.
-    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `liveShow.commerceApiKey` → `apiKey`).
+    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `apiKey`).
     /// Recreates the client if the resolved key or GraphQL URL changes.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
@@ -28,7 +28,7 @@ public class ProductService {
             throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(graphQLURLString)")
         }
         
-        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then `liveShow.commerceApiKey`, then SDK `apiKey`
+        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then SDK `apiKey`
         let resolvedApiKey = config.resolvedCommerceApiKey
         
         // Invalidate cache if the key or URL has changed (e.g. bootstrap loaded after first call)

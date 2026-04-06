@@ -8,8 +8,7 @@ struct ConfigAPIClient {
     }
     
     private var apiKey: String {
-        let campaignKey = VioConfiguration.shared.campaignConfiguration.campaignApiKey
-        return campaignKey.isEmpty ? VioConfiguration.shared.apiKey : campaignKey
+        VioConfiguration.shared.resolvedSdkApiKey
     }
     
     /// Fetch campaign configuration

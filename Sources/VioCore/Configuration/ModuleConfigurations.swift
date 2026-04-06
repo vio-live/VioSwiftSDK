@@ -411,78 +411,6 @@ public enum PlaceholderImageType: String, CaseIterable {
     case none = "none"
 }
 
-// MARK: - LiveShow Configuration
-
-/// Configuration for LiveShow functionality
-public struct LiveShowConfiguration {
-    
-    // Stream Configuration
-    public let autoJoinChat: Bool
-    public let enableChatModeration: Bool
-    public let maxChatMessageLength: Int
-    public let enableEmojis: Bool
-    
-    // Shopping Integration
-    public let enableShoppingDuringStream: Bool
-    public let showProductOverlays: Bool
-    public let enableQuickBuy: Bool
-    
-    // Notifications
-    public let enableStreamNotifications: Bool
-    public let enableProductNotifications: Bool
-    public let enableChatNotifications: Bool
-    
-    // Video Configuration
-    public let videoQuality: VideoQuality
-    public let enableAutoplay: Bool
-    public let enablePictureInPicture: Bool
-    
-    // Tipio Integration
-    public let commerceApiKey: String
-    public let commerceBaseUrl: String
-    
-    // Dynamic Components
-    public let campaignId: Int  // 0 = no campaign (SDK works normally)
-    
-    public init(
-        autoJoinChat: Bool = true,
-        enableChatModeration: Bool = true,
-        maxChatMessageLength: Int = 200,
-        enableEmojis: Bool = true,
-        enableShoppingDuringStream: Bool = true,
-        showProductOverlays: Bool = true,
-        enableQuickBuy: Bool = true,
-        enableStreamNotifications: Bool = true,
-        enableProductNotifications: Bool = true,
-        enableChatNotifications: Bool = false,
-        videoQuality: VideoQuality = .auto,
-        enableAutoplay: Bool = false,
-        enablePictureInPicture: Bool = true,
-        commerceApiKey: String = "",
-        commerceBaseUrl: String = "https://stg-dev-microservices.tipioapp.com",
-        campaignId: Int = 0  // Default to 0 (no campaign restrictions)
-    ) {
-        self.autoJoinChat = autoJoinChat
-        self.enableChatModeration = enableChatModeration
-        self.maxChatMessageLength = maxChatMessageLength
-        self.enableEmojis = enableEmojis
-        self.enableShoppingDuringStream = enableShoppingDuringStream
-        self.showProductOverlays = showProductOverlays
-        self.enableQuickBuy = enableQuickBuy
-        self.enableStreamNotifications = enableStreamNotifications
-        self.enableProductNotifications = enableProductNotifications
-        self.enableChatNotifications = enableChatNotifications
-        self.videoQuality = videoQuality
-        self.enableAutoplay = enableAutoplay
-        self.enablePictureInPicture = enablePictureInPicture
-        self.commerceApiKey = commerceApiKey
-        self.commerceBaseUrl = commerceBaseUrl
-        self.campaignId = campaignId
-    }
-    
-    public static let `default` = LiveShowConfiguration()
-}
-
 // MARK: - Campaign Configuration
 
 /// Configuration for Campaign endpoints
@@ -494,9 +422,9 @@ public struct CampaignConfiguration {
     /// Configured in vio-config.json under "campaigns.campaignAdminApiKey"
     /// Only needed if autoDiscover is false (legacy mode)
     public let campaignAdminApiKey: String
-    /// API key for SDK/campaigns endpoints (GET /v1/sdk/broadcast, GET /v1/sdk/campaigns)
-    /// When set, used instead of apiKey for contentId validation and campaign discovery
-    /// Configured in vio-config.json under "campaigns.campaignApiKey"
+    /// Optional override for SDK campaign REST auth (GET `/v1/sdk/broadcast`, etc.).
+    /// Prefer a single root `apiKey` in `vio-config.json`; leave this empty so `VioConfiguration.resolvedSdkApiKey` uses the root key.
+    /// Legacy: `campaigns.campaignApiKey` in JSON.
     public let campaignApiKey: String
     /// Enable auto-discovery of campaigns using only the Vio SDK API key
     /// When true, campaigns are discovered automatically via GET /v1/sdk/campaigns

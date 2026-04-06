@@ -4,7 +4,7 @@ import SwiftUI
 /// Vio SDK Global Configuration
 ///
 /// Centralized configuration system that allows developers to set up the entire SDK
-/// once and use it across all modules (Core, UI, LiveShow, etc.) without additional setup.
+/// once and use it across all modules (Core, UI, engagement, casting, etc.) without additional setup.
 ///
 /// **Usage:**
 /// ```swift
@@ -31,7 +31,6 @@ public class VioConfiguration: ObservableObject {
     @Published public private(set) var cartConfiguration: CartConfiguration = .default
     @Published public private(set) var networkConfiguration: NetworkConfiguration = .default
     @Published public private(set) var uiConfiguration: UIConfiguration = .default
-    @Published public private(set) var liveShowConfiguration: LiveShowConfiguration = .default
     @Published public private(set) var marketConfiguration: MarketConfiguration = .default
     @Published public private(set) var productDetailConfiguration: ProductDetailConfiguration = .default
     @Published public private(set) var localizationConfiguration: LocalizationConfiguration = .default
@@ -52,7 +51,14 @@ public class VioConfiguration: ObservableObject {
     /// Set by ConfigurationLoader from vio-config.json campaigns.wsBaseURL / campaigns.devWsBaseURL
     @Published public private(set) var wsBaseURL: String = "wss://ws-dev.vio.live"
     
-    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides local `liveShow.commerceApiKey`).
+    /// API key for SDK campaign REST endpoints: `/v1/sdk/broadcast`, `/v1/sdk/campaigns`, `/api/campaigns/...`, lineup, dynamic config.
+    /// Prefer a single root `apiKey` in `vio-config.json`; when `campaigns.campaignApiKey` is non-empty it overrides (legacy).
+    public var resolvedSdkApiKey: String {
+        let override = campaignConfiguration.campaignApiKey
+        return override.isEmpty ? apiKey : override
+    }
+    
+    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides SDK `apiKey` for GraphQL).
     @Published public private(set) var sdkBootstrapCommerceApiKey: String?
     /// Commerce GraphQL URL from bootstrap (`commerce.endpoint` or `endpoints.commerceGraphQL`).
     @Published public private(set) var sdkBootstrapCommerceGraphQLURL: String?
@@ -74,7 +80,6 @@ public class VioConfiguration: ObservableObject {
         cartConfig: CartConfiguration? = nil,
         networkConfig: NetworkConfiguration? = nil,
         uiConfig: UIConfiguration? = nil,
-        liveShowConfig: LiveShowConfiguration? = nil,
         marketConfig: MarketConfiguration? = nil,
         productDetailConfig: ProductDetailConfiguration? = nil,
         localizationConfig: LocalizationConfiguration? = nil,
@@ -92,7 +97,6 @@ public class VioConfiguration: ObservableObject {
         instance.cartConfiguration = cartConfig ?? .default
         instance.networkConfiguration = networkConfig ?? .default
         instance.uiConfiguration = uiConfig ?? .default
-        instance.liveShowConfiguration = liveShowConfig ?? .default
         instance.marketConfiguration = marketConfig ?? .default
         instance.productDetailConfiguration = productDetailConfig ?? .default
         instance.localizationConfiguration = localizationConfig ?? .default
@@ -136,8 +140,7 @@ public class VioConfiguration: ObservableObject {
             theme: nil,
             cartConfig: nil,
             networkConfig: nil,
-            uiConfig: nil,
-            liveShowConfig: nil
+            uiConfig: nil
         )
     }
     
@@ -258,13 +261,11 @@ public class VioConfiguration: ObservableObject {
         return environment.graphQLURL
     }
     
-    /// Resolved GraphQL `Authorization`: bootstrap overrides `liveShow.commerceApiKey`, then SDK `apiKey` (legacy).
+    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then SDK `apiKey`.
     public var resolvedCommerceApiKey: String {
         if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
             return k
         }
-        let live = liveShowConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !live.isEmpty { return live }
         return apiKey.isEmpty ? "DEMO_KEY" : apiKey
     }
     
