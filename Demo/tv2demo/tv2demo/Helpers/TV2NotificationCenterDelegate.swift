@@ -17,7 +17,7 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let info = notification.request.content.userInfo
-        if info[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent {
+        if CampaignManager.isVioCartIntentNotificationUserInfo(info) {
             completionHandler([.banner, .sound])
             return
         }
@@ -30,14 +30,14 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        guard userInfo[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent else {
+        guard CampaignManager.isVioCartIntentNotificationUserInfo(userInfo) else {
             completionHandler()
             return
         }
 
         Task { @MainActor in
             await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
-            CampaignManager.shared.presentCartIntentFromNotification(userInfo: userInfo)
+            CampaignManager.shared.handlePushNotificationUserInfo(userInfo)
         }
         completionHandler()
     }
