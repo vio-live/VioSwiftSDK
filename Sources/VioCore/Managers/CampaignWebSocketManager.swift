@@ -249,13 +249,17 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             case "lineup_show":
                 let event = try JSONDecoder().decode(LineupShowEvent.self, from: data)
                 VioLogger.success("Decoded lineup_show event (videoTimestamp: \(event.videoTimestamp))", component: "CampaignWebSocket")
-                onLineupShow?(event)
+                VioLatencyManager.shared.bufferAction {
+                    self.onLineupShow?(event)
+                }
                 
             case "cart_intent":
                 let event = try JSONDecoder().decode(CartIntentEvent.self, from: data)
                 VioLogger.success("Decoded cart_intent event (productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
-                onCartIntent?(event)
-                scheduleCartIntentNotification(for: event)
+                VioLatencyManager.shared.bufferAction {
+                    self.onCartIntent?(event)
+                    self.scheduleCartIntentNotification(for: event)
+                }
 
             case "ping":
                 // App-level heartbeat — respond immediately with pong

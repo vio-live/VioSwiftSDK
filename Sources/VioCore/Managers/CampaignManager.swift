@@ -1171,13 +1171,17 @@ public class CampaignManager: ObservableObject {
         
         webSocketManager?.onComponentStatusChanged = { [weak self] event in
             Task { @MainActor in
-                self?.handleComponentStatusChanged(event)
+                VioLatencyManager.shared.bufferAction {
+                    self?.handleComponentStatusChanged(event)
+                }
             }
         }
         
         webSocketManager?.onComponentConfigUpdated = { [weak self] event in
             Task { @MainActor in
-                self?.handleComponentConfigUpdated(event)
+                VioLatencyManager.shared.bufferAction {
+                    self?.handleComponentConfigUpdated(event)
+                }
             }
         }
         
