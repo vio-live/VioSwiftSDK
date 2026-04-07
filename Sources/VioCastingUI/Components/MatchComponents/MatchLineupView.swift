@@ -72,7 +72,7 @@ public struct MatchLineupView: View {
             // Team header
             HStack(spacing: 8) {
                 if !isHome { Spacer() }
-                if let logo = team.teamLogo {
+                if let logo = team.teamLogo, !logo.isEmpty {
                     AsyncImage(url: URL(string: logo)) { img in
                         img.resizable().scaledToFit()
                     } placeholder: {
