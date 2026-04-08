@@ -432,14 +432,21 @@ public struct CampaignConfiguration {
     public let autoDiscover: Bool
     /// Optional channel ID to filter campaigns during auto-discovery
     public let channelId: Int?
-    
+    /// Fallback Commerce GraphQL `Authorization` when `GET /v1/sdk/config` omits `commerce.apiKey` (e.g. local dev / sponsor sin key).
+    /// Prefer bootstrap from backend; set in `vio-config.json` as `campaigns.commerceApiKey` only when needed.
+    public let commerceApiKey: String
+    /// Optional override for Commerce GraphQL endpoint when using `commerceApiKey` without bootstrap URL.
+    public let commerceGraphQLURL: String?
+
     public init(
         webSocketBaseURL: String = "https://api-dev.vio.live",
         restAPIBaseURL: String = "https://api-dev.vio.live",
         campaignAdminApiKey: String = "",
         campaignApiKey: String = "",
         autoDiscover: Bool = false,
-        channelId: Int? = nil
+        channelId: Int? = nil,
+        commerceApiKey: String = "",
+        commerceGraphQLURL: String? = nil
     ) {
         self.webSocketBaseURL = webSocketBaseURL
         self.restAPIBaseURL = restAPIBaseURL
@@ -447,6 +454,8 @@ public struct CampaignConfiguration {
         self.campaignApiKey = campaignApiKey
         self.autoDiscover = autoDiscover
         self.channelId = channelId
+        self.commerceApiKey = commerceApiKey
+        self.commerceGraphQLURL = commerceGraphQLURL
     }
     
     public static let `default` = CampaignConfiguration()

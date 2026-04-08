@@ -119,6 +119,9 @@ private struct CartIntentProductDetailHost: View {
         loadedProduct = nil
         defer { isLoading = false }
 
+        await CampaignManager.shared.ensureCommerceBootstrapApplied()
+        print("🎯 [cart_intent] CartIntentProductDetailHost — bootstrap aplicado, lanzando loadProduct id=\(productId)")
+
         do {
             let product = try await ProductService.shared.loadProduct(
                 productId: productId,

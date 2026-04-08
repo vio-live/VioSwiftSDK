@@ -27,8 +27,28 @@ final class TV2AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        Task { @MainActor in
+            CampaignManager.shared.suspendWebSocketForBackground()
+        }
+    }
+
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        Task { @MainActor in
+            await CampaignManager.shared.resumeWebSocketIfNeeded()
+        }
+    }
+
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        if hex.count > 16 {
+            print("🎯 [TV2Demo] APNs token recibido len=\(hex.count) prefix=\(hex.prefix(8))…suffix=\(hex.suffix(8)) — register-device cuando exista campaña tras discoverCampaigns")
+        } else {
+            print("🎯 [TV2Demo] APNs token recibido len=\(hex.count)")
+        }
+        #if DEBUG
+        print("🎯 [TV2Demo] APNs token (DEBUG hex completo): \(hex)")
+        #endif
         Task { @MainActor in
             CampaignManager.shared.submitApnsDeviceTokenForVioRegister(hex)
         }

@@ -34,6 +34,8 @@ public class CampaignManager: ObservableObject {
     /// Set before calling `discoverCampaigns`.
     /// Example: `CampaignManager.shared.userId = jwtPayload.sub`
     public var userId: String?
+    /// When `true` (default), schedules a **local** notification for WebSocket `cart_intent` even while the app is **active**, so the banner appears together with the overlay. Set `false` to skip local notifications in foreground (overlay only).
+    public var showsCartIntentLocalNotificationWhenAppIsActive: Bool = true
     /// Zero-config: APNs hex from the app; `register-device` runs only after `discoverCampaigns` sets `currentCampaign`.
     private var pendingApnsDeviceTokenHex: String?
     private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
@@ -88,6 +90,15 @@ public class CampaignManager: ObservableObject {
             return
         }
         let src = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let tokenLog: String = {
+            let len = hex.count
+            if len <= 16 { return "hex len=\(len) (short)" }
+            return "hex len=\(len) prefix=\(hex.prefix(8))…suffix=\(hex.suffix(8))"
+        }()
+        print("🎯 [CampaignManager] register-device    APNs token: \(tokenLog)")
+        #if DEBUG
+        print("🎯 [CampaignManager] register-device    APNs token (DEBUG full): \(hex)")
+        #endif
         print("🎯 [CampaignManager] register-device → POST \(src)/api/campaigns/\(campaignId)/register-device (x-api-key)")
         print("🎯 [CampaignManager] register-device    esperado: HTTP 200, { \"success\": true } (+ forward al partner en servidor si está configurado)")
         do {
@@ -150,7 +161,7 @@ public class CampaignManager: ObservableObject {
         print("🎯 [CampaignManager] initializeCampaign - Starting initialization for campaignId: \(campaignId)")
         
         // Commerce GraphQL credentials from GET /v1/sdk/config (no local commerce key required)
-        await fetchAndApplySdkBootstrap(usingSdkApiKey: VioConfiguration.shared.apiKey)
+        await fetchAndApplySdkBootstrap(usingSdkApiKey: VioConfiguration.shared.resolvedSdkApiKey)
         
         // 0. Load dynamic configuration from backend
         var dynamicSponsorLogoUrl: String? = nil
@@ -332,6 +343,7 @@ public class CampaignManager: ObservableObject {
         }
         switch resolved {
         case VioPushEventType.cartIntent.rawValue:
+            print("🎯 [CampaignManager] handlePushNotificationUserInfo → cart_intent (siguiente paso: commerce bootstrap + ProductService en overlay)")
             applyCartIntentFromNotificationUserInfo(userInfo)
         default:
             VioLogger.debug("Unhandled vio_event_type: \(resolved)", component: "CampaignManager")
@@ -353,7 +365,35 @@ public class CampaignManager: ObservableObject {
         if userInfo[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent {
             return true
         }
+        if hasVioPayloadProductId(in: userInfo) {
+            return true
+        }
         return false
+    }
+
+    /// True if `vio_payload` exists and carries a product id (canonical APNs shape).
+    private static func hasVioPayloadProductId(in userInfo: [AnyHashable: Any]) -> Bool {
+        var top: [String: Any] = [:]
+        for (k, v) in userInfo {
+            guard let ks = k as? String else { continue }
+            top[ks] = v
+        }
+        guard let payload = normalizedVioPayloadDict(from: top) else { return false }
+        let pid = payload["product_id"] ?? payload["productId"]
+        if let s = pid as? String, !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return true }
+        if let n = pid as? NSNumber { return true }
+        if let i = pid as? Int { return true }
+        return false
+    }
+
+    private static func normalizedVioPayloadDict(from top: [String: Any]) -> [String: Any]? {
+        if let p = top["vio_payload"] as? [String: Any] { return p }
+        if let s = top["vio_payload"] as? String,
+           let d = s.data(using: .utf8),
+           let o = try? JSONSerialization.jsonObject(with: d, options: []) as? [String: Any] {
+            return o
+        }
+        return nil
     }
     
     /// Resolves `vio_event_type`, or legacy cart_intent when only older keys are present.
@@ -365,30 +405,60 @@ public class CampaignManager: ObservableObject {
         if userInfo[CartIntentNotificationKeys.kind] as? String == CartIntentNotificationKeys.kindValueCartIntent {
             return VioPushEventType.cartIntent.rawValue
         }
+        var top: [String: Any] = [:]
+        for (k, v) in userInfo {
+            guard let ks = k as? String else { continue }
+            top[ks] = v
+        }
+        if normalizedVioPayloadDict(from: top) != nil, hasVioPayloadProductId(in: userInfo) {
+            return VioPushEventType.cartIntent.rawValue
+        }
         return nil
     }
     
     private func applyCartIntentFromNotificationUserInfo(_ userInfo: [AnyHashable: Any]) {
-        guard let rawId = Self.stringFromUserInfo(userInfo, key: CartIntentNotificationKeys.productId),
-              !rawId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else {
-            VioLogger.warning("cart_intent notification missing \(CartIntentNotificationKeys.productId)", component: "CampaignManager")
+        guard let base = CartIntentEvent.from(userInfo: userInfo) else {
+            VioLogger.warning(
+                "cart_intent notification missing product id (revisar vio_payload.product_id, \(CartIntentNotificationKeys.productId), productId o deeplink vio://)",
+                component: "CampaignManager",
+            )
+            print("🎯 [CampaignManager] cart_intent [push/local] parse fallido — userInfo no contiene id de producto reconocible")
             return
         }
-        let pid = rawId.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = userInfo[CartIntentNotificationKeys.productName] as? String
-        let campaignId: Int? = {
-            if let n = userInfo[CartIntentNotificationKeys.campaignId] as? Int { return n }
-            if let s = userInfo[CartIntentNotificationKeys.campaignId] as? String { return Int(s) }
-            if let n = userInfo[CartIntentNotificationKeys.campaignId] as? NSNumber { return n.intValue }
-            return nil
-        }()
-        activeCartIntentEvent = CartIntentEvent(
-            type: VioPushEventType.cartIntent.rawValue,
-            productName: name,
-            productId: pid,
-            campaignId: campaignId
+        let notifTitle = base.notificationTitle ?? Self.apsAlertTitleFromUserInfo(userInfo)
+        let notifBody = base.notificationBody ?? Self.apsAlertBodyFromUserInfo(userInfo)
+        let merged = CartIntentEvent(
+            type: base.type,
+            productName: base.productName,
+            productId: base.productId,
+            campaignId: base.campaignId,
+            notificationTitle: notifTitle,
+            notificationBody: notifBody,
+            vioUserId: base.vioUserId,
+            source: base.source,
+            deeplink: base.deeplink
         )
+        activeCartIntentEvent = merged
+        if let envUid = merged.vioUserId?.trimmingCharacters(in: .whitespacesAndNewlines), !envUid.isEmpty,
+           let appUid = userId?.trimmingCharacters(in: .whitespacesAndNewlines), !appUid.isEmpty,
+           envUid != appUid {
+            print("🎯 [CampaignManager] cart_intent ⚠️ vio_user_id=\(envUid) distinto de CampaignManager.userId=\(appUid) (demo: revisar routing)")
+        }
+        let pid = merged.productId ?? ""
+        print("🎯 [CampaignManager] cart_intent aplicado [push/local] productId=\(pid) campaignId=\(merged.campaignId.map(String.init) ?? "nil") name=\(merged.productName ?? "nil") title=\(notifTitle ?? "nil") → activeCartIntentEvent (overlay + commerce GraphQL)")
+    }
+    
+    private static func apsAlertTitleFromUserInfo(_ userInfo: [AnyHashable: Any]) -> String? {
+        guard let aps = userInfo["aps"] as? [String: Any] else { return nil }
+        if let alert = aps["alert"] as? [String: Any] { return alert["title"] as? String }
+        return nil
+    }
+    
+    private static func apsAlertBodyFromUserInfo(_ userInfo: [AnyHashable: Any]) -> String? {
+        guard let aps = userInfo["aps"] as? [String: Any] else { return nil }
+        if let alert = aps["alert"] as? [String: Any] { return alert["body"] as? String }
+        if let alertStr = aps["alert"] as? String { return alertStr }
+        return nil
     }
     
     private static func stringFromUserInfo(_ userInfo: [AnyHashable: Any], key: String) -> String? {
@@ -397,6 +467,39 @@ public class CampaignManager: ObservableObject {
         if let n = userInfo[key] as? NSNumber { return n.stringValue }
         return nil
     }
+
+    /// Pretty-prints `GET /v1/sdk/config` JSON for logs with secrets redacted (commerce keys, etc.).
+    private static func sdkConfigJSONRedactedForLogs(_ data: Data) -> String? {
+        guard let root = try? JSONSerialization.jsonObject(with: data, options: []) else { return nil }
+        let redacted = redactSecretsInJSONObject(root)
+        guard JSONSerialization.isValidJSONObject(redacted),
+              let out = try? JSONSerialization.data(withJSONObject: redacted, options: [.prettyPrinted, .sortedKeys]),
+              let s = String(data: out, encoding: .utf8)
+        else { return nil }
+        return s
+    }
+
+    private static func redactSecretsInJSONObject(_ any: Any) -> Any {
+        if var dict = any as? [String: Any] {
+            for (k, v) in dict {
+                let lower = k.lowercased()
+                if lower.contains("apikey") || lower == "authorization" || lower.contains("api_key") || lower.contains("secret") {
+                    if let s = v as? String, !s.isEmpty {
+                        dict[k] = "<redacted len=\(s.count) prefix=\(String(s.prefix(8)))…>"
+                    } else {
+                        dict[k] = "<redacted>"
+                    }
+                } else {
+                    dict[k] = redactSecretsInJSONObject(v)
+                }
+            }
+            return dict
+        }
+        if let arr = any as? [Any] {
+            return arr.map { redactSecretsInJSONObject($0) }
+        }
+        return any
+    }
     
     /// Disconnect from campaign
     public func disconnect() {
@@ -404,6 +507,29 @@ public class CampaignManager: ObservableObject {
         webSocketManager = nil
         isConnected = false
         activeCartIntentEvent = nil
+    }
+    
+    /// Close only the campaign WebSocket (keeps `currentCampaign` and components). Call from
+    /// `applicationDidEnterBackground` so the backend removes this `userId` from `wsUserMap` and
+    /// `POST .../cart-intent` can use the **push/webhook** path while the user is in another app.
+    /// Pair with ``resumeWebSocketIfNeeded()`` on return to foreground.
+    public func suspendWebSocketForBackground() {
+        webSocketManager?.disconnect()
+        webSocketManager = nil
+        isConnected = false
+        VioLogger.debug(
+            "WebSocket suspended for background — server can deliver cart_intent via APNs/webhook",
+            component: "CampaignManager",
+        )
+    }
+    
+    /// Reconnect WebSocket after ``suspendWebSocketForBackground()``.
+    public func resumeWebSocketIfNeeded() async {
+        guard let activeCampaign = currentCampaign,
+              activeCampaign.isPaused != true,
+              activeCampaign.id > 0
+        else { return }
+        await connectWebSocket(campaignId: activeCampaign.id)
     }
     
     // MARK: - Private Methods
@@ -484,13 +610,25 @@ public class CampaignManager: ObservableObject {
         }
     }
     
+    /// Re-runs commerce bootstrap from `GET /v1/sdk/config` (e.g. before ``ProductService`` load in cart_intent overlay). Idempotent.
+    public func ensureCommerceBootstrapApplied() async {
+        let apiKey = VioConfiguration.shared.resolvedSdkApiKey
+        guard !apiKey.isEmpty else {
+            print("🎯 [CampaignManager] ensureCommerceBootstrapApplied — skip (empty apiKey)")
+            return
+        }
+        print("🎯 [CampaignManager] ensureCommerceBootstrapApplied → GET /v1/sdk/config")
+        await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
+    }
+    
     /// Loads `GET /v1/sdk/config` and applies `commerce.apiKey` / `commerce.endpoint` for ProductService (GraphQL).
     private func fetchAndApplySdkBootstrap(usingSdkApiKey apiKey: String) async {
         guard !apiKey.isEmpty else {
             VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
             return
         }
-        var urlComponents = URLComponents(string: "\(campaignRestAPIBaseURL)/v1/sdk/config")
+        let restBase = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var urlComponents = URLComponents(string: "\(restBase)/v1/sdk/config")
         urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
         guard let url = urlComponents?.url else {
             VioLogger.warning("Invalid SDK bootstrap URL", component: "CampaignManager")
@@ -500,26 +638,85 @@ public class CampaignManager: ObservableObject {
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 10.0
-        print("🎯 [CampaignManager] sdk/bootstrap → GET \(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=<redacted>")
-        print("🎯 [CampaignManager] sdk/bootstrap    esperado: HTTP 200 (commerce / endpoints opcionales)")
+        let safeURLForLog = url.absoluteString.replacingOccurrences(of: apiKey, with: "<redacted>")
+        print("🎯 [CampaignManager] sdk/bootstrap → GET \(safeURLForLog)")
+        print("🎯 [CampaignManager] sdk/bootstrap    REST base (campaigns.* en vio-config): \(restBase)")
+        print("🎯 [CampaignManager] sdk/bootstrap    URL host=\(url.host ?? "nil") port=\(url.port.map(String.init) ?? "default") query apiKey len=\(apiKey.count) prefix=\(apiKey.prefix(12))…")
+        print("🎯 [CampaignManager] sdk/bootstrap    esperado: HTTP 200 + objeto \"commerce\" con apiKey (como curl al mismo host)")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
                 let code = (response as? HTTPURLResponse)?.statusCode ?? -1
                 print("🎯 [CampaignManager] sdk/bootstrap ← HTTP \(code) (omitido o error)")
+                if let body = String(data: data, encoding: .utf8), !body.isEmpty {
+                    print("🎯 [CampaignManager] sdk/bootstrap    cuerpo error (prefix 800):\n\(body.prefix(800))")
+                }
                 VioLogger.warning("SDK bootstrap HTTP error", component: "CampaignManager")
                 return
             }
-            print("🎯 [CampaignManager] sdk/bootstrap ← HTTP \(http.statusCode) OK")
-            let bootstrap = try JSONDecoder().decode(SdkBootstrapResponse.self, from: data)
-            let key = bootstrap.commerce?.apiKey
-            let gql = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
-            VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: key, graphQLURL: gql)
-            if key != nil {
-                VioLogger.debug("SDK bootstrap: commerce GraphQL key applied from backend", component: "CampaignManager")
+            print("🎯 [CampaignManager] sdk/bootstrap ← HTTP \(http.statusCode) OK bodyBytes=\(data.count)")
+            if let redacted = Self.sdkConfigJSONRedactedForLogs(data) {
+                print("🎯 [CampaignManager] sdk/bootstrap    respuesta JSON (secretos redactados, comparable a `curl | json.tool`):\n\(redacted)")
             } else {
-                VioLogger.debug("SDK bootstrap: no commerce in response — ProductService uses local/env fallbacks", component: "CampaignManager")
+                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ no se pudo pretty-print JSON; body utf8 prefix 500:\n\(String(data: data, encoding: .utf8)?.prefix(500) ?? "<nil>")")
             }
+            // Diagnóstico rápido: bloque "commerce" en bruto (sin imprimir la apiKey completa).
+            if let root = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let commerce = root["commerce"] as? [String: Any] {
+                let hasKey = ((commerce["apiKey"] as? String)?.isEmpty == false)
+                print("🎯 [CampaignManager] sdk/bootstrap    parse manual commerce: tiene.apiKey=\(hasKey) endpoint=\(String(describing: commerce["endpoint"] ?? "nil"))")
+            } else {
+                print("🎯 [CampaignManager] sdk/bootstrap    parse manual: clave \"commerce\" ausente o no es objeto (revisar body arriba)")
+            }
+            let bootstrap: SdkBootstrapResponse
+            do {
+                bootstrap = try JSONDecoder().decode(SdkBootstrapResponse.self, from: data)
+            } catch {
+                print("🎯 [CampaignManager] sdk/bootstrap    ❌ decode SdkBootstrapResponse falló: \(error)")
+                if let de = error as? DecodingError {
+                    print("🎯 [CampaignManager] sdk/bootstrap    DecodingError: \(String(describing: de))")
+                }
+                if let raw = String(data: data, encoding: .utf8) {
+                    let limit = 2500
+                    print("🎯 [CampaignManager] sdk/bootstrap    body prefix (\(min(limit, raw.count)) chars):\n\(raw.prefix(limit))")
+                }
+                VioLogger.warning("SDK bootstrap JSON decode failed: \(error.localizedDescription)", component: "CampaignManager")
+                return
+            }
+            let key = bootstrap.commerce?.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let keyNonEmpty = (key?.isEmpty == false) ? key : nil
+            // Solo aplicar URL del bootstrap cuando hay clave de commerce; si no, evita fijar URLs internas del servidor (p. ej. k8s) sin Authorization válida.
+            let gqlForApply: String? = {
+                guard keyNonEmpty != nil else { return nil }
+                let g = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
+                let t = g?.trimmingCharacters(in: .whitespacesAndNewlines)
+                return (t?.isEmpty == false) ? t : nil
+            }()
+            let hadCommerce = keyNonEmpty != nil
+            let featCommerce = bootstrap.features?.commerce
+            print("🎯 [CampaignManager] sdk/bootstrap    decode OK features.commerce=\(String(describing: featCommerce)) commerce.apiKey.present=\(hadCommerce) commerce.endpoint.aplicaráAlBootstrap=\(gqlForApply != nil && !(gqlForApply?.isEmpty ?? true))")
+            if featCommerce == true, keyNonEmpty == nil {
+                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ features.commerce=true pero sin commerce.apiKey usará campaigns.commerceApiKey en vio-config si está definida")
+            }
+            VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: keyNonEmpty, graphQLURL: gqlForApply)
+            NotificationCenter.default.post(name: .vioCommerceBootstrapDidApply, object: nil)
+            print("🎯 [CampaignManager] sdk/bootstrap    posted vioCommerceBootstrapDidApply (invalidate ProductService GraphQL cache)")
+            if let k = keyNonEmpty {
+                VioLogger.debug(
+                    "SDK bootstrap: commerce GraphQL Authorization from backend (prefix \(k.prefix(8))…, len \(k.count))",
+                    component: "CampaignManager",
+                )
+                print("🎯 [CampaignManager] sdk/bootstrap    commerce.apiKey aplicada prefix=\(k.prefix(8))… len=\(k.count)")
+            } else {
+                VioLogger.debug(
+                    "SDK bootstrap: sin commerce.apiKey en respuesta — ProductService usará VioConfiguration.resolvedCommerceApiKey (apiKey del cliente / DEMO_KEY)",
+                    component: "CampaignManager",
+                )
+                print("🎯 [CampaignManager] sdk/bootstrap    commerce.apiKey ausente — GraphQL usará fallback resolvedCommerceApiKey")
+            }
+            let cfg = VioConfiguration.shared
+            let src = cfg.sdkBootstrapCommerceApiKey != nil ? "bootstrap(/v1/sdk/config)" : "fallback(apiKey campaña)"
+            print("🎯 [CampaignManager] sdk/bootstrap    → commerce listo: fuente=\(src) GraphQL=\(cfg.resolvedCommerceGraphQLURL) authKey prefix=\(cfg.resolvedCommerceApiKey.prefix(8))… len=\(cfg.resolvedCommerceApiKey.count)")
         } catch {
             VioLogger.warning("SDK bootstrap failed: \(error.localizedDescription)", component: "CampaignManager")
         }
@@ -748,7 +945,7 @@ public class CampaignManager: ObservableObject {
     /// - Parameter matchId: Optional matchId to filter campaigns for a specific match
     public func discoverCampaigns(broadcastId: String? = nil) async {
         let config = VioConfiguration.shared
-        let apiKey = config.apiKey
+        let apiKey = config.resolvedSdkApiKey
         
         guard !apiKey.isEmpty else {
             VioLogger.error("Cannot discover campaigns: API key is empty", component: "CampaignManager")
@@ -774,6 +971,9 @@ public class CampaignManager: ObservableObject {
         request.timeoutInterval = 10.0
         
         do {
+            // Commerce from GET /v1/sdk/config must not depend on /v1/sdk/campaigns succeeding (GraphQL / cart_intent needs sponsor key even if discovery errors).
+            await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
+            
             let safeUrlForLog = "\(campaignRestAPIBaseURL)/v1/sdk/campaigns?apiKey=<redacted>"
             print("🎯 [CampaignManager] discoverCampaigns → GET \(safeUrlForLog)")
             print("🎯 [CampaignManager] discoverCampaigns    esperado: HTTP 200, JSON con array \"campaigns\" (campaignId, components, …)")
@@ -789,9 +989,6 @@ public class CampaignManager: ObservableObject {
                 }
             }
             print("🎯 [CampaignManager] discoverCampaigns ← HTTP \(statusCode) OK")
-            
-            // GraphQL commerce key + endpoint from backend (before WS / cart_intent)
-            await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
             
             // Decode campaigns discovery response
             let discoveryResponse = try JSONDecoder().decode(CampaignsDiscoveryResponse.self, from: data)
@@ -1204,6 +1401,7 @@ public class CampaignManager: ObservableObject {
         
         webSocketManager?.onCartIntent = { [weak self] event in
             Task { @MainActor in
+                print("🎯 [CampaignManager] cart_intent [WebSocket] productId=\(event.productId ?? "nil") campaignId=\(event.campaignId.map(String.init) ?? "nil") name=\(event.productName ?? "nil") → activeCartIntentEvent")
                 self?.activeCartIntentEvent = event
             }
         }
@@ -1567,5 +1765,7 @@ extension Notification.Name {
     public static let componentStatusChanged = Notification.Name("VioComponentStatusChanged")
     public static let componentConfigUpdated = Notification.Name("VioComponentConfigUpdated")
     public static let campaignLogoChanged = Notification.Name("VioCampaignLogoChanged")
+    /// Posted after a successful `GET /v1/sdk/config` bootstrap apply so ``VioUI/ProductService`` can invalidate cached GraphQL client.
+    public static let vioCommerceBootstrapDidApply = Notification.Name("io.vio.sdk.commerceBootstrapDidApply")
 }
 

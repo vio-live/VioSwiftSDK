@@ -250,7 +250,7 @@ public class VioConfiguration: ObservableObject {
         return isConfigured && isMarketAvailable
     }
     
-    /// Resolved commerce GraphQL URL: bootstrap from backend, then environment default.
+    /// Resolved commerce GraphQL URL: bootstrap from backend, then `campaigns.commerceGraphQLURL` in vio-config, then environment default.
     public var resolvedCommerceGraphQLURL: String {
         if let u = sdkBootstrapCommerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !u.isEmpty,
@@ -258,13 +258,23 @@ public class VioConfiguration: ObservableObject {
         {
             return u
         }
+        if let u = campaignConfiguration.commerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !u.isEmpty,
+           URL(string: u) != nil
+        {
+            return u
+        }
         return environment.graphQLURL
     }
-    
-    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then SDK `apiKey`.
+
+    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then `campaigns.commerceApiKey` in vio-config, then SDK `apiKey`.
     public var resolvedCommerceApiKey: String {
         if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
             return k
+        }
+        let localCommerce = campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !localCommerce.isEmpty {
+            return localCommerce
         }
         return apiKey.isEmpty ? "DEMO_KEY" : apiKey
     }

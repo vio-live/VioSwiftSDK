@@ -532,7 +532,9 @@ public class ConfigurationLoader {
             campaignAdminApiKey: config.campaignAdminApiKey ?? CampaignConfiguration.default.campaignAdminApiKey,
             campaignApiKey: config.campaignApiKey ?? CampaignConfiguration.default.campaignApiKey,
             autoDiscover: config.autoDiscover ?? CampaignConfiguration.default.autoDiscover,
-            channelId: config.channelId
+            channelId: config.channelId,
+            commerceApiKey: config.commerceApiKey ?? CampaignConfiguration.default.commerceApiKey,
+            commerceGraphQLURL: config.commerceGraphQLURL
         )
     }
     
@@ -929,6 +931,9 @@ private struct JSONCampaignConfiguration: Codable {
     let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
     let channelId: Int?  // Optional channel ID to filter campaigns during auto-discovery
+    /// Fallback when `/v1/sdk/config` has no `commerce` block (local / missing sponsor `commerceApiKey`).
+    let commerceApiKey: String?
+    let commerceGraphQLURL: String?
 }
 
 private struct JSONAnalyticsConfiguration: Codable {
