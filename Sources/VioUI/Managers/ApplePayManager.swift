@@ -13,7 +13,15 @@ public final class ApplePayManager: NSObject, ObservableObject {
     public static let shared = ApplePayManager()
 
     private let merchantIdentifier = "merchant.live.vio"
-    private let supportedNetworks: [PKPaymentNetwork] = [.visa, .masterCard, .amex]
+    /// Single source of truth for PassKit availability and `PKPaymentRequest`. Includes EU/NO wallets (e.g. Maestro) that Visa/MC/Amex alone would exclude.
+    private let supportedNetworks: [PKPaymentNetwork] = [
+        .visa,
+        .masterCard,
+        .amex,
+        .maestro,
+        .discover,
+        .cartesBancaires,
+    ]
     private let merchantCapabilities: PKMerchantCapability = [.threeDSecure, .credit, .debit]
 
     @Published public var isProcessing = false
@@ -23,7 +31,10 @@ public final class ApplePayManager: NSObject, ObservableObject {
         #if targetEnvironment(simulator)
         return true
         #else
-        return PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks)
+        return PKPaymentAuthorizationController.canMakePayments(
+            usingNetworks: supportedNetworks,
+            merchantCapabilities: merchantCapabilities
+        )
         #endif
     }
 
