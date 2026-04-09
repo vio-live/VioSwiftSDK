@@ -58,12 +58,22 @@ public final class ApplePayManager: NSObject, ObservableObject {
         self.pendingClientSecret = intent?.clientSecret
         self.pendingPublishableKey = intent?.publishableKey
 
+        guard amount > 0, amount.isFinite else {
+            VioLogger.error("Apple Pay invalid amount=\(amount)", component: "ApplePayManager")
+            isProcessing = false
+            paymentResult = .failed("Invalid payment amount")
+            return
+        }
+
+        let countryCode = Self.normalizedRegionCode(from: cartManager.country)
+        let currencyCode = Self.normalizedCurrencyCode(from: cartManager.currency)
+
         let request = PKPaymentRequest()
         request.merchantIdentifier = merchantIdentifier
         request.supportedNetworks = supportedNetworks
         request.merchantCapabilities = merchantCapabilities
-        request.countryCode = cartManager.country
-        request.currencyCode = cartManager.currency
+        request.countryCode = countryCode
+        request.currencyCode = currencyCode
         request.requiredShippingContactFields = [.name, .emailAddress, .phoneNumber, .postalAddress]
 
         #if targetEnvironment(simulator)
@@ -84,21 +94,68 @@ public final class ApplePayManager: NSObject, ObservableObject {
         request.shippingContact = demoContact
         #endif
 
-        let amountDecimal = NSDecimalNumber(value: amount)
+        let rounding = NSDecimalNumberHandler(
+            roundingMode: .plain,
+            scale: 2,
+            raiseOnExactness: false,
+            raiseOnOverflow: false,
+            raiseOnUnderflow: false,
+            raiseOnDivideByZero: false
+        )
+        let amountDecimal = NSDecimalNumber(value: amount).rounding(accordingToBehavior: rounding)
+        let lineLabel = Self.summaryLineLabel(from: productName)
         request.paymentSummaryItems = [
-            PKPaymentSummaryItem(label: productName, amount: amountDecimal),
-            PKPaymentSummaryItem(label: "Vio Live", amount: amountDecimal)
+            PKPaymentSummaryItem(label: lineLabel, amount: amountDecimal),
+            PKPaymentSummaryItem(label: "Vio Live", amount: amountDecimal),
         ]
+
+        VioLogger.debug(
+            "Apple Pay present — merchant=\(merchantIdentifier) country=\(countryCode) currency=\(currencyCode) amount=\(amountDecimal) labelLen=\(lineLabel.count)",
+            component: "ApplePayManager",
+        )
 
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
         controller.delegate = self
         let presented = await controller.present()
 
         if !presented {
-            VioLogger.error("PKPaymentAuthorizationController failed to present", component: "ApplePayManager")
+            VioLogger.error(
+                "PKPaymentAuthorizationController.present() returned false — check In-App Payments entitlement (merchant id), ISO country/currency, and Apple Pay on the App ID in the developer portal",
+                component: "ApplePayManager",
+            )
             isProcessing = false
             paymentResult = .failed("Could not present Apple Pay")
         }
+    }
+
+    /// ISO 3166-1 alpha-2 for `PKPaymentRequest.countryCode`.
+    private static func normalizedRegionCode(from raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if t.count == 2, t.allSatisfy({ $0.isLetter }) { return t }
+        let fb = VioConfiguration.shared.marketConfiguration.countryCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        if fb.count == 2, fb.allSatisfy({ $0.isLetter }) { return fb }
+        return "US"
+    }
+
+    /// ISO 4217 for `PKPaymentRequest.currencyCode` (never symbols like \"kr\").
+    private static func normalizedCurrencyCode(from raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if t.count == 3, t.allSatisfy({ $0.isLetter }) { return t }
+        let fb = VioConfiguration.shared.marketConfiguration.currencyCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        if fb.count == 3, fb.allSatisfy({ $0.isLetter }) { return fb }
+        return "USD"
+    }
+
+    private static func summaryLineLabel(from productName: String) -> String {
+        let trimmed = productName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let max = 64
+        guard trimmed.count > max else { return trimmed.isEmpty ? "Order" : trimmed }
+        let idx = trimmed.index(trimmed.startIndex, offsetBy: max - 1)
+        return String(trimmed[..<idx]) + "…"
     }
 
     private var pendingClientSecret: String?
