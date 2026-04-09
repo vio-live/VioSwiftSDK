@@ -8,8 +8,6 @@
 import SwiftUI
 import VioUI
 import VioCore
-// import VioLiveUI
-// import VioLiveShow
 
 struct ContentView: View {
     @EnvironmentObject var cartManager: CartManager
@@ -49,11 +47,6 @@ struct ContentView: View {
                 )
                 .zIndex(999) // Asegurar que esté por encima de todo (video, overlays, etc.)
             }
-            .overlay {
-                // Global live stream overlay (Tipio integration)
-                LiveStreamGlobalOverlay()
-                    .environmentObject(cartManager)
-            }
             // Checkout Overlay
             .sheet(isPresented: $cartManager.isCheckoutPresented) {
                 VCheckoutOverlay()
@@ -67,24 +60,6 @@ struct ContentView: View {
             .navigationBarHidden(true)
         }
         .navigationViewStyle(StackNavigationViewStyle())
-    }
-}
-
-// MARK: - Live Stream Overlay
-
-struct LiveStreamGlobalOverlay: View {
-    // @ObservedObject private var liveShowManager = LiveShowManager.shared
-    @EnvironmentObject private var cartManager: CartManager
-    
-    var body: some View {
-        ZStack {
-            // Full screen LiveShow overlay
-            // TODO: Re-enable when VioLiveUI and VioLiveShow modules are properly configured
-            // if liveShowManager.isLiveShowVisible {
-            //     VLiveShowFullScreenOverlay()
-            //         .environmentObject(cartManager)
-            // }
-        }
     }
 }
 
@@ -112,9 +87,8 @@ extension ContentView {
             print("❌ [Diag][Vio] Invalid base URL from configuration")
             return nil
         }
-        let commerceKey = VioConfiguration.shared.liveShowConfiguration.commerceApiKey
-        let key = commerceKey.isEmpty ? (VioConfiguration.shared.apiKey.isEmpty ? "DEMO_KEY" : VioConfiguration.shared.apiKey) : commerceKey
-        print("🔌 [Diag][Vio] Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key)) (commerceKey: \(!commerceKey.isEmpty))")
+        let key = VioConfiguration.shared.resolvedCommerceApiKey
+        print("🔌 [Diag][Vio] Creating SdkClient base=\(base.absoluteString) apiKey=\(maskKey(key))")
         return SdkClient(baseUrl: base, apiKey: key)
     }
 

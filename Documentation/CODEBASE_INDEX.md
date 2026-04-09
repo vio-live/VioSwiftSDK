@@ -17,7 +17,6 @@ Definidos en [`Package.swift`](../Package.swift):
 | **VioCastingUI**  | Partido en vivo: timeline, lineup, casting, `EventStreamerManager`, `VCastingVideoPlayer` |
 | **VioComplete**   | Agrega Core + Network + DesignSystem + UI + Engagement + CastingUI |
 | **VioTesting**    | Utilidades internas |
-| **VioLiveShow** / **VioLiveUI** | Targets en el package; productos públicos comentados en `Package.swift` |
 
 ## Rutas críticas (por tema)
 

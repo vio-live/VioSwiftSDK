@@ -191,7 +191,6 @@ public class ConfigurationLoader {
         let cartConfig = createCartConfiguration(from: config.cart)
         let networkConfig = createNetworkConfiguration(from: config.network)
         let uiConfig = createUIConfiguration(from: config.ui)
-        let liveShowConfig = createLiveShowConfiguration(from: config.liveShow, rootCampaignId: config.campaignId)
         let marketFallback = createMarketConfiguration(from: config.marketFallback)
         let productDetailConfig = createProductDetailConfiguration(from: config.productDetail)
         let localizationConfig = createLocalizationConfiguration(from: config.localization, bundle: bundle)
@@ -208,7 +207,6 @@ public class ConfigurationLoader {
             cartConfig: cartConfig,
             networkConfig: networkConfig,
             uiConfig: uiConfig,
-            liveShowConfig: liveShowConfig,
             marketConfig: marketFallback,
             productDetailConfig: productDetailConfig,
             localizationConfig: localizationConfig,
@@ -218,15 +216,24 @@ public class ConfigurationLoader {
             engagementConfig: engagementConfig
         )
         
-        // Resolve and set dedicated WS base URL
-        let isDevEnv = (VioEnvironment(rawValue: config.environment) ?? .production) == .development
+        // Dedicated campaign WS host (`CampaignWebSocketManager`): solo `development` usa overrides `devWs*`.
+        let env = VioEnvironment(rawValue: config.environment) ?? .production
+        let useLocalCampaignOverrides = (env == .development)
         let resolvedWsBaseURL: String
         if let campaigns = config.campaigns {
-            resolvedWsBaseURL = (isDevEnv ? campaigns.devWsBaseURL : nil)
-                ?? campaigns.wsBaseURL
-                ?? (isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live")
+            if useLocalCampaignOverrides {
+                resolvedWsBaseURL = campaigns.devWsBaseURL
+                    ?? campaigns.devWebSocketBaseURL
+                    ?? campaigns.wsBaseURL
+                    ?? campaigns.webSocketBaseURL
+                    ?? "wss://ws-dev.vio.live"
+            } else {
+                resolvedWsBaseURL = campaigns.wsBaseURL
+                    ?? campaigns.webSocketBaseURL
+                    ?? "wss://ws.vio.live"
+            }
         } else {
-            resolvedWsBaseURL = isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live"
+            resolvedWsBaseURL = useLocalCampaignOverrides ? "wss://ws-dev.vio.live" : "wss://ws.vio.live"
         }
         VioConfiguration.setWsBaseURL(resolvedWsBaseURL)
         VioLogger.debug("wsBaseURL resolved: \(resolvedWsBaseURL)", component: "Config")
@@ -520,49 +527,18 @@ public class ConfigurationLoader {
         )
     }
     
-    private static func createLiveShowConfiguration(from liveShowConfig: JSONLiveShowConfiguration?, rootCampaignId: Int? = nil) -> LiveShowConfiguration {
-        guard let config = liveShowConfig else {
-            // If no liveShow config, use root campaignId if provided
-            if let rootCampaignId = rootCampaignId {
-                return LiveShowConfiguration(campaignId: rootCampaignId)
-            }
-            return .default
-        }
-        
-        // Use streaming.autoJoinChat if available, otherwise fallback to legacy autoJoinChat
-        let autoJoinChat = config.streaming?.autoJoinChat ?? config.autoJoinChat ?? true
-        
-        // Use shopping.enableShoppingDuringStream if available, otherwise fallback to legacy enableShopping
-        let enableShopping = config.shopping?.enableShoppingDuringStream ?? config.enableShopping ?? true
-        
-        // Use streaming.enableAutoplay if available, otherwise fallback to legacy enableAutoplay
-        let enableAutoplay = config.streaming?.enableAutoplay ?? config.enableAutoplay ?? false
-        
-        // Commerce API key — prefer commerceApiKey, fallback to legacy tipio.apiKey
-        let commerceApiKey = config.commerceApiKey ?? config.tipio?.apiKey ?? ""
-        let commerceBaseUrl = config.tipio?.baseUrl ?? "https://stg-dev-microservices.tipioapp.com"
-        
-        // Dynamic components configuration
-        // Priority: rootCampaignId > liveShow.campaignId > 0 (default)
-        let campaignId = rootCampaignId ?? config.campaignId ?? 0
-        
-        return LiveShowConfiguration(
-            autoJoinChat: autoJoinChat,
-            enableShoppingDuringStream: enableShopping,
-            enableAutoplay: enableAutoplay,
-            commerceApiKey: commerceApiKey,
-            commerceBaseUrl: commerceBaseUrl,
-            campaignId: campaignId
-        )
-    }
-
     private static func createCampaignConfiguration(from campaignConfig: JSONCampaignConfiguration?, environment: VioEnvironment = .production) -> CampaignConfiguration {
         guard let config = campaignConfig else { return .default }
         
-        // Use dev URLs when environment is development and dev overrides are provided
-        let isDev = environment == .development
-        let resolvedRestURL = (isDev ? config.devRestAPIBaseURL : nil) ?? config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL
-        let resolvedWSURL = (isDev ? config.devWebSocketBaseURL : nil) ?? config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL
+        // Solo `development` aplica `devRestAPIBaseURL` / `devWebSocketBaseURL` (HTTP/WS local, ATS en el host).
+        // `testing`, `sandbox`, `production` usan `restAPIBaseURL` / `webSocketBaseURL` (p. ej. https://api-dev.vio.live).
+        let useLocalOverrides = environment == .development
+        let resolvedRestURL = (useLocalOverrides ? config.devRestAPIBaseURL : nil)
+            ?? config.restAPIBaseURL
+            ?? CampaignConfiguration.default.restAPIBaseURL
+        let resolvedWSURL = (useLocalOverrides ? config.devWebSocketBaseURL : nil)
+            ?? config.webSocketBaseURL
+            ?? CampaignConfiguration.default.webSocketBaseURL
         
         return CampaignConfiguration(
             webSocketBaseURL: resolvedWSURL,
@@ -570,7 +546,9 @@ public class ConfigurationLoader {
             campaignAdminApiKey: config.campaignAdminApiKey ?? CampaignConfiguration.default.campaignAdminApiKey,
             campaignApiKey: config.campaignApiKey ?? CampaignConfiguration.default.campaignApiKey,
             autoDiscover: config.autoDiscover ?? CampaignConfiguration.default.autoDiscover,
-            channelId: config.channelId
+            channelId: config.channelId,
+            commerceApiKey: config.commerceApiKey ?? CampaignConfiguration.default.commerceApiKey,
+            commerceGraphQLURL: config.commerceGraphQLURL
         )
     }
     
@@ -817,13 +795,11 @@ public class ConfigurationLoader {
 
 private struct JSONConfiguration: Codable {
     let apiKey: String
-    let campaignId: Int?  // Campaign ID at root level (preferred)
     let environment: String
     let theme: JSONThemeConfiguration?
     let cart: JSONCartConfiguration?
     let network: JSONNetworkConfiguration?
     let ui: JSONUIConfiguration?
-    let liveShow: JSONLiveShowConfiguration?
     let marketFallback: JSONMarketFallbackConfiguration?
     let productDetail: JSONProductDetailConfiguration?
     let localization: JSONLocalizationConfiguration?
@@ -928,29 +904,6 @@ private struct JSONUIConfiguration: Codable {
     let shadowConfig: JSONShadowConfiguration?
 }
 
-private struct JSONLiveShowConfiguration: Codable {
-    let tipio: JSONTipioConfiguration?
-    let vimeo: JSONVimeoConfiguration?
-    let realTime: JSONRealTimeConfiguration?
-    let components: JSONComponentsConfiguration?
-    let streaming: JSONStreamingConfiguration?
-    let chat: JSONChatConfiguration?
-    let shopping: JSONShoppingConfiguration?
-    let ui: JSONLiveShowUIConfiguration?
-    let notifications: JSONNotificationsConfiguration?
-    
-    // Dynamic components configuration
-    let campaignId: Int?
-    
-    // Commerce API key (replaces legacy tipio.apiKey)
-    let commerceApiKey: String?
-
-    // Legacy properties for backward compatibility
-    let autoJoinChat: Bool?
-    let enableShopping: Bool?
-    let enableAutoplay: Bool?
-}
-
 private struct JSONMarketFallbackConfiguration: Codable {
     let countryCode: String?
     let countryName: String?
@@ -992,6 +945,9 @@ private struct JSONCampaignConfiguration: Codable {
     let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
     let autoDiscover: Bool?  // Enable auto-discovery of campaigns using only SDK API key
     let channelId: Int?  // Optional channel ID to filter campaigns during auto-discovery
+    /// Fallback when `/v1/sdk/config` has no `commerce` block (local / missing sponsor `commerceApiKey`).
+    let commerceApiKey: String?
+    let commerceGraphQLURL: String?
 }
 
 private struct JSONAnalyticsConfiguration: Codable {
@@ -1015,113 +971,6 @@ private struct JSONBrandConfiguration: Codable {
 private struct JSONEngagementConfiguration: Codable {
     let demoMode: Bool?
     let useDynamicConfig: Bool?
-}
-
-private struct JSONTipioConfiguration: Codable {
-    let apiKey: String?
-    let baseUrl: String?
-    let enableWebhooks: Bool?
-    let webhookSecret: String?
-}
-
-private struct JSONVimeoConfiguration: Codable {
-    let apiKey: String?
-    let accessToken: String?
-    let baseUrl: String?
-    let enableEmbedPlayer: Bool?
-}
-
-private struct JSONRealTimeConfiguration: Codable {
-    let webSocketUrl: String?
-    let autoReconnect: Bool?
-    let heartbeatInterval: Int?
-    let maxReconnectAttempts: Int?
-    let componentCacheTimeout: Int?
-    let autoRefreshInterval: Int?
-}
-
-private struct JSONComponentsConfiguration: Codable {
-    let enableDynamicComponents: Bool?
-    let maxConcurrentComponents: Int?
-    let defaultAnimationDuration: Double?
-    let enableOfflineCache: Bool?
-    let preloadNextComponents: Bool?
-}
-
-private struct JSONStreamingConfiguration: Codable {
-    let autoJoinChat: Bool?
-    let enableAutoplay: Bool?
-    let videoQuality: String?
-    let enablePictureInPicture: Bool?
-    let enableFullscreen: Bool?
-    let showStreamControls: Bool?
-    let muteByDefault: Bool?
-}
-
-private struct JSONChatConfiguration: Codable {
-    let enableChat: Bool?
-    let enableChatModeration: Bool?
-    let maxChatMessageLength: Int?
-    let enableEmojis: Bool?
-    let enableChatNotifications: Bool?
-    let chatRefreshInterval: Double?
-    let enableUserMentions: Bool?
-    let enableChatHistory: Bool?
-    let showChatAvatars: Bool?
-}
-
-private struct JSONShoppingConfiguration: Codable {
-    let enableShoppingDuringStream: Bool?
-    let showProductOverlays: Bool?
-    let enableQuickBuy: Bool?
-    let productOverlayDuration: Double?
-    let enableProductNotifications: Bool?
-    let integrateLiveCart: Bool?
-    let specialPricingEnabled: Bool?
-    let countdownEnabled: Bool?
-}
-
-private struct JSONLiveShowUIConfiguration: Codable {
-    let playerAspectRatio: String?
-    let enableLiveIndicator: Bool?
-    let showViewerCount: Bool?
-    let enableShareButton: Bool?
-    let layout: JSONLayoutConfiguration?
-    let branding: JSONBrandingConfiguration?
-    let animations: JSONAnimationsConfiguration?
-}
-
-private struct JSONLayoutConfiguration: Codable {
-    let defaultLayout: String?
-    let enableLayoutSwitching: Bool?
-    let miniPlayerPosition: String?
-}
-
-private struct JSONBrandingConfiguration: Codable {
-    let liveIndicatorColor: String?
-    let accentColor: String?
-    let overlayBackgroundOpacity: Double?
-    let gradientOverlay: Bool?
-    let cardBackgroundColor: String?
-    let highlightColor: String?
-    let shadowColor: String?
-    let shadowOpacity: Double?
-}
-
-private struct JSONAnimationsConfiguration: Codable {
-    let enableEntryAnimations: Bool?
-    let enableExitAnimations: Bool?
-    let componentTransitionDuration: Double?
-    let fadeInDuration: Double?
-    let slideAnimationEnabled: Bool?
-}
-
-private struct JSONNotificationsConfiguration: Codable {
-    let enableStreamNotifications: Bool?
-    let enableProductNotifications: Bool?
-    let enableComponentNotifications: Bool?
-    let notificationSound: Bool?
-    let showNotificationBadges: Bool?
 }
 
 // MARK: - Plist Configuration

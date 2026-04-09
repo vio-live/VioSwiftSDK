@@ -127,11 +127,6 @@
     "phoneCode": "+47",
     "flag": "https://flagcdn.com/w320/no.png"
   },
-  "liveShow": {
-    "campaignId": 0,
-    "autoDiscover": true,
-    "commerceApiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S"
-  },
   "localization": {
     "defaultLanguage": "en",
     "fallbackLanguage": "en",
@@ -152,11 +147,12 @@
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "campaignApiKey": "viaplay_api_key_0c611e983b314ff8",
     "autoDiscover": true,
     "channelId": null,
     "wsBaseURL": "wss://ws.vio.live",
-    "devWsBaseURL": "wss://ws-dev.vio.live"
+    "devWsBaseURL": "wss://ws-dev.vio.live",
+    "devWebSocketBaseURL": "ws://127.0.0.1:5001",
+    "devRestAPIBaseURL": "http://127.0.0.1:5001"
   },
   "brand": {
     "name": "Elkjøp",

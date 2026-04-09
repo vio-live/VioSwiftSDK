@@ -12,6 +12,8 @@ import VioUI
 
 @main
 struct tv2demoApp: App {
+    @UIApplicationDelegateAdaptor(TV2AppDelegate.self) private var appDelegate
+
     /// Strong reference; `UNUserNotificationCenter` delegate is weak.
     private static let notificationCenterDelegate = TV2NotificationCenterDelegate()
     // MARK: - Global State Managers
@@ -35,15 +37,15 @@ struct tv2demoApp: App {
         print("🎨 [TV2Demo] GraphQL: \(cfg.environment.graphQLURL)")
         print("🎨 [TV2Demo] REST: \(cfg.campaignConfiguration.restAPIBaseURL)")
         print("🎨 [TV2Demo] WebSocket: \(cfg.wsBaseURL)")
-        let campaignId = cfg.liveShowConfiguration.campaignId
-        if campaignId > 0 {
-            print("🎨 [TV2Demo] campaignId (config): \(campaignId)")
-        }
         print("🎨 [TV2Demo] autoDiscover: \(cfg.campaignConfiguration.autoDiscover)")
-        if !cfg.liveShowConfiguration.commerceBaseUrl.isEmpty {
-            print("🎨 [TV2Demo] Commerce: \(cfg.liveShowConfiguration.commerceBaseUrl)")
-        }
         print("🎨 [TV2Demo] apiKey: \(cfg.apiKey.prefix(10))…")
+        let rest = cfg.campaignConfiguration.restAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let ws = cfg.wsBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        print("📋 [TV2Demo] Referencia respuestas (zero-config):")
+        print("    → GET  \(rest)/v1/sdk/campaigns?apiKey=…  esperado: HTTP 200, JSON { \"campaigns\": [...] }")
+        print("    → GET  \(rest)/v1/sdk/config?apiKey=…     esperado: HTTP 200 (commerce en body si el backend lo envía)")
+        print("    → WS   \(ws)/ws/<campaignId>?userId=<uid>  esperado: handshake OK; luego mensaje identify")
+        print("    → POST \(rest)/api/campaigns/<id>/register-device  esperado: HTTP 200, { \"success\": true }")
         
         // Set demo userId for WS identify — backend uses this to route cart_intent events
         // In production replace with real user identity (e.g. JWT sub claim)
@@ -51,11 +53,6 @@ struct tv2demoApp: App {
         print("👤 [TV2Demo] userId set: tv2_demo_user")
 
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
-        
-        if campaignId > 0 {
-            let ws = "\(cfg.wsBaseURL)/ws/\(campaignId)?userId=\(CampaignManager.shared.userId ?? "")"
-            print("🎨 [TV2Demo] WebSocket URL: \(ws)")
-        }
     }
     
     var body: some Scene {

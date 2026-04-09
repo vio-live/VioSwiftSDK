@@ -25,8 +25,7 @@ public class LineupService: ObservableObject {
     }
 
     private var apiKey: String {
-        let campaignKey = VioConfiguration.shared.campaignConfiguration.campaignApiKey
-        return campaignKey.isEmpty ? VioConfiguration.shared.apiKey : campaignKey
+        VioConfiguration.shared.resolvedSdkApiKey
     }
 
     private init() {}

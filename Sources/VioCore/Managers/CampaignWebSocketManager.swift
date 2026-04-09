@@ -75,6 +75,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             return
         }
         
+        print("🎯 [CampaignWebSocket] connect → \(urlString)")
+        print("🎯 [CampaignWebSocket] connect    esperado: handshake WebSocket OK; luego envío identify con userId si aplica")
         VioLogger.debug("Connecting to: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
         
         // Create URLRequest with potential authentication headers
@@ -250,8 +252,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
                 onLineupShow?(event)
                 
             case "cart_intent":
-                let event = try JSONDecoder().decode(CartIntentEvent.self, from: data)
-                VioLogger.success("Decoded cart_intent event (productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
+                let event = try CartIntentEvent.parse(jsonData: data)
+                VioLogger.success("Decoded cart_intent event (productId: \(event.productId ?? "nil"), productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
                 onCartIntent?(event)
                 scheduleCartIntentNotification(for: event)
 
@@ -305,6 +307,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
         do {
             try await task.send(.string(text))
+            print("🎯 [CampaignWebSocket] identify → enviado \(text) (servidor registra userId en wsUserMap)")
             VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
@@ -315,8 +318,11 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     // MARK: - Local Notifications
     
-    /// When the app is active, the in-app overlay already shows — skip local notification to avoid duplicate prompts.
-    private func shouldSkipCartIntentLocalNotification() -> Bool {
+    /// Skips local notification in foreground only when ``CampaignManager/showsCartIntentLocalNotificationWhenAppIsActive`` is `false`.
+    private func shouldSkipCartIntentLocalNotificationForForeground() -> Bool {
+        if CampaignManager.shared.showsCartIntentLocalNotificationWhenAppIsActive {
+            return false
+        }
         #if canImport(UIKit) && os(iOS)
         return UIApplication.shared.applicationState == .active
         #else
@@ -324,16 +330,28 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         #endif
     }
     
-    /// Fires a local notification when a cart_intent is received (for users in background or after switching apps).
     private func scheduleCartIntentNotification(for event: CartIntentEvent) {
-        if shouldSkipCartIntentLocalNotification() {
-            VioLogger.debug("cart_intent: skipping local notification — app is active", component: "CampaignWebSocket")
+        if shouldSkipCartIntentLocalNotificationForForeground() {
+            VioLogger.debug("cart_intent: skipping local notification — app is active (overlay)", component: "CampaignWebSocket")
             return
         }
         
+        enum Defaults {
+            static let title = "Tienes un artículo esperando"
+            static let bodyNoProduct = "Un producto está listo para añadir al carrito"
+        }
+        
         let content = UNMutableNotificationContent()
-        content.title = "Tienes un artículo esperando"
-        content.body = event.productName ?? "Un producto está listo para añadir al carrito"
+        let tTrim = event.notificationTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        content.title = tTrim.isEmpty ? Defaults.title : tTrim
+        let bTrim = event.notificationBody?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !bTrim.isEmpty {
+            content.body = bTrim
+        } else if let name = event.productName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            content.body = name
+        } else {
+            content.body = Defaults.bodyNoProduct
+        }
         content.sound = .default
         var info: [String: Any] = [
             VioNotificationUserInfoKeys.notificationVersion: 1,
@@ -343,6 +361,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         if let pid = event.productId, !pid.isEmpty { info[CartIntentNotificationKeys.productId] = pid }
         if let name = event.productName { info[CartIntentNotificationKeys.productName] = name }
         if let cid = event.campaignId { info[CartIntentNotificationKeys.campaignId] = cid }
+        if !tTrim.isEmpty { info[CartIntentNotificationKeys.notificationTitle] = tTrim }
+        if !bTrim.isEmpty { info[CartIntentNotificationKeys.notificationBody] = bTrim }
         content.userInfo = info
         
         let request = UNNotificationRequest(
@@ -402,7 +422,7 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
                 VioLogger.debug("Ignoring didOpen for stale webSocketTask", component: "CampaignWebSocket")
                 return
             }
-            print("🎯 [CampaignWebSocket] WS connected (didOpenWithProtocol) campaignId: \(self.campaignId)")
+            print("🎯 [CampaignWebSocket] ← WebSocket abierto campaignId=\(self.campaignId) (equivalente HTTP 101 Switching Protocols)")
             self.isConnected = true
             self.reconnectAttempts = 0
             self.onConnectionStatusChanged?(true)

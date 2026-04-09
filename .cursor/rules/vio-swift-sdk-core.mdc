@@ -7,6 +7,12 @@ alwaysApply: true
 
 Trabajas **solo** en este Swift Package (iOS / macOS / tvOS / watchOS). El backend Vio (Express, schema Postgres, dashboard) está **fuera de alcance** salvo que el usuario abra explícitamente otro root o pegue una spec.
 
+## Git (convención del repo)
+
+- **Rama de integración del SDK:** siempre **`develop`**. Las features se crean con `git checkout develop && git pull && git checkout -b feature/...`.
+- Los **PR / merge** del package apuntan a **`develop`**, no a `main` (en este repo `main` suele ir a la zaga).
+- Si el usuario pide subir cambios: asumir base **`develop`** salvo que diga otra cosa explícita.
+
 ## Producto y nombres
 
 - **Vio.live** = producto actual. **Reachu** = legacy en código/API antigua. **Tipio** = otro producto; no confundir con Vio.
@@ -14,7 +20,7 @@ Trabajas **solo** en este Swift Package (iOS / macOS / tvOS / watchOS). El backe
 
 ## Módulos SPM (resumen)
 
-Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio mentalmente), **VioNetwork**, **VioDesignSystem**, **VioUI**, **VioEngagementSystem**, **VioEngagementUI**, **VioCastingUI**, **VioComplete**. Targets **VioLiveShow** / **VioLiveUI** pueden existir en el manifiesto; productos públicos pueden estar comentados.
+Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio mentalmente), **VioNetwork**, **VioDesignSystem**, **VioUI**, **VioEngagementSystem**, **VioEngagementUI**, **VioCastingUI**, **VioComplete**. No hay módulos separados de live shopping / live show en el package.
 
 ## Inicialización (código real)
 

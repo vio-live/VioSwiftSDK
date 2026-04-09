@@ -12,7 +12,6 @@ public typealias VioSDKTheme = VioTheme
 public typealias VioCartConfiguration = CartConfiguration
 public typealias VioNetworkConfiguration = NetworkConfiguration
 public typealias VioUIConfiguration = UIConfiguration
-public typealias VioLiveShowConfiguration = LiveShowConfiguration
 public typealias VioConfigurationLoader = ConfigurationLoader
 
 // Export Logger

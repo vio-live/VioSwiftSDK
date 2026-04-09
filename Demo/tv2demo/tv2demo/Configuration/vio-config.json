@@ -2,7 +2,7 @@
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
   "apiKey": "tv2_api_key_91b4fbf634af4bc5",
-  "environment": "development",
+  "environment": "testing",
   "theme": {
     "name": "TV2 Dark Theme",
     "mode": "dark",
@@ -114,9 +114,6 @@
     "phoneCode": "+47",
     "flag": "https://flagcdn.com/w320/no.png"
   },
-  "liveShow": {
-    "campaignId": 36
-  },
   "localization": {
     "defaultLanguage": "no",
     "fallbackLanguage": "en",
@@ -208,14 +205,16 @@
     "showDescription": "Boolean - true: show product description section, false: hide description",
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
+  "_e2e_physical_device": {
+    "_comment": "environment: \"testing\" → REST/WS desde restAPIBaseURL/webSocketBaseURL (HTTPS, api-dev). Para backend en Mac/Tailscale/LAN: \"environment\": \"development\" y ajusta devRestAPIBaseURL/devWebSocketBaseURL (y devWsBaseURL si aplica); el SDK solo usa esos en development. Simulador contra API en el Mac: 127.0.0.1:5001."
+  },
   "campaigns": {
-    "webSocketBaseURL": "wss://ws-dev.vio.live",
+    "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "wss://ws-dev.vio.live",
-    "devRestAPIBaseURL": "https://api-dev.vio.live",
-    "campaignApiKey": "tv2_api_key_91b4fbf634af4bc5",
+    "devWebSocketBaseURL": "ws://100.84.32.36:5001",
+    "devRestAPIBaseURL": "http://100.84.32.36:5001",
     "autoDiscover": true,
-    "wsBaseURL": "wss://ws.vio.live",
-    "devWsBaseURL": "wss://ws-dev.vio.live"
+    "wsBaseURL": "wss://api-dev.vio.live",
+    "devWsBaseURL": "ws://100.84.32.36:5001"
   }
 }

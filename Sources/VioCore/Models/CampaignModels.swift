@@ -348,14 +348,40 @@ internal struct SDKConfigResponse: Codable {
 /// Minimal decode for GET /v1/sdk/config zero-config bootstrap (`commerce` + `endpoints`).
 internal struct SdkBootstrapResponse: Codable {
     struct CommerceBlock: Codable {
-        let apiKey: String
+        /// Omitting or null `apiKey` in JSON must not fail the whole decode.
+        let apiKey: String?
         let endpoint: String?
+
+        enum CodingKeys: String, CodingKey {
+            case apiKey
+            case api_key
+            case endpoint
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let camel = try c.decodeIfPresent(String.self, forKey: .apiKey)
+            let snake = try c.decodeIfPresent(String.self, forKey: .api_key)
+            let merged = [camel, snake].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            apiKey = merged
+            endpoint = try c.decodeIfPresent(String.self, forKey: .endpoint)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encodeIfPresent(apiKey, forKey: .apiKey)
+            try c.encodeIfPresent(endpoint, forKey: .endpoint)
+        }
     }
     struct EndpointsBlock: Codable {
         let commerceGraphQL: String?
     }
+    struct FeaturesBlock: Codable {
+        let commerce: Bool?
+    }
     let commerce: CommerceBlock?
     let endpoints: EndpointsBlock?
+    let features: FeaturesBlock?
 }
 
 /// Campaigns Discovery Response from GET /v1/sdk/campaigns
@@ -962,31 +988,177 @@ public struct ComponentConfigUpdatedEvent: Codable {
 
 
 
-// MARK: - Cart Intent WS Event
+// MARK: - Cart Intent (WebSocket + push — canonical `vio_payload` or legacy flat)
 
-/// Received when the backend routes a cart_intent to this user's WebSocket connection.
-/// Triggered by POST /api/campaigns/:id/cart-intent → wsUserMap lookup → send to device.
-public struct CartIntentEvent: Codable, Equatable {
+/// Parsing errors for ``CartIntentEvent/parse(jsonData:)``.
+public enum CartIntentParseError: Error, Sendable {
+    case notJSONObject
+    case missingProductId
+}
+
+/// Received when the backend routes a `cart_intent` over WebSocket or push.
+/// Supports **canonical** envelope (`vio_event_type`, nested `vio_payload` with snake_case) and **legacy** flat keys (`type`, `productId`, `vio_cartIntent_*`).
+public struct CartIntentEvent: Equatable {
     public let type: String
-    /// Name of the product the user is being prompted to add to cart.
     public let productName: String?
-    /// Optional product ID for deep-linking into a product detail view.
     public let productId: String?
-    /// Optional campaign ID for context.
     public let campaignId: Int?
-    
-    public init(type: String, productName: String?, productId: String?, campaignId: Int?) {
+    public let notificationTitle: String?
+    public let notificationBody: String?
+    /// Envelope `vio_user_id` when present.
+    public let vioUserId: String?
+    public let source: String?
+    public let deeplink: String?
+
+    public init(
+        type: String,
+        productName: String?,
+        productId: String?,
+        campaignId: Int?,
+        notificationTitle: String? = nil,
+        notificationBody: String? = nil,
+        vioUserId: String? = nil,
+        source: String? = nil,
+        deeplink: String? = nil
+    ) {
         self.type = type
         self.productName = productName
         self.productId = productId
         self.campaignId = campaignId
+        self.notificationTitle = notificationTitle
+        self.notificationBody = notificationBody
+        self.vioUserId = vioUserId
+        self.source = source
+        self.deeplink = deeplink
     }
-    
-    enum CodingKeys: String, CodingKey {
-        case type
-        case productName = "productName"
-        case productId   = "productId"
-        case campaignId  = "campaignId"
+
+    /// WebSocket JSON body: canonical envelope, legacy flat, or legacy `type` + fields.
+    public static func parse(jsonData: Data) throws -> CartIntentEvent {
+        let obj = try JSONSerialization.jsonObject(with: jsonData, options: [])
+        guard let top = obj as? [String: Any] else { throw CartIntentParseError.notJSONObject }
+        guard let event = from(plain: top) else { throw CartIntentParseError.missingProductId }
+        return event
+    }
+
+    /// APNs / local notification `userInfo`.
+    public static func from(userInfo: [AnyHashable: Any]) -> CartIntentEvent? {
+        var top: [String: Any] = [:]
+        for (k, v) in userInfo {
+            guard let ks = k as? String else { continue }
+            top[ks] = v
+        }
+        return from(plain: top)
+    }
+
+    /// Shared parser for canonical `vio_payload` or legacy flat keys.
+    static func from(plain top: [String: Any]) -> CartIntentEvent? {
+        let vioPayload = normalizedPayloadDict(from: top)
+        let deeplinkFromPayload = vioPayload.flatMap { stringFromAny($0["deeplink"]) }
+
+        if let payload = vioPayload {
+            var pid = stringFromAny(payload["product_id"] ?? payload["productId"])
+            if pid == nil || pid!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                pid = productIdFromVioDeeplink(stringFromAny(payload["deeplink"]))
+            }
+            let productId = pid?.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let productId, !productId.isEmpty else { return nil }
+
+            let name = stringFromAny(payload["product_name"] ?? payload["productName"])
+            let source = stringFromAny(payload["source"])
+            let deeplink = deeplinkFromPayload
+            let campaignId = intFromAny(payload["campaign_id"] ?? payload["campaignId"])
+            let evt = (stringFromAny(top["vio_event_type"]) ?? stringFromAny(top["type"]) ?? VioPushEventType.cartIntent.rawValue)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
+            let notifTitle = stringFromAny(top[CartIntentNotificationKeys.notificationTitle])
+            let notifBody = stringFromAny(top[CartIntentNotificationKeys.notificationBody])
+            return CartIntentEvent(
+                type: evt.isEmpty ? VioPushEventType.cartIntent.rawValue : evt,
+                productName: name,
+                productId: productId,
+                campaignId: campaignId,
+                notificationTitle: notifTitle,
+                notificationBody: notifBody,
+                vioUserId: vioUserId,
+                source: source,
+                deeplink: deeplink
+            )
+        }
+
+        var rawPid = stringFromAny(top[CartIntentNotificationKeys.productId] ?? top["productId"])
+        if rawPid == nil || rawPid!.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            rawPid = productIdFromVioDeeplink(stringFromAny(top["deeplink"]))
+        }
+        guard let pid = rawPid?.trimmingCharacters(in: .whitespacesAndNewlines), !pid.isEmpty else {
+            return nil
+        }
+        let typeRaw = stringFromAny(top["type"]) ?? stringFromAny(top["vio_event_type"]) ?? VioPushEventType.cartIntent.rawValue
+        let name = stringFromAny(top[CartIntentNotificationKeys.productName] ?? top["productName"])
+        let campaignId = intFromAny(top[CartIntentNotificationKeys.campaignId] ?? top["campaignId"])
+        let notifTitle = stringFromAny(top["notificationTitle"] ?? top[CartIntentNotificationKeys.notificationTitle])
+        let notifBody = stringFromAny(top["notificationBody"] ?? top[CartIntentNotificationKeys.notificationBody])
+        let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
+        return CartIntentEvent(
+            type: typeRaw,
+            productName: name,
+            productId: pid,
+            campaignId: campaignId,
+            notificationTitle: notifTitle,
+            notificationBody: notifBody,
+            vioUserId: vioUserId,
+            source: stringFromAny(top["source"]),
+            deeplink: stringFromAny(top["deeplink"])
+        )
+    }
+
+    private static func normalizedPayloadDict(from top: [String: Any]) -> [String: Any]? {
+        if let p = top["vio_payload"] as? [String: Any] { return p }
+        if let s = top["vio_payload"] as? String,
+           let d = s.data(using: .utf8),
+           let o = try? JSONSerialization.jsonObject(with: d, options: []) as? [String: Any] {
+            return o
+        }
+        return nil
+    }
+
+    private static func stringFromAny(_ any: Any?) -> String? {
+        switch any {
+        case let s as String:
+            let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? nil : t
+        case let i as Int:
+            return String(i)
+        case let n as NSNumber:
+            return n.stringValue
+        default:
+            return nil
+        }
+    }
+
+    private static func intFromAny(_ any: Any?) -> Int? {
+        switch any {
+        case let i as Int:
+            return i
+        case let n as NSNumber:
+            return n.intValue
+        case let s as String:
+            return Int(s.trimmingCharacters(in: .whitespacesAndNewlines))
+        default:
+            return nil
+        }
+    }
+
+    /// `vio://product/{id}?...` — host `product`, path segment is the id.
+    static func productIdFromVioDeeplink(_ urlString: String?) -> String? {
+        guard let raw = urlString?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty,
+              let url = URL(string: raw),
+              url.scheme?.lowercased() == "vio"
+        else { return nil }
+        let host = url.host?.lowercased() ?? ""
+        guard host == "product" else { return nil }
+        let trimmed = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !trimmed.isEmpty else { return nil }
+        return trimmed.split(separator: "/").first.map(String.init)
     }
 }
 
@@ -1011,5 +1183,8 @@ public enum CartIntentNotificationKeys {
     public static let productId = "vio_cartIntent_productId"
     public static let productName = "vio_cartIntent_productName"
     public static let campaignId = "vio_cartIntent_campaignId"
+    /// Optional; aligns WebSocket → local notification with partner `aps.alert` copy.
+    public static let notificationTitle = "vio_cartIntent_notificationTitle"
+    public static let notificationBody = "vio_cartIntent_notificationBody"
     public static let kindValueCartIntent = "cart_intent"
 }

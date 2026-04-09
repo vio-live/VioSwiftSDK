@@ -4,7 +4,7 @@ import SwiftUI
 /// Vio SDK Global Configuration
 ///
 /// Centralized configuration system that allows developers to set up the entire SDK
-/// once and use it across all modules (Core, UI, LiveShow, etc.) without additional setup.
+/// once and use it across all modules (Core, UI, engagement, casting, etc.) without additional setup.
 ///
 /// **Usage:**
 /// ```swift
@@ -31,7 +31,6 @@ public class VioConfiguration: ObservableObject {
     @Published public private(set) var cartConfiguration: CartConfiguration = .default
     @Published public private(set) var networkConfiguration: NetworkConfiguration = .default
     @Published public private(set) var uiConfiguration: UIConfiguration = .default
-    @Published public private(set) var liveShowConfiguration: LiveShowConfiguration = .default
     @Published public private(set) var marketConfiguration: MarketConfiguration = .default
     @Published public private(set) var productDetailConfiguration: ProductDetailConfiguration = .default
     @Published public private(set) var localizationConfiguration: LocalizationConfiguration = .default
@@ -52,7 +51,14 @@ public class VioConfiguration: ObservableObject {
     /// Set by ConfigurationLoader from vio-config.json campaigns.wsBaseURL / campaigns.devWsBaseURL
     @Published public private(set) var wsBaseURL: String = "wss://ws-dev.vio.live"
     
-    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides local `liveShow.commerceApiKey`).
+    /// API key for SDK campaign REST endpoints: `/v1/sdk/broadcast`, `/v1/sdk/campaigns`, `/api/campaigns/...`, lineup, dynamic config.
+    /// Prefer a single root `apiKey` in `vio-config.json`; when `campaigns.campaignApiKey` is non-empty it overrides (legacy).
+    public var resolvedSdkApiKey: String {
+        let override = campaignConfiguration.campaignApiKey
+        return override.isEmpty ? apiKey : override
+    }
+    
+    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides SDK `apiKey` for GraphQL).
     @Published public private(set) var sdkBootstrapCommerceApiKey: String?
     /// Commerce GraphQL URL from bootstrap (`commerce.endpoint` or `endpoints.commerceGraphQL`).
     @Published public private(set) var sdkBootstrapCommerceGraphQLURL: String?
@@ -74,7 +80,6 @@ public class VioConfiguration: ObservableObject {
         cartConfig: CartConfiguration? = nil,
         networkConfig: NetworkConfiguration? = nil,
         uiConfig: UIConfiguration? = nil,
-        liveShowConfig: LiveShowConfiguration? = nil,
         marketConfig: MarketConfiguration? = nil,
         productDetailConfig: ProductDetailConfiguration? = nil,
         localizationConfig: LocalizationConfiguration? = nil,
@@ -92,7 +97,6 @@ public class VioConfiguration: ObservableObject {
         instance.cartConfiguration = cartConfig ?? .default
         instance.networkConfiguration = networkConfig ?? .default
         instance.uiConfiguration = uiConfig ?? .default
-        instance.liveShowConfiguration = liveShowConfig ?? .default
         instance.marketConfiguration = marketConfig ?? .default
         instance.productDetailConfiguration = productDetailConfig ?? .default
         instance.localizationConfiguration = localizationConfig ?? .default
@@ -136,8 +140,7 @@ public class VioConfiguration: ObservableObject {
             theme: nil,
             cartConfig: nil,
             networkConfig: nil,
-            uiConfig: nil,
-            liveShowConfig: nil
+            uiConfig: nil
         )
     }
     
@@ -247,24 +250,32 @@ public class VioConfiguration: ObservableObject {
         return isConfigured && isMarketAvailable
     }
     
-    /// Resolved commerce GraphQL URL: bootstrap from backend, then environment default.
+    /// Resolved commerce GraphQL URL: bootstrap from backend, then `campaigns.commerceGraphQLURL` in vio-config, then environment default.
     public var resolvedCommerceGraphQLURL: String {
         if let u = sdkBootstrapCommerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !u.isEmpty,
            URL(string: u) != nil
         {
-            return u
+            return Self.normalizeCommerceGraphQLHTTPURL(u)
+        }
+        if let u = campaignConfiguration.commerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !u.isEmpty,
+           URL(string: u) != nil
+        {
+            return Self.normalizeCommerceGraphQLHTTPURL(u)
         }
         return environment.graphQLURL
     }
-    
-    /// Resolved GraphQL `Authorization`: bootstrap overrides `liveShow.commerceApiKey`, then SDK `apiKey` (legacy).
+
+    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then `campaigns.commerceApiKey` in vio-config, then SDK `apiKey`.
     public var resolvedCommerceApiKey: String {
         if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
             return k
         }
-        let live = liveShowConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !live.isEmpty { return live }
+        let localCommerce = campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !localCommerce.isEmpty {
+            return localCommerce
+        }
         return apiKey.isEmpty ? "DEMO_KEY" : apiKey
     }
     
@@ -274,6 +285,33 @@ public class VioConfiguration: ObservableObject {
         let u = graphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         sdkBootstrapCommerceApiKey = (k?.isEmpty == false) ? k : nil
         sdkBootstrapCommerceGraphQLURL = (u?.isEmpty == false) ? u : nil
+    }
+
+    /// `true` cuando la autorización GraphQL de **commerce** viene de `GET /v1/sdk/config` (clave dinámica del sponsor).
+    /// No expone el secreto; úsalo en UI para saber si el catálogo puede usar la key remota antes de mostrar commerce.
+    public var hasDynamicCommerceAuthorizationFromBootstrap: Bool {
+        guard let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty else {
+            return false
+        }
+        return true
+    }
+
+    /// `GET /v1/sdk/config` often returns `commerce.endpoint` / `endpoints.commerceGraphQL` as host only (`https://graph-ql-dev.vio.live`).
+    /// ``GraphQLHTTPClient`` POSTs to this URL; the service expects the `/graphql` path.
+    private static func normalizeCommerceGraphQLHTTPURL(_ raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: t), var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return raw
+        }
+        let path = comps.path
+        if path.isEmpty || path == "/" {
+            comps.path = "/graphql"
+            return comps.string ?? "\(t.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/graphql"
+        }
+        if path.hasSuffix("/graphql") {
+            return comps.string ?? raw
+        }
+        return raw
     }
     
     /// Update specific configurations after initial setup
@@ -398,16 +436,17 @@ public class VioConfiguration: ObservableObject {
 // MARK: - Environment
 
 public enum VioEnvironment: String, CaseIterable {
+    /// Usa `campaigns.devRestAPIBaseURL` / `devWebSocketBaseURL` cuando están definidos (backend en Mac, Tailscale, etc.).
     case development = "development"
+    /// Integración contra Vio **api-dev** (`restAPIBaseURL` / `webSocketBaseURL` HTTPS/WSS); no usa overrides `dev*`.
+    case testing = "testing"
     case sandbox = "sandbox"
     case production = "production"
     
     public var baseURL: String {
         switch self {
-        case .development:
+        case .development, .testing, .sandbox:
             return "https://graph-ql-dev.vio.live"
-        case .sandbox:
-            return "https://graph-ql-dev.vio.live"  // Sandbox uses same endpoint as development
         case .production:
             return "https://graph-ql-dev.vio.live"  // Same as development for now
         }

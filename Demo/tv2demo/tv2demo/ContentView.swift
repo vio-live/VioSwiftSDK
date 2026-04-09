@@ -22,9 +22,9 @@ struct ContentView: View {
                 .onAppear {
                     // 🎯 SDK: discover active campaigns → WS connect → identify → ready for cart_intent
                     Task {
-                        print("🎯 [ContentView] Starting campaign discovery...")
+                        print("🎯 [ContentView] discoverCampaigns() — ver logs [CampaignManager] / [CampaignWebSocket] (respuestas esperadas en 📋 al arranque)")
                         await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
-                        print("🎯 [ContentView] Campaigns found: \(CampaignManager.shared.activeCampaigns.count), WS connected: \(CampaignManager.shared.isConnected)")
+                        print("🎯 [ContentView] Fin discovery — campaigns en memoria: \(CampaignManager.shared.activeCampaigns.count), WS isConnected: \(CampaignManager.shared.isConnected) (puede ser true un instante después)")
                     }
                 }
 
@@ -118,6 +118,9 @@ private struct CartIntentProductDetailHost: View {
         isLoading = true
         loadedProduct = nil
         defer { isLoading = false }
+
+        await CampaignManager.shared.ensureCommerceBootstrapApplied()
+        print("🎯 [cart_intent] CartIntentProductDetailHost — bootstrap aplicado, lanzando loadProduct id=\(productId)")
 
         do {
             let product = try await ProductService.shared.loadProduct(

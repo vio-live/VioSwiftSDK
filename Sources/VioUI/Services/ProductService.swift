@@ -12,13 +12,31 @@ public class ProductService {
     // MARK: - Private Properties
     private var cachedSdkClient: SdkClient?
     private let sdkClientQueue = DispatchQueue(label: "com.vio.productsdk")
+    private var bootstrapObserver: NSObjectProtocol?
     
-    private init() {}
+    private init() {
+        bootstrapObserver = NotificationCenter.default.addObserver(
+            forName: .vioCommerceBootstrapDidApply,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.clearCache()
+                print("🎯 [ProductService] GraphQL cache cleared — vioCommerceBootstrapDidApply")
+            }
+        }
+    }
+    
+    deinit {
+        if let o = bootstrapObserver {
+            NotificationCenter.default.removeObserver(o)
+        }
+    }
     
     // MARK: - SDK Client Management
     
     /// Get or create SDK client.
-    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `liveShow.commerceApiKey` → `apiKey`).
+    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `apiKey`).
     /// Recreates the client if the resolved key or GraphQL URL changes.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
@@ -28,7 +46,7 @@ public class ProductService {
             throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(graphQLURLString)")
         }
         
-        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then `liveShow.commerceApiKey`, then SDK `apiKey`
+        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then SDK `apiKey`
         let resolvedApiKey = config.resolvedCommerceApiKey
         
         // Invalidate cache if the key or URL has changed (e.g. bootstrap loaded after first call)
@@ -46,6 +64,15 @@ public class ProductService {
         let client = SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
         cachedSdkClient = client
         
+        let commerceSource: String
+        if config.sdkBootstrapCommerceApiKey != nil {
+            commerceSource = "GET /v1/sdk/config (bootstrap)"
+        } else if !config.campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            commerceSource = "vio-config campaigns.commerceApiKey"
+        } else {
+            commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
+        }
+        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(resolvedApiKey.count) (valor no logueado)")
         VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
         
         return client
@@ -94,7 +121,10 @@ public class ProductService {
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
         
         let sdk = try getSdkClient()
-        
+        let gqlURL = VioConfiguration.shared.resolvedCommerceGraphQLURL
+        let keySrc = VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
+        print("🎯 [ProductService] loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)")
+
         let dtoProducts = try await sdk.channel.product.get(
             currency: currency,
             imageSize: "medium",
@@ -108,10 +138,12 @@ public class ProductService {
         
         guard let dtoProduct = dtoProducts.first else {
             VioLogger.warning("Product not found for ID: \(productId)", component: "ProductService")
+            print("🎯 [ProductService] loadProduct ← GraphQL OK pero 0 filas para id=\(productId)")
             throw ProductServiceError.productNotFound(productId)
         }
         
         let product = dtoProduct.toDomainProduct()
+        print("🎯 [ProductService] loadProduct ← OK id=\(product.id) title=\(product.title) sku=\(product.sku) (commerce conectado)")
         return product
     }
     
