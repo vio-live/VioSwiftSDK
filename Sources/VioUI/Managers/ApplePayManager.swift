@@ -13,28 +13,24 @@ public final class ApplePayManager: NSObject, ObservableObject {
     public static let shared = ApplePayManager()
 
     private let merchantIdentifier = "merchant.live.vio"
-    /// Single source of truth for PassKit availability and `PKPaymentRequest`. Includes EU/NO wallets (e.g. Maestro) that Visa/MC/Amex alone would exclude.
+    /// Same list on `PKPaymentRequest` and for PassKit probes. Maestro covers many NO/EU debit wallets; avoid rare networks that can make the aggregate `canMakePayments(usingNetworks:…)` falsely negative in some regions.
     private let supportedNetworks: [PKPaymentNetwork] = [
         .visa,
         .masterCard,
         .amex,
         .maestro,
-        .discover,
-        .cartesBancaires,
     ]
     private let merchantCapabilities: PKMerchantCapability = [.threeDSecure, .credit, .debit]
 
     @Published public var isProcessing = false
     @Published public var paymentResult: ApplePayResult? = nil
 
+    /// True when the device has Apple Pay and at least one card. We intentionally **do not** gate on `canMakePayments(usingNetworks:capabilities:)` for UI: that API often returns false for valid EU/NO wallets while the sheet still works; eligibility is enforced when presenting `PKPaymentRequest`.
     public var isApplePayAvailable: Bool {
         #if targetEnvironment(simulator)
         return true
         #else
-        return PKPaymentAuthorizationController.canMakePayments(
-            usingNetworks: supportedNetworks,
-            capabilities: merchantCapabilities
-        )
+        return PKPaymentAuthorizationController.canMakePayments()
         #endif
     }
 
