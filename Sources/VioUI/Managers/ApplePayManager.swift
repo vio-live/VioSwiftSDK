@@ -33,7 +33,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
         #else
         return PKPaymentAuthorizationController.canMakePayments(
             usingNetworks: supportedNetworks,
-            merchantCapabilities: merchantCapabilities
+            capabilities: merchantCapabilities
         )
         #endif
     }
