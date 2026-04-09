@@ -11,14 +11,39 @@ import VioCore
 
 final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
 
+    /// Evita volcar secretos a consola (apiKey, tokens, etc.); solo longitudes.
+    private func redactNotificationPayload(_ userInfo: [AnyHashable: Any]) -> [String: Any] {
+        var out: [String: Any] = [:]
+        for (k, v) in userInfo {
+            let key = String(describing: k)
+            let low = key.lowercased()
+            if low.contains("apikey") || low.contains("api_key") || low.contains("token") || low.contains("secret")
+                || low == "authorization" || low.contains("password") || low.contains("bearer")
+            {
+                if let s = v as? String { out[key] = "<redacted len=\(s.count)>" }
+                else { out[key] = "<redacted>" }
+            } else if let nested = v as? [AnyHashable: Any] {
+                out[key] = redactNotificationPayload(nested)
+            } else if let arr = v as? [Any] {
+                out[key] = arr.map { elem -> Any in
+                    if let d = elem as? [AnyHashable: Any] { return redactNotificationPayload(d) }
+                    return elem
+                }
+            } else {
+                out[key] = v
+            }
+        }
+        return out
+    }
+
     private func logPayload(_ userInfo: [AnyHashable: Any], phase: String) {
-        let ns = userInfo as NSDictionary
-        if JSONSerialization.isValidJSONObject(ns),
-           let data = try? JSONSerialization.data(withJSONObject: ns, options: [.prettyPrinted, .sortedKeys]),
+        let safe = redactNotificationPayload(userInfo)
+        if JSONSerialization.isValidJSONObject(safe),
+           let data = try? JSONSerialization.data(withJSONObject: safe, options: [.prettyPrinted, .sortedKeys]),
            let json = String(data: data, encoding: .utf8) {
-            print("🎯 [TV2Demo] Notificación [\(phase)] payload JSON:\n\(json)")
+            print("🎯 [TV2Demo] Notificación [\(phase)] payload JSON (redactado):\n\(json)")
         } else {
-            print("🎯 [TV2Demo] Notificación [\(phase)] payload: \(userInfo)")
+            print("🎯 [TV2Demo] Notificación [\(phase)] payload (redactado): \(safe)")
         }
     }
 

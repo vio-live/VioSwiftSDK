@@ -256,13 +256,13 @@ public class VioConfiguration: ObservableObject {
            !u.isEmpty,
            URL(string: u) != nil
         {
-            return u
+            return Self.normalizeCommerceGraphQLHTTPURL(u)
         }
         if let u = campaignConfiguration.commerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !u.isEmpty,
            URL(string: u) != nil
         {
-            return u
+            return Self.normalizeCommerceGraphQLHTTPURL(u)
         }
         return environment.graphQLURL
     }
@@ -285,6 +285,33 @@ public class VioConfiguration: ObservableObject {
         let u = graphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         sdkBootstrapCommerceApiKey = (k?.isEmpty == false) ? k : nil
         sdkBootstrapCommerceGraphQLURL = (u?.isEmpty == false) ? u : nil
+    }
+
+    /// `true` cuando la autorización GraphQL de **commerce** viene de `GET /v1/sdk/config` (clave dinámica del sponsor).
+    /// No expone el secreto; úsalo en UI para saber si el catálogo puede usar la key remota antes de mostrar commerce.
+    public var hasDynamicCommerceAuthorizationFromBootstrap: Bool {
+        guard let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty else {
+            return false
+        }
+        return true
+    }
+
+    /// `GET /v1/sdk/config` often returns `commerce.endpoint` / `endpoints.commerceGraphQL` as host only (`https://graph-ql-dev.vio.live`).
+    /// ``GraphQLHTTPClient`` POSTs to this URL; the service expects the `/graphql` path.
+    private static func normalizeCommerceGraphQLHTTPURL(_ raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: t), var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return raw
+        }
+        let path = comps.path
+        if path.isEmpty || path == "/" {
+            comps.path = "/graphql"
+            return comps.string ?? "\(t.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/graphql"
+        }
+        if path.hasSuffix("/graphql") {
+            return comps.string ?? raw
+        }
+        return raw
     }
     
     /// Update specific configurations after initial setup
@@ -409,16 +436,17 @@ public class VioConfiguration: ObservableObject {
 // MARK: - Environment
 
 public enum VioEnvironment: String, CaseIterable {
+    /// Usa `campaigns.devRestAPIBaseURL` / `devWebSocketBaseURL` cuando están definidos (backend en Mac, Tailscale, etc.).
     case development = "development"
+    /// Integración contra Vio **api-dev** (`restAPIBaseURL` / `webSocketBaseURL` HTTPS/WSS); no usa overrides `dev*`.
+    case testing = "testing"
     case sandbox = "sandbox"
     case production = "production"
     
     public var baseURL: String {
         switch self {
-        case .development:
+        case .development, .testing, .sandbox:
             return "https://graph-ql-dev.vio.live"
-        case .sandbox:
-            return "https://graph-ql-dev.vio.live"  // Sandbox uses same endpoint as development
         case .production:
             return "https://graph-ql-dev.vio.live"  // Same as development for now
         }

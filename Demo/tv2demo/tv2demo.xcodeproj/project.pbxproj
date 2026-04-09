@@ -202,7 +202,7 @@
 			mainGroup = 17BD22AB2E8E8D0500853E53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */,
+				1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../.." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17BD22B52E8E8D0500853E53 /* Products */;
@@ -599,9 +599,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */ = {
+		1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../.." */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../../VioSwiftSDK;
+			relativePath = ../..;
 		};
 /* End XCLocalSwiftPackageReference section */
 

@@ -351,6 +351,27 @@ internal struct SdkBootstrapResponse: Codable {
         /// Omitting or null `apiKey` in JSON must not fail the whole decode.
         let apiKey: String?
         let endpoint: String?
+
+        enum CodingKeys: String, CodingKey {
+            case apiKey
+            case api_key
+            case endpoint
+        }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let camel = try c.decodeIfPresent(String.self, forKey: .apiKey)
+            let snake = try c.decodeIfPresent(String.self, forKey: .api_key)
+            let merged = [camel, snake].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            apiKey = merged
+            endpoint = try c.decodeIfPresent(String.self, forKey: .endpoint)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encodeIfPresent(apiKey, forKey: .apiKey)
+            try c.encodeIfPresent(endpoint, forKey: .endpoint)
+        }
     }
     struct EndpointsBlock: Codable {
         let commerceGraphQL: String?

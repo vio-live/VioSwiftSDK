@@ -72,7 +72,7 @@ public class ProductService {
         } else {
             commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
         }
-        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) prefix=\(resolvedApiKey.prefix(8))… len=\(resolvedApiKey.count)")
+        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(resolvedApiKey.count) (valor no logueado)")
         VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
         
         return client

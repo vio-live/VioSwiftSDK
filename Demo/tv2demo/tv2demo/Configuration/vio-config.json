@@ -2,7 +2,7 @@
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
   "apiKey": "tv2_api_key_91b4fbf634af4bc5",
-  "environment": "development",
+  "environment": "testing",
   "theme": {
     "name": "TV2 Dark Theme",
     "mode": "dark",
@@ -206,7 +206,7 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
   "_e2e_physical_device": {
-    "_comment": "dev* usan IP Tailscale del Mac (100.x): estable entre redes si iPhone y Mac están en la misma tailnet (app Tailscale en ambos). Alternativa misma WiFi: IP LAN (p. ej. 192.168.x.x). Simulador en Mac: 127.0.0.1."
+    "_comment": "environment: \"testing\" → REST/WS desde restAPIBaseURL/webSocketBaseURL (HTTPS, api-dev). Para backend en Mac/Tailscale/LAN: \"environment\": \"development\" y ajusta devRestAPIBaseURL/devWebSocketBaseURL (y devWsBaseURL si aplica); el SDK solo usa esos en development. Simulador contra API en el Mac: 127.0.0.1:5001."
   },
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",
@@ -214,7 +214,7 @@
     "devWebSocketBaseURL": "ws://100.84.32.36:5001",
     "devRestAPIBaseURL": "http://100.84.32.36:5001",
     "autoDiscover": true,
-    "wsBaseURL": "wss://api.vio.live",
+    "wsBaseURL": "wss://api-dev.vio.live",
     "devWsBaseURL": "ws://100.84.32.36:5001"
   }
 }

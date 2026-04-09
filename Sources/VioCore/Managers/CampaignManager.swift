@@ -90,12 +90,7 @@ public class CampaignManager: ObservableObject {
             return
         }
         let src = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let tokenLog: String = {
-            let len = hex.count
-            if len <= 16 { return "hex len=\(len) (short)" }
-            return "hex len=\(len) prefix=\(hex.prefix(8))…suffix=\(hex.suffix(8))"
-        }()
-        print("🎯 [CampaignManager] register-device    APNs token: \(tokenLog)")
+        print("🎯 [CampaignManager] register-device    APNs token: hex len=\(hex.count) (hex completo solo en logs DEBUG)")
         #if DEBUG
         print("🎯 [CampaignManager] register-device    APNs token (DEBUG full): \(hex)")
         #endif
@@ -485,7 +480,7 @@ public class CampaignManager: ObservableObject {
                 let lower = k.lowercased()
                 if lower.contains("apikey") || lower == "authorization" || lower.contains("api_key") || lower.contains("secret") {
                     if let s = v as? String, !s.isEmpty {
-                        dict[k] = "<redacted len=\(s.count) prefix=\(String(s.prefix(8)))…>"
+                        dict[k] = "<redacted len=\(s.count)>"
                     } else {
                         dict[k] = "<redacted>"
                     }
@@ -499,6 +494,21 @@ public class CampaignManager: ObservableObject {
             return arr.map { redactSecretsInJSONObject($0) }
         }
         return any
+    }
+
+    /// Strips `apiKey` query values so URLs are safe for `print` / console (no key material, not even a prefix).
+    private static func redactApiKeyQuery(in urlString: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"([?&]apiKey=)[^&]*"#,
+            options: [.caseInsensitive]
+        ) else { return urlString }
+        let ns = urlString as NSString
+        return regex.stringByReplacingMatches(
+            in: urlString,
+            options: [],
+            range: NSRange(location: 0, length: ns.length),
+            withTemplate: "$1<redacted>",
+        )
     }
     
     /// Disconnect from campaign
@@ -641,7 +651,7 @@ public class CampaignManager: ObservableObject {
         let safeURLForLog = url.absoluteString.replacingOccurrences(of: apiKey, with: "<redacted>")
         print("🎯 [CampaignManager] sdk/bootstrap → GET \(safeURLForLog)")
         print("🎯 [CampaignManager] sdk/bootstrap    REST base (campaigns.* en vio-config): \(restBase)")
-        print("🎯 [CampaignManager] sdk/bootstrap    URL host=\(url.host ?? "nil") port=\(url.port.map(String.init) ?? "default") query apiKey len=\(apiKey.count) prefix=\(apiKey.prefix(12))…")
+        print("🎯 [CampaignManager] sdk/bootstrap    URL host=\(url.host ?? "nil") port=\(url.port.map(String.init) ?? "default") query apiKey len=\(apiKey.count) (valor no logueado)")
         print("🎯 [CampaignManager] sdk/bootstrap    esperado: HTTP 200 + objeto \"commerce\" con apiKey (como curl al mismo host)")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -676,9 +686,11 @@ public class CampaignManager: ObservableObject {
                 if let de = error as? DecodingError {
                     print("🎯 [CampaignManager] sdk/bootstrap    DecodingError: \(String(describing: de))")
                 }
-                if let raw = String(data: data, encoding: .utf8) {
-                    let limit = 2500
-                    print("🎯 [CampaignManager] sdk/bootstrap    body prefix (\(min(limit, raw.count)) chars):\n\(raw.prefix(limit))")
+                if let redacted = Self.sdkConfigJSONRedactedForLogs(data) {
+                    let limit = min(2500, redacted.count)
+                    print("🎯 [CampaignManager] sdk/bootstrap    body (redactado, prefix \(limit) chars):\n\(redacted.prefix(limit))")
+                } else {
+                    print("🎯 [CampaignManager] sdk/bootstrap    body no JSON o vacío, bytes=\(data.count)")
                 }
                 VioLogger.warning("SDK bootstrap JSON decode failed: \(error.localizedDescription)", component: "CampaignManager")
                 return
@@ -703,10 +715,10 @@ public class CampaignManager: ObservableObject {
             print("🎯 [CampaignManager] sdk/bootstrap    posted vioCommerceBootstrapDidApply (invalidate ProductService GraphQL cache)")
             if let k = keyNonEmpty {
                 VioLogger.debug(
-                    "SDK bootstrap: commerce GraphQL Authorization from backend (prefix \(k.prefix(8))…, len \(k.count))",
+                    "SDK bootstrap: commerce GraphQL Authorization from backend (key len \(k.count))",
                     component: "CampaignManager",
                 )
-                print("🎯 [CampaignManager] sdk/bootstrap    commerce.apiKey aplicada prefix=\(k.prefix(8))… len=\(k.count)")
+                print("🎯 [CampaignManager] sdk/bootstrap    commerce.apiKey aplicada (len=\(k.count), sin imprimir valor)")
             } else {
                 VioLogger.debug(
                     "SDK bootstrap: sin commerce.apiKey en respuesta — ProductService usará VioConfiguration.resolvedCommerceApiKey (apiKey del cliente / DEMO_KEY)",
@@ -716,7 +728,7 @@ public class CampaignManager: ObservableObject {
             }
             let cfg = VioConfiguration.shared
             let src = cfg.sdkBootstrapCommerceApiKey != nil ? "bootstrap(/v1/sdk/config)" : "fallback(apiKey campaña)"
-            print("🎯 [CampaignManager] sdk/bootstrap    → commerce listo: fuente=\(src) GraphQL=\(cfg.resolvedCommerceGraphQLURL) authKey prefix=\(cfg.resolvedCommerceApiKey.prefix(8))… len=\(cfg.resolvedCommerceApiKey.count)")
+            print("🎯 [CampaignManager] sdk/bootstrap    → commerce listo: fuente=\(src) GraphQL=\(cfg.resolvedCommerceGraphQLURL) authKey len=\(cfg.resolvedCommerceApiKey.count) (sin imprimir)")
         } catch {
             VioLogger.warning("SDK bootstrap failed: \(error.localizedDescription)", component: "CampaignManager")
         }
@@ -733,17 +745,17 @@ public class CampaignManager: ObservableObject {
             : config.campaignConfiguration.campaignAdminApiKey
         
         print("🎯 [CampaignManager] fetchCampaignInfo - Using campaignId: \(campaignId)")
-        print("🎯 [CampaignManager] fetchCampaignInfo - campaignAdminApiKey: \(campaignAdminApiKey.prefix(20))...")
+        print("🎯 [CampaignManager] fetchCampaignInfo - campaignAdminApiKey len=\(campaignAdminApiKey.count) (valor no logueado)")
         guard campaignId > 0 else {
             VioLogger.warning("No campaignId — skipping campaign info fetch", component: "CampaignManager")
             return
         }
         
         let urlString = "\(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=\(campaignAdminApiKey)&campaignId=\(campaignId)"
-        print("🎯 [CampaignManager] fetchCampaignInfo - Request URL: \(urlString)")
+        print("🎯 [CampaignManager] fetchCampaignInfo - Request URL: \(Self.redactApiKeyQuery(in: urlString))")
         
         guard let url = URL(string: urlString) else {
-            VioLogger.error("Invalid campaign API URL: \(urlString)", component: "CampaignManager")
+            VioLogger.error("Invalid campaign API URL: \(Self.redactApiKeyQuery(in: urlString))", component: "CampaignManager")
             return
         }
         
@@ -757,7 +769,7 @@ public class CampaignManager: ObservableObject {
         
         do {
             print("🎯 [CampaignManager] fetchCampaignInfo - Starting URLSession request...")
-            print("🎯 [CampaignManager] fetchCampaignInfo - URL: \(url.absoluteString)")
+            print("🎯 [CampaignManager] fetchCampaignInfo - URL: \(Self.redactApiKeyQuery(in: url.absoluteString))")
             
             let (data, response) = try await URLSession.shared.data(for: request)
             responseData = data

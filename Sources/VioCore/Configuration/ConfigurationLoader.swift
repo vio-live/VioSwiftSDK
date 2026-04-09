@@ -216,15 +216,24 @@ public class ConfigurationLoader {
             engagementConfig: engagementConfig
         )
         
-        // Resolve and set dedicated WS base URL
-        let isDevEnv = (VioEnvironment(rawValue: config.environment) ?? .production) == .development
+        // Dedicated campaign WS host (`CampaignWebSocketManager`): solo `development` usa overrides `devWs*`.
+        let env = VioEnvironment(rawValue: config.environment) ?? .production
+        let useLocalCampaignOverrides = (env == .development)
         let resolvedWsBaseURL: String
         if let campaigns = config.campaigns {
-            resolvedWsBaseURL = (isDevEnv ? campaigns.devWsBaseURL : nil)
-                ?? campaigns.wsBaseURL
-                ?? (isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live")
+            if useLocalCampaignOverrides {
+                resolvedWsBaseURL = campaigns.devWsBaseURL
+                    ?? campaigns.devWebSocketBaseURL
+                    ?? campaigns.wsBaseURL
+                    ?? campaigns.webSocketBaseURL
+                    ?? "wss://ws-dev.vio.live"
+            } else {
+                resolvedWsBaseURL = campaigns.wsBaseURL
+                    ?? campaigns.webSocketBaseURL
+                    ?? "wss://ws.vio.live"
+            }
         } else {
-            resolvedWsBaseURL = isDevEnv ? "wss://ws-dev.vio.live" : "wss://ws.vio.live"
+            resolvedWsBaseURL = useLocalCampaignOverrides ? "wss://ws-dev.vio.live" : "wss://ws.vio.live"
         }
         VioConfiguration.setWsBaseURL(resolvedWsBaseURL)
         VioLogger.debug("wsBaseURL resolved: \(resolvedWsBaseURL)", component: "Config")
@@ -521,10 +530,15 @@ public class ConfigurationLoader {
     private static func createCampaignConfiguration(from campaignConfig: JSONCampaignConfiguration?, environment: VioEnvironment = .production) -> CampaignConfiguration {
         guard let config = campaignConfig else { return .default }
         
-        // Use dev URLs when environment is development and dev overrides are provided
-        let isDev = environment == .development
-        let resolvedRestURL = (isDev ? config.devRestAPIBaseURL : nil) ?? config.restAPIBaseURL ?? CampaignConfiguration.default.restAPIBaseURL
-        let resolvedWSURL = (isDev ? config.devWebSocketBaseURL : nil) ?? config.webSocketBaseURL ?? CampaignConfiguration.default.webSocketBaseURL
+        // Solo `development` aplica `devRestAPIBaseURL` / `devWebSocketBaseURL` (HTTP/WS local, ATS en el host).
+        // `testing`, `sandbox`, `production` usan `restAPIBaseURL` / `webSocketBaseURL` (p. ej. https://api-dev.vio.live).
+        let useLocalOverrides = environment == .development
+        let resolvedRestURL = (useLocalOverrides ? config.devRestAPIBaseURL : nil)
+            ?? config.restAPIBaseURL
+            ?? CampaignConfiguration.default.restAPIBaseURL
+        let resolvedWSURL = (useLocalOverrides ? config.devWebSocketBaseURL : nil)
+            ?? config.webSocketBaseURL
+            ?? CampaignConfiguration.default.webSocketBaseURL
         
         return CampaignConfiguration(
             webSocketBaseURL: resolvedWSURL,
