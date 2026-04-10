@@ -12,7 +12,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
     public static let shared = ApplePayManager()
 
-    private let merchantIdentifier = "merchant.live.vio"
+    private var merchantIdentifier = "merchant.live.vio"
     /// Same list on `PKPaymentRequest` and for PassKit probes. Maestro covers many NO/EU debit wallets; avoid rare networks that can make the aggregate `canMakePayments(usingNetworks:…)` falsely negative in some regions.
     private let supportedNetworks: [PKPaymentNetwork] = [
         .visa,
@@ -24,6 +24,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
     @Published public var isProcessing = false
     @Published public var paymentResult: ApplePayResult? = nil
+    @Published public var capturedContact: PKContact? = nil
 
     /// True when the device has Apple Pay and at least one card. We intentionally **do not** gate on `canMakePayments(usingNetworks:capabilities:)` for UI: that API often returns false for valid EU/NO wallets while the sheet still works; eligibility is enforced when presenting `PKPaymentRequest`.
     public var isApplePayAvailable: Bool {
@@ -51,11 +52,21 @@ public final class ApplePayManager: NSObject, ObservableObject {
         let intent = await cartManager.stripeIntent(returnEphemeralKey: false)
         if intent != nil {
             VioLogger.debug("stripeIntent OK — Stripe PaymentIntent ready", component: "ApplePayManager")
-        } else {
-            VioLogger.warning("stripeIntent unavailable — proceeding in demo mode", component: "ApplePayManager")
         }
 
-        self.pendingClientSecret = intent?.clientSecret
+        self.pendingCheckoutId = cartManager.checkoutId
+        
+        // Initialize Apple Pay on backend to get gateway/merchant info (similar to Google Pay)
+        if let checkoutId = cartManager.checkoutId {
+            do {
+                let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: checkoutId)
+                self.merchantIdentifier = initDto.gatewayMerchantId
+                VioLogger.debug("Apple Pay init OK, merchantId: \(initDto.gatewayMerchantId)", component: "ApplePayManager")
+            } catch {
+                VioLogger.error("Apple Pay init failed: \(error.localizedDescription)", component: "ApplePayManager")
+            }
+        }
+
         self.pendingPublishableKey = intent?.publishableKey
 
         guard amount > 0, amount.isFinite else {
@@ -116,6 +127,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
         controller.delegate = self
+        self.pendingCartManager = cartManager
         let presented = await controller.present()
 
         if !presented {
@@ -158,10 +170,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         return String(trimmed[..<idx]) + "…"
     }
 
-    private var pendingClientSecret: String?
+    private var pendingCheckoutId: String?
     private var pendingPublishableKey: String?
-
-    public private(set) var capturedContact: PKContact? = nil
+    private var pendingCartManager: CartManager?
 }
 
 extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
@@ -181,7 +192,12 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
             )
         }
         Task { @MainActor in
-            let success = await self.confirmWithBackend(paymentToken: payment.token)
+            guard let cartManager = self.pendingCartManager else {
+                VioLogger.error("No CartManager available in delegate", component: "ApplePayManager")
+                completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
+                return
+            }
+            let success = await self.confirmWithBackend(paymentToken: payment.token, cartManager: cartManager)
             if success {
                 completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
             } else {
@@ -201,59 +217,50 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
         }
     }
 
-    private func confirmWithBackend(paymentToken: PKPaymentToken) async -> Bool {
-        guard let clientSecret = pendingClientSecret else {
-            VioLogger.warning("No clientSecret — demo mode: simulating success", component: "ApplePayManager")
+    private func confirmWithBackend(paymentToken: PKPaymentToken, cartManager: CartManager) async -> Bool {
+        guard let checkoutId = pendingCheckoutId else {
+            VioLogger.warning("No checkoutId — demo mode: simulating success", component: "ApplePayManager")
             paymentResult = .success
             return true
         }
 
-        let backendUrl = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
-            + "/api/checkout/confirm-apple-pay"
-        guard let url = URL(string: backendUrl) else {
-            paymentResult = .success
-            return true
+        var shippingAddressInput: ApplePayAddressInputDto? = nil
+        if let contact = capturedContact, let addr = contact.postalAddress {
+            shippingAddressInput = ApplePayAddressInputDto(
+                firstName: contact.name?.givenName,
+                lastName: contact.name?.familyName,
+                address1: addr.street,
+                city: addr.city,
+                province: addr.state,
+                zip: addr.postalCode,
+                country: addr.isoCountryCode,
+                countryCode: addr.isoCountryCode
+            )
         }
-
-        var buyerInfo: [String: Any] = [:]
-        if let contact = capturedContact {
-            buyerInfo["name"] = [contact.name?.givenName, contact.name?.familyName]
-                .compactMap { $0 }.joined(separator: " ")
-            buyerInfo["email"] = contact.emailAddress ?? ""
-            buyerInfo["phone"] = contact.phoneNumber?.stringValue ?? ""
-            if let addr = contact.postalAddress {
-                buyerInfo["address"] = [
-                    "street": addr.street,
-                    "city": addr.city,
-                    "state": addr.state,
-                    "postalCode": addr.postalCode,
-                    "country": addr.isoCountryCode
-                ]
-            }
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "clientSecret": clientSecret,
-            "applePayToken": paymentToken.paymentData.base64EncodedString(),
-            "buyer": buyerInfo
-        ])
 
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if (response as? HTTPURLResponse)?.statusCode == 200 {
+            VioLogger.debug("Sending Apple Pay confirmation to backend via GraphQL", component: "ApplePayManager")
+            let tokenString = paymentToken.paymentData.base64EncodedString()
+            let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
+                checkoutId: checkoutId,
+                applePayToken: tokenString,
+                email: capturedContact?.emailAddress,
+                shippingAddress: shippingAddressInput
+            )
+            
+            if confirmDto.status == "SUCCESS" {
+                VioLogger.success("Apple Pay payment confirmed by backend", component: "ApplePayManager")
                 paymentResult = .success
                 return true
             } else {
-                paymentResult = .failed("Payment confirmation failed")
+                VioLogger.error("Backend returned non-success status for Apple Pay: \(confirmDto.status)", component: "ApplePayManager")
+                paymentResult = .failed("Payment confirmation failed with status: \(confirmDto.status)")
                 return false
             }
         } catch {
-            VioLogger.warning("Backend confirm not available — demo mode success", component: "ApplePayManager")
-            paymentResult = .success
-            return true
+            VioLogger.error("Error during Apple Pay confirmation: \(error.localizedDescription)", component: "ApplePayManager")
+            paymentResult = .failed("Network or server error")
+            return false
         }
     }
 }

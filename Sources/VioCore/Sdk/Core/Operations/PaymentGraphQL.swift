@@ -199,4 +199,36 @@ public enum PaymentGraphQL {
       }
     }
     """#
+
+  public static let APPLE_PAY_INIT_MUTATION = #"""
+    mutation CreatePaymentApplePay($checkoutId: String!) {
+      Payment {
+        CreatePaymentApplePay(checkout_id: $checkoutId) {
+          gateway
+          gateway_merchant_id
+        }
+      }
+    }
+    """#
+
+  public static let APPLE_PAY_CONFIRM_MUTATION = #"""
+    mutation ConfirmPaymentApplePay(
+      $checkoutId: String!
+      $applePayToken: String!
+      $email: String
+      $shippingAddress: ApplePayAddressInput
+    ) {
+      Payment {
+        ConfirmPaymentApplePay(
+          checkout_id: $checkoutId
+          apple_pay_token: $applePayToken
+          email: $email
+          shipping_address: $shippingAddress
+        ) {
+          status
+          order_id
+        }
+      }
+    }
+    """#
 }

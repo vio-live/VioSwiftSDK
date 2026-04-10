@@ -284,6 +284,52 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         return try GraphQLPick.decodeJSON(obj, as: KlarnaNativeOrderDto.self)
     }
 
+    public func applePayInit(checkoutId: String) async throws -> InitPaymentApplePayDto {
+        try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
+        let res = try await client.runMutationSafe(
+            query: PaymentGraphQL.APPLE_PAY_INIT_MUTATION,
+            variables: ["checkoutId": checkoutId]
+        )
+        guard
+            let obj: [String: Any] = GraphQLPick.pickPath(
+                res.data, path: ["Payment", "CreatePaymentApplePay"])
+        else {
+            throw SdkException("Empty response in Payment.applePayInit", code: "EMPTY_RESPONSE")
+        }
+        return try GraphQLPick.decodeJSON(obj, as: InitPaymentApplePayDto.self)
+    }
+
+    public func applePayConfirm(
+        checkoutId: String,
+        applePayToken: String,
+        email: String?,
+        shippingAddress: ApplePayAddressInputDto?
+    ) async throws -> ConfirmPaymentApplePayDto {
+        try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
+        try Validation.requireNonEmpty(applePayToken, field: "applePayToken")
+
+        var vars: [String: Any?] = [
+            "checkoutId": checkoutId,
+            "applePayToken": applePayToken,
+            "email": email,
+        ]
+        if let shipping = shippingAddress {
+            vars["shippingAddress"] = try encodeToDictionary(shipping)
+        }
+
+        let res = try await client.runMutationSafe(
+            query: PaymentGraphQL.APPLE_PAY_CONFIRM_MUTATION,
+            variables: vars.compactMapValues { $0 }
+        )
+        guard
+            let obj: [String: Any] = GraphQLPick.pickPath(
+                res.data, path: ["Payment", "ConfirmPaymentApplePay"])
+        else {
+            throw SdkException("Empty response in Payment.applePayConfirm", code: "EMPTY_RESPONSE")
+        }
+        return try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
+    }
+
     private func encodeToDictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
         let encoder = JSONEncoder()
         let data = try encoder.encode(value)

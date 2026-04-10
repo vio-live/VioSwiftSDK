@@ -42,4 +42,13 @@ public protocol PaymentRepository {
         orderId: String,
         userId: String?
     ) async throws -> KlarnaNativeOrderDto
+
+    func applePayInit(checkoutId: String) async throws -> InitPaymentApplePayDto
+
+    func applePayConfirm(
+        checkoutId: String,
+        applePayToken: String,
+        email: String?,
+        shippingAddress: ApplePayAddressInputDto?
+    ) async throws -> ConfirmPaymentApplePayDto
 }

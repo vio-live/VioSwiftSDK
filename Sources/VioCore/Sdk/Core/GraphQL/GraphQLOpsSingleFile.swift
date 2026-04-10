@@ -42,6 +42,8 @@ private enum _GQLOperationFallbackFromVars {
         ops["payment/CreatePaymentKlarna.graphql"] =
             PaymentGraphQL.KLARNA_PLATFORM_BUILDER_PAYMENT_MUTATION
         ops["payment/CreatePaymentVipps.graphql"] = PaymentGraphQL.VIPPS_PAYMENT
+        ops["payment/CreatePaymentApplePay.graphql"] = PaymentGraphQL.APPLE_PAY_INIT_MUTATION
+        ops["payment/ConfirmPaymentApplePay.graphql"] = PaymentGraphQL.APPLE_PAY_CONFIRM_MUTATION
 
         ops["market/GetAvailableMarkets.graphql"] = MarketGraphQL.GET_AVAILABLE_MARKET_QUERY
 

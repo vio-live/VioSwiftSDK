@@ -303,3 +303,69 @@ public struct KlarnaNativeConfirmInputDto: Codable, Equatable {
         self.shippingAddress = shippingAddress
     }
 }
+
+public struct InitPaymentApplePayDto: Codable, Equatable {
+    public let gateway: String
+    public let gatewayMerchantId: String
+
+    enum CodingKeys: String, CodingKey {
+        case gateway
+        case gatewayMerchantId = "gateway_merchant_id"
+    }
+}
+
+public struct ConfirmPaymentApplePayDto: Codable, Equatable {
+    public let status: String
+    public let orderId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case orderId = "order_id"
+    }
+}
+
+public struct ApplePayAddressInputDto: Codable, Equatable {
+    public var firstName: String?
+    public var lastName: String?
+    public var address1: String?
+    public var address2: String?
+    public var city: String?
+    public var province: String?
+    public var zip: String?
+    public var country: String?
+    public var countryCode: String?
+
+    enum CodingKeys: String, CodingKey {
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case address1
+        case address2
+        case city
+        case province
+        case zip
+        case country
+        case countryCode = "country_code"
+    }
+
+    public init(
+        firstName: String? = nil,
+        lastName: String? = nil,
+        address1: String? = nil,
+        address2: String? = nil,
+        city: String? = nil,
+        province: String? = nil,
+        zip: String? = nil,
+        country: String? = nil,
+        countryCode: String? = nil
+    ) {
+        self.firstName = firstName
+        self.lastName = lastName
+        self.address1 = address1
+        self.address2 = address2
+        self.city = city
+        self.province = province
+        self.zip = zip
+        self.country = country
+        self.countryCode = countryCode
+    }
+}
