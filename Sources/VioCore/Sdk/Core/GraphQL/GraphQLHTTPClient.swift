@@ -7,8 +7,8 @@ public struct GraphQLHTTPResponse {
 }
 
 public final class GraphQLHTTPClient {
-    public let baseURL: URL
-    public let apiKey: String
+    public var baseURL: URL
+    public var apiKey: String
     public var timeout: TimeInterval = 30
 
     private let session: URLSession
@@ -37,9 +37,11 @@ public final class GraphQLHTTPClient {
     private func runOperationSafe(query: String, variables: [String: Any]) async throws
         -> GraphQLHTTPResponse
     {
+        print("📡 [GraphQLHTTPClient] POST \(baseURL)")
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        print("Authorization: \(apiKey)")
         req.setValue(apiKey, forHTTPHeaderField: "Authorization")
         let payload: [String: Any] = ["query": query, "variables": variables]
         req.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
@@ -47,12 +49,19 @@ public final class GraphQLHTTPClient {
         do {
             let (data, resp) = try await session.data(for: req)
             let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
+            let bodyString = String(data: data, encoding: .utf8) ?? ""
+
+            print("📬 [GraphQLHTTPClient] Response status: \(status)")
+            if status != 200 {
+                print("⚠️ [GraphQLHTTPClient] Non-200 body: \(bodyString)")
+            }
 
             let root = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
             let errors = root["errors"] as? [[String: Any]]
             let dataObj = root["data"] as? [String: Any]
 
             if let errs = errors, !errs.isEmpty {
+                print("❌ [GraphQLHTTPClient] GraphQL Errors: \(errs)")
                 let first = errs[0]
                 let message = (first["message"] as? String) ?? "GraphQL error"
                 var det: [String: Any] = [:]
@@ -66,15 +75,15 @@ public final class GraphQLHTTPClient {
             }
 
             if !(200..<300).contains(status) {
-                let body = String(data: data, encoding: .utf8)
                 throw GraphQLErrorMapper.fromStatus(
-                    status, msg: "HTTP error", details: ["body": body ?? ""])
+                    status, msg: "HTTP error", details: ["body": bodyString])
             }
 
             return GraphQLHTTPResponse(data: dataObj, errors: errors, status: status)
         } catch let e as SdkException {
             throw e
         } catch {
+            print("🛑 [GraphQLHTTPClient] Network failure: \(error.localizedDescription)")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
     }

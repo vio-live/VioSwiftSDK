@@ -47,7 +47,7 @@ public class CartManager: ObservableObject {
     internal var lastLoadedProductCurrency: String?
     internal var lastLoadedProductCountry: String?
 
-    internal let sdk: CartManagingSDK
+    internal var sdk: CartManagingSDK
 
     public init(
         sdk: CartManagingSDK? = nil,
@@ -57,8 +57,8 @@ public class CartManager: ObservableObject {
         if let provided = sdk {
             self.sdk = provided
         } else {
-            let baseURL = URL(string: configuration.environment.graphQLURL)!
-            let apiKey = configuration.apiKey.isEmpty ? "DEMO_KEY" : configuration.apiKey
+            let baseURL = URL(string: configuration.resolvedCommerceGraphQLURL)!
+            let apiKey = configuration.resolvedCommerceApiKey
 
             VioLogger.debug("Initializing SDK Client - Base URL: \(baseURL), API Key: \(apiKey.prefix(8))...", component: "CartManager")
 
@@ -100,6 +100,19 @@ public class CartManager: ObservableObject {
         }
     }
 
+    /// Ensures the underlying SdkClient is using the latest credentials from VioConfiguration
+    public func syncSdkCredentials() {
+        guard let concreteSdk = sdk as? SdkClient else { return }
+        let config = VioConfiguration.shared
+        let currentUrl = URL(string: config.resolvedCommerceGraphQLURL)!
+        let currentKey = config.resolvedCommerceApiKey
+        
+        if concreteSdk.baseUrl != currentUrl || concreteSdk.apiKey != currentKey {
+            VioLogger.debug("Syncing SDK credentials to resolved values...", component: "CartManager")
+            concreteSdk.updateCredentials(baseUrl: currentUrl, apiKey: currentKey)
+        }
+    }
+
     public func showCheckout() {
         isCheckoutPresented = true
     }
@@ -133,6 +146,7 @@ public class CartManager: ObservableObject {
     }
 
     public func getCheckoutStatus(_ checkoutId: String) async -> Bool {
+        syncSdkCredentials()
         VioLogger.debug("getCheckoutStatus() with checkoutId: \(checkoutId)", component: "CartManager")
 
         do {
@@ -154,4 +168,3 @@ public class CartManager: ObservableObject {
         }
     }
 }
-

@@ -22,6 +22,7 @@ extension CartManager {
     // MARK: - Cart Lifecycle
 
     public func createCart(currency: String = "USD", country: String = "US") async {
+        syncSdkCredentials()
         // Check if SDK should be used before attempting operations
         guard VioConfiguration.shared.shouldUseSDK else {
             VioLogger.warning("Skipping cart creation - SDK disabled (market not available)", component: "CartModule")
@@ -91,6 +92,7 @@ extension CartManager {
             && lastLoadedProductCountry == requestedCountry
 
         let requestID = UUID()
+        syncSdkCredentials()
         activeProductRequestID = requestID
         isProductsLoading = true
         productsErrorMessage = nil
@@ -159,6 +161,8 @@ extension CartManager {
         print("🔄 [CartModule] Line items count: \(cart.lineItems.count)")
         
         currentCartId = cart.cartId
+        self.cartId = cart.cartId
+        self.checkoutId = cart.cartId // Use cartId as checkoutId fallback
         currency = cart.currency
         country = cart.shippingCountry ?? country
 
@@ -542,6 +546,7 @@ extension CartManager {
         }
 
         do {
+            syncSdkCredentials()
             guard let cid = await ensureCartIDForCheckout() else {
                 addProductLocally(product, variant: selectedVariant, quantity: quantity)
                 updateCartTotal()

@@ -709,9 +709,8 @@ public struct VProductDetailOverlay: View {
             #if os(iOS)
             if isInStock {
                 VApplePayButton(
-                    productName: product.title,
-                    productImageUrl: displayImages.first?.url,
-                    amount: Double(currentPriceWithTaxes) * Double(quantity),
+                    product: product,
+                    variant: selectedVariant,
                     onPaymentComplete: { dismiss() }
                 )
                 .environmentObject(cartManager)

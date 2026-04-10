@@ -7,26 +7,32 @@ import PassKit
 /// Apple Pay entry for product checkout (iOS). Uses `CartManager` from the environment.
 public struct VApplePayButton: View {
 
+    let product: Product?
+    let variant: Variant?
     let productName: String
     let productImageUrl: String?
     let amount: Double
     let onPaymentComplete: (() -> Void)?
-
+ 
     @EnvironmentObject private var cartManager: CartManager
     @ObservedObject private var applePayManager = ApplePayManager.shared
     @State private var showConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
-
+ 
     public init(
-        productName: String,
+        product: Product? = nil,
+        variant: Variant? = nil,
+        productName: String? = nil,
         productImageUrl: String? = nil,
-        amount: Double,
+        amount: Double? = nil,
         onPaymentComplete: (() -> Void)? = nil
     ) {
-        self.productName = productName
-        self.productImageUrl = productImageUrl
-        self.amount = amount
+        self.product = product
+        self.variant = variant
+        self.productName = productName ?? product?.title ?? "Product"
+        self.productImageUrl = productImageUrl ?? product?.images.first?.url
+        self.amount = amount ?? Double(variant?.price.amount_incl_taxes ?? variant?.price.amount ?? product?.price.amount_incl_taxes ?? product?.price.amount ?? 0)
         self.onPaymentComplete = onPaymentComplete
     }
 
@@ -42,7 +48,7 @@ public struct VApplePayButton: View {
             switch newValue {
             case .success:
                 showConfirmation = true
-            case .failed(let msg):
+            case .failure(let msg):
                 errorMessage = msg
                 showError = true
             case .cancelled, .none:
@@ -107,10 +113,15 @@ public struct VApplePayButton: View {
     }
 
     private func initiatePayment() {
+        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount)")
+        applePayManager.paymentResult = nil
         Task {
             await applePayManager.pay(
+                product: product,
+                variant: variant,
                 productName: productName,
                 amount: amount,
+                checkoutId: cartManager.checkoutId ?? cartManager.cartId,
                 cartManager: cartManager
             )
         }

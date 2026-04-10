@@ -311,26 +311,30 @@ struct TV2ContestOverlay: View {
     }
     
     private func wheelSegment(index: Int) -> some View {
-        let angle = 360.0 / Double(prizes.count)
-        let startAngle = angle * Double(index) - 90 // Start from top
+        let count = Double(prizes.count)
+        let angle = 360.0 / count
+        let startAngle = angle * Double(index) - 90.0
+        let midAngle = startAngle + angle / 2.0 + 90.0
         
-        return WheelSegmentShape(startAngle: startAngle, angle: angle)
-            .fill(segmentColor(index: index))
+        let shape = WheelSegmentShape(startAngle: startAngle, angle: angle)
+        let color = segmentColor(index: index)
+        let prizeText = prizes[index]
+        
+        return shape
+            .fill(color)
             .overlay(
-                WheelSegmentShape(startAngle: startAngle, angle: angle)
-                    .stroke(Color.black.opacity(0.3), lineWidth: 1)
+                shape.stroke(Color.black.opacity(0.3), lineWidth: 1)
             )
             .overlay(
-                // Premio text
-                Text(prizes[index])
+                Text(prizeText)
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.white)
                     .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
-                    .rotationEffect(.degrees(startAngle + angle / 2 + 90))
+                    .rotationEffect(.degrees(midAngle))
                     .offset(y: -95)
-                    .rotationEffect(.degrees(-(startAngle + angle / 2 + 90)))
+                    .rotationEffect(.degrees(-midAngle))
             )
-            .rotationEffect(.degrees(startAngle + angle / 2 + 90))
+            .rotationEffect(.degrees(midAngle))
     }
     
     // Custom wheel segment shape

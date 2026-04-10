@@ -8,6 +8,33 @@
 
 /* Begin PBXBuildFile section */
 		1762BB142E954F62008E4E6A /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = 1762BB132E954F62008E4E6A /* VioComplete */; };
+		D0C05B602F8971910062D90E /* VioCastingUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B5F2F8971910062D90E /* VioCastingUI */; };
+		D0C05B622F8971910062D90E /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B612F8971910062D90E /* VioComplete */; };
+		D0C05B642F8971910062D90E /* VioCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B632F8971910062D90E /* VioCore */; };
+		D0C05B662F8971910062D90E /* VioDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B652F8971910062D90E /* VioDesignSystem */; };
+		D0C05B682F8971910062D90E /* VioEngagementSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B672F8971910062D90E /* VioEngagementSystem */; };
+		D0C05B6A2F8971910062D90E /* VioEngagementUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B692F8971910062D90E /* VioEngagementUI */; };
+		D0C05B6C2F8971910062D90E /* VioNetwork in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B6B2F8971910062D90E /* VioNetwork */; };
+		D0C05B6E2F8971910062D90E /* VioTesting in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B6D2F8971910062D90E /* VioTesting */; };
+		D0C05B702F8971910062D90E /* VioUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B6F2F8971910062D90E /* VioUI */; };
+		D0C05B732F8972310062D90E /* VioCastingUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B722F8972310062D90E /* VioCastingUI */; };
+		D0C05B752F8972310062D90E /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B742F8972310062D90E /* VioComplete */; };
+		D0C05B772F8972310062D90E /* VioCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B762F8972310062D90E /* VioCore */; };
+		D0C05B792F8972310062D90E /* VioDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B782F8972310062D90E /* VioDesignSystem */; };
+		D0C05B7B2F8972310062D90E /* VioEngagementSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B7A2F8972310062D90E /* VioEngagementSystem */; };
+		D0C05B7D2F8972310062D90E /* VioEngagementUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B7C2F8972310062D90E /* VioEngagementUI */; };
+		D0C05B7F2F8972310062D90E /* VioNetwork in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B7E2F8972310062D90E /* VioNetwork */; };
+		D0C05B812F8972310062D90E /* VioTesting in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B802F8972310062D90E /* VioTesting */; };
+		D0C05B832F8972310062D90E /* VioUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B822F8972310062D90E /* VioUI */; };
+		D0C05B872F8972FF0062D90E /* VioCastingUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B862F8972FF0062D90E /* VioCastingUI */; };
+		D0C05B892F8972FF0062D90E /* VioComplete in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B882F8972FF0062D90E /* VioComplete */; };
+		D0C05B8B2F8972FF0062D90E /* VioCore in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B8A2F8972FF0062D90E /* VioCore */; };
+		D0C05B8D2F8972FF0062D90E /* VioDesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B8C2F8972FF0062D90E /* VioDesignSystem */; };
+		D0C05B8F2F8972FF0062D90E /* VioEngagementSystem in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B8E2F8972FF0062D90E /* VioEngagementSystem */; };
+		D0C05B912F8972FF0062D90E /* VioEngagementUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B902F8972FF0062D90E /* VioEngagementUI */; };
+		D0C05B932F8972FF0062D90E /* VioNetwork in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B922F8972FF0062D90E /* VioNetwork */; };
+		D0C05B952F8972FF0062D90E /* VioTesting in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B942F8972FF0062D90E /* VioTesting */; };
+		D0C05B972F8972FF0062D90E /* VioUI in Frameworks */ = {isa = PBXBuildFile; productRef = D0C05B962F8972FF0062D90E /* VioUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,7 +83,34 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C05B732F8972310062D90E /* VioCastingUI in Frameworks */,
+				D0C05B872F8972FF0062D90E /* VioCastingUI in Frameworks */,
+				D0C05B8B2F8972FF0062D90E /* VioCore in Frameworks */,
+				D0C05B772F8972310062D90E /* VioCore in Frameworks */,
+				D0C05B812F8972310062D90E /* VioTesting in Frameworks */,
+				D0C05B662F8971910062D90E /* VioDesignSystem in Frameworks */,
+				D0C05B6A2F8971910062D90E /* VioEngagementUI in Frameworks */,
+				D0C05B792F8972310062D90E /* VioDesignSystem in Frameworks */,
+				D0C05B6E2F8971910062D90E /* VioTesting in Frameworks */,
+				D0C05B912F8972FF0062D90E /* VioEngagementUI in Frameworks */,
+				D0C05B8F2F8972FF0062D90E /* VioEngagementSystem in Frameworks */,
+				D0C05B952F8972FF0062D90E /* VioTesting in Frameworks */,
+				D0C05B7D2F8972310062D90E /* VioEngagementUI in Frameworks */,
+				D0C05B7F2F8972310062D90E /* VioNetwork in Frameworks */,
+				D0C05B7B2F8972310062D90E /* VioEngagementSystem in Frameworks */,
+				D0C05B6C2F8971910062D90E /* VioNetwork in Frameworks */,
+				D0C05B892F8972FF0062D90E /* VioComplete in Frameworks */,
+				D0C05B932F8972FF0062D90E /* VioNetwork in Frameworks */,
+				D0C05B622F8971910062D90E /* VioComplete in Frameworks */,
+				D0C05B752F8972310062D90E /* VioComplete in Frameworks */,
+				D0C05B8D2F8972FF0062D90E /* VioDesignSystem in Frameworks */,
+				D0C05B972F8972FF0062D90E /* VioUI in Frameworks */,
+				D0C05B832F8972310062D90E /* VioUI in Frameworks */,
 				1762BB142E954F62008E4E6A /* VioComplete in Frameworks */,
+				D0C05B682F8971910062D90E /* VioEngagementSystem in Frameworks */,
+				D0C05B642F8971910062D90E /* VioCore in Frameworks */,
+				D0C05B602F8971910062D90E /* VioCastingUI in Frameworks */,
+				D0C05B702F8971910062D90E /* VioUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +172,33 @@
 			name = tv2demo;
 			packageProductDependencies = (
 				1762BB132E954F62008E4E6A /* VioComplete */,
+				D0C05B5F2F8971910062D90E /* VioCastingUI */,
+				D0C05B612F8971910062D90E /* VioComplete */,
+				D0C05B632F8971910062D90E /* VioCore */,
+				D0C05B652F8971910062D90E /* VioDesignSystem */,
+				D0C05B672F8971910062D90E /* VioEngagementSystem */,
+				D0C05B692F8971910062D90E /* VioEngagementUI */,
+				D0C05B6B2F8971910062D90E /* VioNetwork */,
+				D0C05B6D2F8971910062D90E /* VioTesting */,
+				D0C05B6F2F8971910062D90E /* VioUI */,
+				D0C05B722F8972310062D90E /* VioCastingUI */,
+				D0C05B742F8972310062D90E /* VioComplete */,
+				D0C05B762F8972310062D90E /* VioCore */,
+				D0C05B782F8972310062D90E /* VioDesignSystem */,
+				D0C05B7A2F8972310062D90E /* VioEngagementSystem */,
+				D0C05B7C2F8972310062D90E /* VioEngagementUI */,
+				D0C05B7E2F8972310062D90E /* VioNetwork */,
+				D0C05B802F8972310062D90E /* VioTesting */,
+				D0C05B822F8972310062D90E /* VioUI */,
+				D0C05B862F8972FF0062D90E /* VioCastingUI */,
+				D0C05B882F8972FF0062D90E /* VioComplete */,
+				D0C05B8A2F8972FF0062D90E /* VioCore */,
+				D0C05B8C2F8972FF0062D90E /* VioDesignSystem */,
+				D0C05B8E2F8972FF0062D90E /* VioEngagementSystem */,
+				D0C05B902F8972FF0062D90E /* VioEngagementUI */,
+				D0C05B922F8972FF0062D90E /* VioNetwork */,
+				D0C05B942F8972FF0062D90E /* VioTesting */,
+				D0C05B962F8972FF0062D90E /* VioUI */,
 			);
 			productName = tv2demo;
 			productReference = 17BD22B42E8E8D0500853E53 /* tv2demo.app */;
@@ -202,7 +283,7 @@
 			mainGroup = 17BD22AB2E8E8D0500853E53;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../.." */,
+				D0C05B852F8972FF0062D90E /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17BD22B52E8E8D0500853E53 /* Products */;
@@ -601,9 +682,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1762BB122E954F62008E4E6A /* XCLocalSwiftPackageReference "../.." */ = {
+		D0C05B852F8972FF0062D90E /* XCLocalSwiftPackageReference "../../../VioSwiftSDK" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../..;
+			relativePath = ../../../VioSwiftSDK;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -611,6 +692,114 @@
 		1762BB132E954F62008E4E6A /* VioComplete */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = VioComplete;
+		};
+		D0C05B5F2F8971910062D90E /* VioCastingUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCastingUI;
+		};
+		D0C05B612F8971910062D90E /* VioComplete */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioComplete;
+		};
+		D0C05B632F8971910062D90E /* VioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCore;
+		};
+		D0C05B652F8971910062D90E /* VioDesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioDesignSystem;
+		};
+		D0C05B672F8971910062D90E /* VioEngagementSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementSystem;
+		};
+		D0C05B692F8971910062D90E /* VioEngagementUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementUI;
+		};
+		D0C05B6B2F8971910062D90E /* VioNetwork */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioNetwork;
+		};
+		D0C05B6D2F8971910062D90E /* VioTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioTesting;
+		};
+		D0C05B6F2F8971910062D90E /* VioUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioUI;
+		};
+		D0C05B722F8972310062D90E /* VioCastingUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCastingUI;
+		};
+		D0C05B742F8972310062D90E /* VioComplete */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioComplete;
+		};
+		D0C05B762F8972310062D90E /* VioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCore;
+		};
+		D0C05B782F8972310062D90E /* VioDesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioDesignSystem;
+		};
+		D0C05B7A2F8972310062D90E /* VioEngagementSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementSystem;
+		};
+		D0C05B7C2F8972310062D90E /* VioEngagementUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementUI;
+		};
+		D0C05B7E2F8972310062D90E /* VioNetwork */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioNetwork;
+		};
+		D0C05B802F8972310062D90E /* VioTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioTesting;
+		};
+		D0C05B822F8972310062D90E /* VioUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioUI;
+		};
+		D0C05B862F8972FF0062D90E /* VioCastingUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCastingUI;
+		};
+		D0C05B882F8972FF0062D90E /* VioComplete */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioComplete;
+		};
+		D0C05B8A2F8972FF0062D90E /* VioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioCore;
+		};
+		D0C05B8C2F8972FF0062D90E /* VioDesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioDesignSystem;
+		};
+		D0C05B8E2F8972FF0062D90E /* VioEngagementSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementSystem;
+		};
+		D0C05B902F8972FF0062D90E /* VioEngagementUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioEngagementUI;
+		};
+		D0C05B922F8972FF0062D90E /* VioNetwork */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioNetwork;
+		};
+		D0C05B942F8972FF0062D90E /* VioTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioTesting;
+		};
+		D0C05B962F8972FF0062D90E /* VioUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VioUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

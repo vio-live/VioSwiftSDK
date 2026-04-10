@@ -1,8 +1,8 @@
 import Foundation
 
 public final class SdkClient {
-    public let baseUrl: URL
-    public let apiKey: String
+    public var baseUrl: URL
+    public var apiKey: String
 
     public let apolloClient: GraphQLHTTPClient
 
@@ -31,6 +31,14 @@ public final class SdkClient {
 
         _ = prepareGraphQLOpsNoop()
 
+    }
+
+    public func updateCredentials(baseUrl: URL, apiKey: String) {
+        self.baseUrl = baseUrl
+        self.apiKey = apiKey
+        self.apolloClient.baseURL = baseUrl
+        self.apolloClient.apiKey = apiKey
+        VioLogger.debug("SdkClient credentials updated - Base URL: \(baseUrl), API Key: \(apiKey.prefix(8))...", component: "SdkClient")
     }
 }
 
