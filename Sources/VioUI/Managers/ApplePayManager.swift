@@ -240,9 +240,96 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return false
         }
     }
+    // MARK: - Summary Item Helpers
+    
+    private func buildSummaryItems(cartManager: CartManager) -> [PKPaymentSummaryItem] {
+        var summaryItems: [PKPaymentSummaryItem] = []
+        let merchantName = VioConfiguration.shared.brandConfiguration.name
+        
+        // Add items
+        for item in cartManager.items {
+            let label = "\(item.quantity)x \(item.title)"
+            let amount = NSDecimalNumber(value: item.price * Double(item.quantity))
+            summaryItems.append(PKPaymentSummaryItem(label: label, amount: amount))
+        }
+        
+        // Add shipping if selected
+        let shippingTotal = cartManager.shippingTotal
+        if shippingTotal > 0 {
+            summaryItems.append(PKPaymentSummaryItem(label: "Shipping", amount: NSDecimalNumber(value: shippingTotal)))
+        }
+        
+        // Add grand total
+        let total = NSDecimalNumber(value: cartManager.cartTotal + shippingTotal)
+        summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: total, type: .final))
+        
+        return summaryItems
+    }
 }
 
 extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
+
+    public func paymentAuthorizationController(
+        _ controller: PKPaymentAuthorizationController,
+        didSelectShippingContact contact: PKContact,
+        handler completion: @escaping (PKPaymentRequestShippingContactUpdate) -> Void
+    ) {
+        Task { @MainActor in
+            guard let cartManager = self.pendingCartManager else {
+                completion(PKPaymentRequestShippingContactUpdate(errors: nil, paymentSummaryItems: [], shippingMethods: []))
+                return
+            }
+            
+            // 1. Update cart country to get regional shipping options
+            if let countryCode = contact.postalAddress?.isoCountryCode {
+                print("🌐 [ApplePayManager] Shipping address changed to \(countryCode). Updating cart...")
+                _ = try? await cartManager.sdk.cart.update(cart_id: cartManager.cartId ?? "", shipping_country: countryCode)
+                _ = await cartManager.refreshShippingOptions()
+            }
+            
+            // 2. Fetch shipping methods from the first item (Vio currently handles shipping per item)
+            // For Apple Pay, we present the options of the first item as the available methods for the whole order
+            let shippingMethods: [PKShippingMethod] = cartManager.items.first?.availableShippings.map { option in
+                let method = PKShippingMethod(label: option.name, amount: NSDecimalNumber(value: option.amount))
+                method.identifier = option.id
+                method.detail = option.description
+                return method
+            } ?? []
+            
+            // 3. Update summary items
+            let summaryItems = buildSummaryItems(cartManager: cartManager)
+            
+            completion(PKPaymentRequestShippingContactUpdate(
+                errors: nil,
+                paymentSummaryItems: summaryItems,
+                shippingMethods: shippingMethods
+            ))
+        }
+    }
+
+    public func paymentAuthorizationController(
+        _ controller: PKPaymentAuthorizationController,
+        didSelectShippingMethod shippingMethod: PKShippingMethod,
+        handler completion: @escaping (PKPaymentRequestShippingMethodUpdate) -> Void
+    ) {
+        Task { @MainActor in
+            guard let cartManager = self.pendingCartManager, let optionId = shippingMethod.identifier else {
+                completion(PKPaymentRequestShippingMethodUpdate(paymentSummaryItems: []))
+                return
+            }
+            
+            print("🌐 [ApplePayManager] Shipping method selected: \(shippingMethod.label) (\(optionId))")
+            
+            // Apply this shipping option to all items in the cart (Standard Apple Pay behavior)
+            for item in cartManager.items {
+                cartManager.setShippingOption(for: item.id, optionId: optionId)
+            }
+            
+            // Recalculate totals
+            let summaryItems = buildSummaryItems(cartManager: cartManager)
+            completion(PKPaymentRequestShippingMethodUpdate(paymentSummaryItems: summaryItems))
+        }
+    }
 
     public func paymentAuthorizationController(
         _ controller: PKPaymentAuthorizationController,
@@ -256,7 +343,11 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
                 completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
                 return
             }
-            // Use the new tokenization helper
+            
+            // Sync final shipping selections to backend before confirming
+            _ = await cartManager.applyCheapestShippingPerSupplier() // This actually applies all PENDING selections
+            
+            // Use the tokenization helper
             let success = await self.tokenizeAndConfirm(payment: payment, cartManager: cartManager)
             if success {
                 completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
