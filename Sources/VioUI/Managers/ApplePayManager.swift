@@ -115,10 +115,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         print("🌐 [ApplePayManager] canMakePayments: \(PKPaymentAuthorizationController.canMakePayments())")
         print("🌐 [ApplePayManager] canMakePayments(networks): \(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))")
         
-        // Shipping/Billing requirements - Simplified for debugging
-        request.requiredShippingContactFields = []
-        // request.requiredBillingContactFields = [] 
-        
+        // Shipping/Billing requirements
+        request.requiredShippingContactFields = [.postalAddress, .name, .emailAddress]
+        request.requiredBillingContactFields = [.postalAddress, .name]        
         // Set payment summary items
         var summaryItems: [PKPaymentSummaryItem] = []
         let merchantName = VioConfiguration.shared.brandConfiguration.name
