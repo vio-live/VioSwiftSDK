@@ -147,6 +147,12 @@ let package = Package(
                     name: "StripePaymentSheet", package: "stripe-ios",
                     condition: .when(platforms: [.iOS])),
                 .product(
+                    name: "StripeApplePay", package: "stripe-ios",
+                    condition: .when(platforms: [.iOS])),
+                .product(
+                    name: "StripePayments", package: "stripe-ios",
+                    condition: .when(platforms: [.iOS])),
+                .product(
                     name: "KlarnaMobileSDK", package: "klarna-mobile-sdk-spm",
                     condition: .when(platforms: [.iOS])),
 

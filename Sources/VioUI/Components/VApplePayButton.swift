@@ -113,7 +113,6 @@ public struct VApplePayButton: View {
     }
 
     private func initiatePayment() {
-        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount)")
         applePayManager.paymentResult = nil
         Task {
             await applePayManager.pay(

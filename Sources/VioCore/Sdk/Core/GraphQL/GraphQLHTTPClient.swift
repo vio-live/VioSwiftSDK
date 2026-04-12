@@ -37,11 +37,10 @@ public final class GraphQLHTTPClient {
     private func runOperationSafe(query: String, variables: [String: Any]) async throws
         -> GraphQLHTTPResponse
     {
-        print("📡 [GraphQLHTTPClient] POST \(baseURL)")
+        VioLogger.debug("GraphQL POST \(baseURL.absoluteString)", component: "GraphQLHTTPClient")
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        print("Authorization: \(apiKey)")
         req.setValue(apiKey, forHTTPHeaderField: "Authorization")
         let payload: [String: Any] = ["query": query, "variables": variables]
         req.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
@@ -51,9 +50,10 @@ public final class GraphQLHTTPClient {
             let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
             let bodyString = String(data: data, encoding: .utf8) ?? ""
 
-            print("📬 [GraphQLHTTPClient] Response status: \(status)")
             if status != 200 {
-                print("⚠️ [GraphQLHTTPClient] Non-200 body: \(bodyString)")
+                VioLogger.warning(
+                    "GraphQL HTTP status=\(status) body=\(bodyString.prefix(500))",
+                    component: "GraphQLHTTPClient")
             }
 
             let root = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
@@ -61,7 +61,7 @@ public final class GraphQLHTTPClient {
             let dataObj = root["data"] as? [String: Any]
 
             if let errs = errors, !errs.isEmpty {
-                print("❌ [GraphQLHTTPClient] GraphQL Errors: \(errs)")
+                VioLogger.error("GraphQL errors: \(errs)", component: "GraphQLHTTPClient")
                 let first = errs[0]
                 let message = (first["message"] as? String) ?? "GraphQL error"
                 var det: [String: Any] = [:]
@@ -83,7 +83,8 @@ public final class GraphQLHTTPClient {
         } catch let e as SdkException {
             throw e
         } catch {
-            print("🛑 [GraphQLHTTPClient] Network failure: \(error.localizedDescription)")
+            VioLogger.error(
+                "Network failure: \(error.localizedDescription)", component: "GraphQLHTTPClient")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
     }

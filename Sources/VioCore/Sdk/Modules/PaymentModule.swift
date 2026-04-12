@@ -129,7 +129,6 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         checkoutId: String,
         input: KlarnaNativeInitInputDto
     ) async throws -> InitPaymentKlarnaNativeDto {
-        print("🌐🌐🌐 [VioCore.PaymentModule] klarnaNativeInit LLAMADO")
         print("🌐 checkoutId: \(checkoutId)")
         print("🌐 countryCode: \(input.countryCode ?? "nil")")
         print("🌐 currency: \(input.currency ?? "nil")")
@@ -285,7 +284,6 @@ public final class PaymentRepositoryGQL: PaymentRepository {
     }
 
     public func applePayInit(checkoutId: String) async throws -> InitPaymentApplePayDto {
-        print("🛠️ [PaymentModule] applePayInit(checkoutId: \(checkoutId)) calling GraphQL...")
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_INIT_MUTATION,
@@ -306,26 +304,18 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         email: String?,
         shippingAddress: ApplePayAddressInputDto?
     ) async throws -> ConfirmPaymentApplePayDto {
-        print("🛠️ [PaymentModule] applePayConfirm(checkoutId: \(checkoutId)) calling GraphQL...")
-        print("🛠️ [PaymentModule] applePayConfirm(applePayToken: \(applePayToken)) calling GraphQL...")
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         try Validation.requireNonEmpty(applePayToken, field: "applePayToken")
-        print("🛠️ [PaymentModule] pase 1")
 
         var vars: [String: Any?] = [
             "checkoutId": checkoutId,
             "applePayToken": applePayToken,
             "email": email,
         ]
-        print("🛠️ [PaymentModule] pase 2")
         
         if let shipping = shippingAddress {
-            print("🛠️ [PaymentModule] entre if")
             vars["shippingAddress"] = try encodeToDictionary(shipping)
         }
-        print("🛠️ [PaymentModule] pase 3")
-        print("🛠️ [PaymentModule] applePayConfirm(checkoutId: \(checkoutId)) calling GraphQL")
-        print("🛠️ [PaymentModule] vars: \(vars)")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_CONFIRM_MUTATION,
             variables: vars.compactMapValues { $0 }

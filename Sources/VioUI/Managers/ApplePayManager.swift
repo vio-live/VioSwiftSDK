@@ -95,12 +95,15 @@ public final class ApplePayManager: NSObject, ObservableObject {
                 STPAPIClient.shared.publishableKey = pubKey
             }
             
-            print("🌐 [ApplePayManager] Calling applePayInit(checkoutId: \(cid))...")
             do {
                 let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: cid)
-                print("✅ [ApplePayManager] applePayInit success: \(initDto.gateway ?? "nil")")
+                VioLogger.debug(
+                    "Apple Pay init OK — gateway=\(initDto.gateway)",
+                    component: "ApplePayManager")
             } catch {
-                print("⚠️ [ApplePayManager] applePayInit failed: \(error.localizedDescription)")
+                VioLogger.warning(
+                    "Apple Pay init failed: \(error.localizedDescription)",
+                    component: "ApplePayManager")
             }
         }
 
@@ -111,9 +114,6 @@ public final class ApplePayManager: NSObject, ObservableObject {
         request.countryCode = cartManager.country
         request.currencyCode = cartManager.currency
         
-        print("🌐 [ApplePayManager] Request: Country=\(request.countryCode), Currency=\(request.currencyCode), Merchant=\(merchantIdentifier)")
-        print("🌐 [ApplePayManager] canMakePayments: \(PKPaymentAuthorizationController.canMakePayments())")
-        print("🌐 [ApplePayManager] canMakePayments(networks): \(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))")
         
         // Shipping/Billing requirements
         request.requiredShippingContactFields = [.postalAddress, .name, .emailAddress]
@@ -138,13 +138,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
             summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: NSDecimalNumber(value: cartManager.cartTotal + cartManager.shippingTotal)))
         }
         request.paymentSummaryItems = summaryItems
-        for item in summaryItems {
-            print("  - [\(item.label)]: \(item.amount.stringValue)")
-        }
 
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
         controller.delegate = self
-        print("🌐 [ApplePayManager] Presenting Apple Pay sheet...")
         let presented = await controller.present()
         if !presented {
             VioLogger.error("Failed to present PKPaymentAuthorizationController", component: "ApplePayManager")
@@ -169,28 +165,21 @@ public final class ApplePayManager: NSObject, ObservableObject {
         }
 
         // 1. Tokenize with Stripe
-        print("🌐 [ApplePayManager] Tokenizing PKPayment with Stripe... (Key: \(STPAPIClient.shared.publishableKey ?? "nil"))")
         let stripeToken: String
         do {
-            print("🌐 [ApplePayManager] Calling STPAPIClient.createToken...")
             let token: STPToken = try await withCheckedThrowingContinuation { continuation in
                 STPAPIClient.shared.createToken(with: payment) { token, error in
                     if let error = error {
-                        print("❌ [ApplePayManager] Stripe creation callback error: \(error.localizedDescription)")
                         continuation.resume(throwing: error)
                     } else if let token = token {
-                        print("✅ [ApplePayManager] Stripe creation callback success: \(token.tokenId)")
                         continuation.resume(returning: token)
                     } else {
-                        print("❌ [ApplePayManager] Stripe creation callback: Unknown error")
                         continuation.resume(throwing: NSError(domain: "ApplePayManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown Stripe error"]))
                     }
                 }
             }
             stripeToken = token.tokenId
-            print("✅ [ApplePayManager] Passed Stripe tokenization: \(stripeToken)")
         } catch {
-            print("❌ [ApplePayManager] Stripe tokenization failed: \(error.localizedDescription)")
             VioLogger.error("Stripe Tokenization Error: \(error.localizedDescription)", component: "ApplePayManager")
             paymentResult = .failure("Payment verification failed")
             return false
@@ -214,27 +203,21 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // 3. Confirm with backend
         do {
             cartManager.syncSdkCredentials()
-            print("🌐 [ApplePayManager] applePayConfirm(checkoutId: \(finalId)) via GraphQL...")
-            print("🌐 [ApplePayManager] token: \(stripeToken)")
             let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
                 checkoutId: finalId,
                 applePayToken: stripeToken,
                 email: capturedContact?.emailAddress,
                 shippingAddress: shippingAddressInput
             )
-            print("🌐 [ApplePayManager] confirm response received status: \(confirmDto.status ?? "nil")")
             
             if confirmDto.status == "SUCCESS" {
-                print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
                 paymentResult = .success
                 return true
             } else {
-                print("⚠️ [ApplePayManager] applePayConfirm status: \(confirmDto.status ?? "UNKNOWN")")
-                paymentResult = .failure("Payment failed: \(confirmDto.status ?? "unknown error")")
+                paymentResult = .failure("Payment failed: \(confirmDto.status)")
                 return false
             }
         } catch {
-            print("🛑 [ApplePayManager] applePayConfirm GraphQL error: \(error.localizedDescription)")
             VioLogger.error("Confirm Mutation Error: \(error.localizedDescription)", component: "ApplePayManager")
             paymentResult = .failure(error.localizedDescription)
             return false
@@ -282,7 +265,6 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
             
             // 1. Update cart country to get regional shipping options
             if let countryCode = contact.postalAddress?.isoCountryCode {
-                print("🌐 [ApplePayManager] Shipping address changed to \(countryCode). Updating cart...")
                 _ = try? await cartManager.sdk.cart.update(cart_id: cartManager.cartId ?? "", shipping_country: countryCode)
                 _ = await cartManager.refreshShippingOptions()
             }
@@ -318,7 +300,6 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
                 return
             }
             
-            print("🌐 [ApplePayManager] Shipping method selected: \(shippingMethod.label) (\(optionId))")
             
             // Apply this shipping option to all items in the cart (Standard Apple Pay behavior)
             for item in cartManager.items {
@@ -368,4 +349,31 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
         }
     }
 }
+
+#else
+
+@MainActor
+public final class ApplePayManager: ObservableObject {
+    public static let shared = ApplePayManager()
+    @Published public var isProcessing = false
+    @Published public var paymentResult: PaymentResult?
+
+    public enum PaymentResult: Equatable {
+        case success
+        case failure(String)
+        case cancelled
+    }
+
+    public var isApplePayAvailable: Bool { false }
+
+    public func pay(
+        product: Product? = nil,
+        variant: Variant? = nil,
+        productName: String? = nil,
+        amount: Double? = nil,
+        checkoutId: String? = nil,
+        cartManager: CartManager
+    ) async {}
+}
+
 #endif
