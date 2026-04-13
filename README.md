@@ -4,6 +4,11 @@ Note: Demos are included in this repository under `Demo/`. Each demo depends on 
 
 A modular Swift SDK for the Vio platform. Add engagement, monetization, and broadcasting to live events. Add shopping cart, checkout, and livestream features to any iOS, macOS, tvOS or watchOS application.
 
+## Documentation
+
+- **SDK flow, REST/WebSocket/GraphQL, and repo conventions:** [Documentation/VIO_SWIFT_SDK.md](Documentation/VIO_SWIFT_SDK.md)
+- **Code index (where to look in `Sources/`):** [Documentation/CODEBASE_INDEX.md](Documentation/CODEBASE_INDEX.md)
+
 ## 🏗️ Modular Architecture
 
 This SDK is designed with a modular architecture that allows you to import only the features you need:

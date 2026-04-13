@@ -1,5 +1,7 @@
 # VioSwiftSDK — Índice del codebase
 
+**Documentación de flujo, red y convenciones:** [VIO_SWIFT_SDK.md](VIO_SWIFT_SDK.md)
+
 > Mapa para agentes y humanos. Verificado con `Package.swift` y árbol `Sources/`.
 
 ## Productos SPM (exportados)

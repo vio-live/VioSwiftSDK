@@ -88,7 +88,7 @@ La configuración se carga automáticamente con `ConfigurationLoader.loadConfigu
 
 ## Broadcast Context
 
-El video player establece automáticamente el broadcast context desde el match. Ver **[BROADCAST_CONTEXT_GUIDE.md](../../Documentation/BROADCAST_CONTEXT_GUIDE.md)** para detalles de auto-discovery y configuración en `vio-config.json`.
+El video player establece automáticamente el broadcast context desde el match. Ver **[VIO_SWIFT_SDK.md](../../Documentation/VIO_SWIFT_SDK.md)** (sección «Broadcast context y auto-discovery») para auto-discovery y `vio-config.json`.
 
 ---
 
@@ -111,8 +111,7 @@ Genera todos los tamaños necesarios en `Viaplay/Assets.xcassets/AppIcon.appicon
 ## Documentación adicional
 
 - **[Documentation/Configuration-README.md](Documentation/Configuration-README.md)** – Detalles de `vio-config.json`
-- **[BROADCAST_CONTEXT_GUIDE.md](../../Documentation/BROADCAST_CONTEXT_GUIDE.md)** – Broadcast context y auto-discovery
-- **[BACKEND_DOCUMENTATION.md](../../Documentation/BACKEND_DOCUMENTATION.md)** – API e integración con backend
+- **[VIO_SWIFT_SDK.md](../../Documentation/VIO_SWIFT_SDK.md)** – Flujo del SDK, REST/WebSocket/GraphQL y broadcast context
 
 ---
 

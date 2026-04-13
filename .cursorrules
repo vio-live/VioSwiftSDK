@@ -4,4 +4,4 @@ Todo el contexto persistente para el agente está en **`.cursor/rules/`** (`vio-
 
 **Git:** features y PRs del SDK siempre desde / hacia **`develop`** (no `main`), salvo instrucción contraria.
 
-Documentación opcional en `Documentation/` (histórico, guías); no sustituye la regla.
+**Documentación canónica del package:** `Documentation/VIO_SWIFT_SDK.md` (flujo, red, convenciones). Índice de código: `Documentation/CODEBASE_INDEX.md`. Las reglas en `.cursor/rules/` no se sustituyen por el doc largo.

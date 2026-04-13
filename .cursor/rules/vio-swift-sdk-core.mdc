@@ -40,9 +40,9 @@ Ver `Package.swift` como fuente. Productos relevantes: **VioCore** (obligatorio 
 
 ## WebSocket de campaña (`CampaignWebSocketManager`)
 
-- URL relativa: `{baseURL wss}/ws/{campaignId}`; header `X-API-Key` si hay `apiKey` en config.
-- Eventos **implementados** en `handleMessage` (comprobar archivo si añades casos): `campaign_started`, `campaign_ended`, `campaign_paused`, `campaign_resumed`, `component_status_changed`, `component_config_updated`, `config:updated`, `lineup_show`.
-- **No asumir** `cart_intent`, query `userId` en la URL ni mensaje `identify` hasta que existan en código; si un doc externo los menciona, verificar la rama/commit.
+- URL: `{wsBaseURL}/ws/{campaignId}`; header `X-API-Key` si hay `apiKey` en config; opcional `?userId=` si `userId` está definido.
+- Tras conectar, si hay `userId`, se envía mensaje `identify` al servidor.
+- Eventos entrantes en `handleMessage` (comprobar archivo si añades casos): `campaign_started`, `campaign_ended`, `campaign_paused`, `campaign_resumed`, `component_status_changed`, `component_config_updated`, `config:updated`, `lineup_show`, `cart_intent`, `ping` (respuesta `pong`).
 
 ## Managers y servicios (dónde mirar)
 
@@ -70,3 +70,8 @@ No existe **`VioCommerceService`**; commerce: **ProductService** + **SdkClient**
 ## Tests
 
 - `Tests/VioCoreTests/` (y otros si existen). Comando: `swift test` desde la raíz del package.
+
+## Documentación extendida
+
+- Flujo del SDK, tabla de requests (REST / partner / WS / GraphQL), broadcast/`contentId`, `cart_intent`, y mantenimiento: `Documentation/VIO_SWIFT_SDK.md`
+- Índice de archivos: `Documentation/CODEBASE_INDEX.md`
