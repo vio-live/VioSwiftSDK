@@ -30,18 +30,20 @@ public struct VApplePayButton: View {
     ) {
         self.product = product
         self.variant = variant
-        self.productName = productName ?? product?.title ?? "Product"
-        self.productImageUrl = productImageUrl ?? product?.images.first?.url
+
+        let titleCandidate: String? = productName ?? product?.title
+        self.productName = titleCandidate ?? "Product"
+
+        let imageCandidate: String? = productImageUrl ?? product?.images.first?.url
+        self.productImageUrl = imageCandidate
+
         let variantInclTax: Float? = variant?.price.amount_incl_taxes
         let variantAmount: Float? = variant.map { $0.price.amount }
         let productInclTax: Float? = product?.price.amount_incl_taxes
         let productAmount: Float? = product.map { $0.price.amount }
-        let unit: Float =
-            variantInclTax
-            ?? variantAmount
-            ?? productInclTax
-            ?? productAmount
-            ?? 0
+        let mergedUnit: Float? =
+            variantInclTax ?? variantAmount ?? productInclTax ?? productAmount
+        let unit: Float = mergedUnit ?? 0
         self.amount = amount ?? Double(unit)
         self.onPaymentComplete = onPaymentComplete
     }
@@ -60,6 +62,22 @@ public struct VApplePayButton: View {
     }
 
     public var body: some View {
+        availabilityContent
+            .onChange(of: applePayManager.paymentResult) { newValue in
+                handlePaymentResultChange(newValue)
+            }
+            .sheet(isPresented: $showConfirmation, content: confirmationSheet)
+            .alert(
+                "Betaling feilet",
+                isPresented: $showError,
+                actions: {
+                    Button("OK") { applePayManager.paymentResult = nil }
+                },
+                message: { Text(errorMessage) }
+            )
+    }
+
+    private var availabilityContent: some View {
         Group {
             if applePayManager.isApplePayAvailable {
                 applePayButton
@@ -67,28 +85,24 @@ public struct VApplePayButton: View {
                 unavailableView
             }
         }
-        .onChange(of: applePayManager.paymentResult, perform: handlePaymentResultChange)
-        .sheet(isPresented: $showConfirmation) {
-            VApplePayConfirmationSheet(
-                productName: productName,
-                productImageUrl: productImageUrl,
-                amount: amount,
-                currencyCode: cartManager.currency,
-                contact: applePayManager.capturedContact
-            ) {
-                showConfirmation = false
-                applePayManager.paymentResult = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    onPaymentComplete?()
-                }
+    }
+
+    @ViewBuilder
+    private func confirmationSheet() -> some View {
+        VApplePayConfirmationSheet(
+            productName: productName,
+            productImageUrl: productImageUrl,
+            amount: amount,
+            currencyCode: cartManager.currency,
+            contact: applePayManager.capturedContact
+        ) {
+            showConfirmation = false
+            applePayManager.paymentResult = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                onPaymentComplete?()
             }
-            .applyApplePaySheetChrome()
         }
-        .alert("Betaling feilet", isPresented: $showError) {
-            Button("OK") { applePayManager.paymentResult = nil }
-        } message: {
-            Text(errorMessage)
-        }
+        .applyApplePaySheetChrome()
     }
 
     private var applePayButton: some View {
