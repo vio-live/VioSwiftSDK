@@ -32,10 +32,15 @@ public struct VApplePayButton: View {
         self.variant = variant
         self.productName = productName ?? product?.title ?? "Product"
         self.productImageUrl = productImageUrl ?? product?.images.first?.url
-        let unit = variant?.price.amount_incl_taxes
-            ?? variant?.price.amount
-            ?? product?.price.amount_incl_taxes
-            ?? product?.price.amount
+        let variantInclTax: Float? = variant?.price.amount_incl_taxes
+        let variantAmount: Float? = variant.map { $0.price.amount }
+        let productInclTax: Float? = product?.price.amount_incl_taxes
+        let productAmount: Float? = product.map { $0.price.amount }
+        let unit: Float =
+            variantInclTax
+            ?? variantAmount
+            ?? productInclTax
+            ?? productAmount
             ?? 0
         self.amount = amount ?? Double(unit)
         self.onPaymentComplete = onPaymentComplete
