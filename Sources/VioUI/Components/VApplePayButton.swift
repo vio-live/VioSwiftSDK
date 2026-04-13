@@ -30,24 +30,14 @@ public struct VApplePayButton: View {
     ) {
         self.product = product
         self.variant = variant
-
-        let resolvedTitle = productName ?? product?.title
-        self.productName = resolvedTitle ?? "Product"
-
-        if let url = productImageUrl {
-            self.productImageUrl = url
-        } else {
-            self.productImageUrl = product?.images.first?.url
-        }
-
-        let variantIncl = variant?.price.amount_incl_taxes
-        let variantBase = variant?.price.amount
-        let productIncl = product?.price.amount_incl_taxes
-        let productBase = product?.price.amount
-        let unit: Float = variantIncl ?? variantBase ?? productIncl ?? productBase ?? 0
-        let resolvedAmount = amount ?? Double(unit)
-        self.amount = resolvedAmount
-
+        self.productName = productName ?? product?.title ?? "Product"
+        self.productImageUrl = productImageUrl ?? product?.images.first?.url
+        let unit = variant?.price.amount_incl_taxes
+            ?? variant?.price.amount
+            ?? product?.price.amount_incl_taxes
+            ?? product?.price.amount
+            ?? 0
+        self.amount = amount ?? Double(unit)
         self.onPaymentComplete = onPaymentComplete
     }
 
