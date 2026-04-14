@@ -22,7 +22,7 @@ public class ProductService {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.clearCache()
-                print("🎯 [ProductService] GraphQL cache cleared — vioCommerceBootstrapDidApply")
+                print("[Vio:Commerce] GraphQL client cache cleared (bootstrap applied)")
             }
         }
     }
@@ -36,18 +36,30 @@ public class ProductService {
     // MARK: - SDK Client Management
     
     /// Get or create SDK client.
-    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `apiKey`).
+    /// Uses only `GET /v1/sdk/config` commerce credentials (`VioConfiguration.resolvedCommerceApiKey` / `resolvedCommerceGraphQLURL`); no SDK root `apiKey` fallback.
     /// Recreates the client if the resolved key or GraphQL URL changes.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
         let graphQLURLString = config.resolvedCommerceGraphQLURL
+        let resolvedApiKey = config.resolvedCommerceApiKey
         
+        if resolvedApiKey.isEmpty {
+            let snap = config.lastSdkConfig
+            print(
+                "[Vio:Commerce] commerceNotConfigured: resolvedApiKey empty — sdkBootstrapKeyStored=\(config.sdkBootstrapCommerceApiKey != nil) bootstrapKeyLen=\(config.sdkBootstrapCommerceApiKey?.count ?? 0) lastSnapshot=\(snap != nil) rawBytes=\(config.lastSdkConfigRawData?.count ?? 0) features.commerce=\(String(describing: snap?.features?.commerce)) snapshotCommerceKeyLen=\(snap?.commerce?.apiKey?.count ?? 0)",
+            )
+            throw ProductServiceError.commerceNotConfigured
+        }
+        if graphQLURLString.isEmpty {
+            let snap = config.lastSdkConfig
+            print(
+                "[Vio:Commerce] commerceNotConfigured: resolvedGraphQLURL empty — bootstrapGqlStored=\(config.sdkBootstrapCommerceGraphQLURL != nil) bootstrapGql=\(config.sdkBootstrapCommerceGraphQLURL ?? "nil") snapshotEndpointsGql=\(snap?.endpoints?.commerceGraphQL ?? "nil") snapshotCommerceEndpoint=\(snap?.commerce?.endpoint ?? "nil")",
+            )
+            throw ProductServiceError.commerceNotConfigured
+        }
         guard let baseURL = URL(string: graphQLURLString) else {
             throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(graphQLURLString)")
         }
-        
-        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then SDK `apiKey`
-        let resolvedApiKey = config.resolvedCommerceApiKey
         
         // Invalidate cache if the key or URL has changed (e.g. bootstrap loaded after first call)
         if let cached = cachedSdkClient {
@@ -64,16 +76,8 @@ public class ProductService {
         let client = SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
         cachedSdkClient = client
         
-        let commerceSource: String
-        if config.sdkBootstrapCommerceApiKey != nil {
-            commerceSource = "GET /v1/sdk/config (bootstrap)"
-        } else if !config.campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            commerceSource = "vio-config campaigns.commerceApiKey"
-        } else {
-            commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
-        }
-        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(resolvedApiKey.count) (valor no logueado)")
-        VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
+        print("[Vio:Commerce] GraphQL auth source=GET /v1/sdk/config (bootstrap) authKeyLen=\(resolvedApiKey.count)")
+        VioLogger.debug("Created SDK client (bootstrap commerce)", component: "ProductService")
         
         return client
     }
@@ -121,9 +125,11 @@ public class ProductService {
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
         
         let sdk = try getSdkClient()
+        print("[Vio:Commerce] loadProduct id=\(productId) auth=bootstrap country=\(country) currency=\(currency)")
+        #if DEBUG
         let gqlURL = VioConfiguration.shared.resolvedCommerceGraphQLURL
-        let keySrc = VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
-        print("🎯 [ProductService] loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)")
+        print("[Vio:Commerce] loadProduct GraphQL=\(gqlURL)")
+        #endif
 
         let dtoProducts = try await sdk.channel.product.get(
             currency: currency,
@@ -138,12 +144,12 @@ public class ProductService {
         
         guard let dtoProduct = dtoProducts.first else {
             VioLogger.warning("Product not found for ID: \(productId)", component: "ProductService")
-            print("🎯 [ProductService] loadProduct ← GraphQL OK pero 0 filas para id=\(productId)")
+            print("[Vio:Commerce] loadProduct id=\(productId) not found (0 rows)")
             throw ProductServiceError.productNotFound(productId)
         }
         
         let product = dtoProduct.toDomainProduct()
-        print("🎯 [ProductService] loadProduct ← OK id=\(product.id) title=\(product.title) sku=\(product.sku) (commerce conectado)")
+        print("[Vio:Commerce] loadProduct OK id=\(product.id) title=\(product.title)")
         return product
     }
     
@@ -235,6 +241,8 @@ public enum ProductServiceError: LocalizedError {
     case invalidConfiguration(String)
     case invalidProductId(String)
     case productNotFound(Int)
+    /// Commerce catalog is disabled or `GET /v1/sdk/config` did not return `commerce.apiKey` / endpoint (no fallback to SDK root apiKey).
+    case commerceNotConfigured
     case sdkError(SdkException)
     case networkError(Error)
     
@@ -246,6 +254,8 @@ public enum ProductServiceError: LocalizedError {
             return "Invalid product ID format: \(id)"
         case .productNotFound(let id):
             return "Product not found: \(id)"
+        case .commerceNotConfigured:
+            return "Commerce not configured: require features.commerce and commerce.apiKey from GET /v1/sdk/config (or legacy commerce.apiKey only), with endpoint. No SDK root apiKey fallback."
         case .sdkError(let error):
             return error.message
         case .networkError(let error):

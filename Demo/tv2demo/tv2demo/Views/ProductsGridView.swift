@@ -160,7 +160,9 @@ struct ProductsGridView: View {
         isLoading = true
         errorMessage = nil
         
+        #if DEBUG
         print("🛍️ [ProductsGridView] Loading products...")
+        #endif
         print("   Currency: \(cartManager.currency)")
         print("   Country: \(cartManager.country)")
         
@@ -185,21 +187,29 @@ struct ProductsGridView: View {
             
             products = dtoProducts.map { $0.toDomainProduct() }
             
+            #if DEBUG
             print("✅ [ProductsGridView] Loaded \(products.count) products")
+            #endif
             
         } catch let error as SdkException {
             errorMessage = error.description
+            #if DEBUG
             print("❌ [ProductsGridView] Failed to load products: \(error.description)")
+            #endif
         } catch {
             errorMessage = error.localizedDescription
+            #if DEBUG
             print("❌ [ProductsGridView] Failed to load products: \(error.localizedDescription)")
+            #endif
         }
         
         isLoading = false
     }
     
     private func addToCart(product: Product) async {
+        #if DEBUG
         print("🛒 [ProductsGridView] Adding to cart: \(product.title)")
+        #endif
         
         await cartManager.addProduct(product, quantity: 1)
     }

@@ -75,9 +75,10 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             return
         }
         
-        print("🎯 [CampaignWebSocket] connect → \(urlString)")
-        print("🎯 [CampaignWebSocket] connect    esperado: handshake WebSocket OK; luego envío identify con userId si aplica")
+        print("[Vio:WS] connecting campaignId=\(campaignId) url=\(urlString)")
+        #if DEBUG
         VioLogger.debug("Connecting to: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
+        #endif
         
         // Create URLRequest with potential authentication headers
         var request = URLRequest(url: url)
@@ -253,7 +254,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
                 
             case "cart_intent":
                 let event = try CartIntentEvent.parse(jsonData: data)
-                VioLogger.success("Decoded cart_intent event (productId: \(event.productId ?? "nil"), productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
+                VioLogger.debug("Decoded cart_intent event (productId: \(event.productId ?? "nil"), productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
                 onCartIntent?(event)
                 scheduleCartIntentNotification(for: event)
 
@@ -307,7 +308,9 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
         do {
             try await task.send(.string(text))
-            print("🎯 [CampaignWebSocket] identify → enviado \(text) (servidor registra userId en wsUserMap)")
+            #if DEBUG
+            print("[Vio:WS] identify sent payload=\(text)")
+            #endif
             VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
@@ -422,7 +425,7 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
                 VioLogger.debug("Ignoring didOpen for stale webSocketTask", component: "CampaignWebSocket")
                 return
             }
-            print("🎯 [CampaignWebSocket] ← WebSocket abierto campaignId=\(self.campaignId) (equivalente HTTP 101 Switching Protocols)")
+            print("[Vio:WS] open campaignId=\(self.campaignId)")
             self.isConnected = true
             self.reconnectAttempts = 0
             self.onConnectionStatusChanged?(true)
@@ -459,7 +462,7 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
                 VioLogger.debug("Ignoring didClose for stale webSocketTask", component: "CampaignWebSocket")
                 return
             }
-            print("🎯 [CampaignWebSocket] WS closed (code: \(closeCode.rawValue), reason: \(reasonStr)) campaignId: \(self.campaignId)")
+            print("[Vio:WS] closed code=\(closeCode.rawValue) campaignId=\(self.campaignId) reason=\(reasonStr)")
             guard self.isConnected else { return }
             self.isConnected = false
             self.onConnectionStatusChanged?(false)

@@ -21,9 +21,20 @@ final class ProductServiceTests: XCTestCase {
                 flagURL: nil
             )
         )
-        
+        // Commerce GraphQL requires bootstrap credentials (no root apiKey fallback).
+        VioConfiguration.shared.applySdkBootstrapCommerce(
+            apiKey: "TEST_COMMERCE_KEY",
+            graphQLURL: "https://graph.test/graphql"
+        )
+
         productService = ProductService.shared
         productService.clearCache() // Clear cache before each test
+    }
+
+    override func tearDown() async throws {
+        VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
+        productService?.clearCache()
+        try await super.tearDown()
     }
     
     func testInvalidProductId() async {
@@ -42,11 +53,10 @@ final class ProductServiceTests: XCTestCase {
         }
     }
     
-    func testInvalidConfiguration() async {
-        // Test with invalid GraphQL URL
+    func testCommerceNotConfiguredWithoutBootstrap() async {
         VioConfiguration.configure(
             apiKey: "TEST_KEY",
-            environment: .custom(graphQLURL: "invalid-url"),
+            environment: .custom(graphQLURL: "https://graph.example.com/graphql"),
             marketConfig: MarketConfiguration(
                 countryCode: "US",
                 countryName: "United States",
@@ -56,18 +66,18 @@ final class ProductServiceTests: XCTestCase {
                 flagURL: nil
             )
         )
-        
+        VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
         productService.clearCache()
-        
+
         do {
             _ = try await productService.loadProduct(
                 productId: "123",
                 currency: "USD",
                 country: "US"
             )
-            XCTFail("Should have thrown ProductServiceError.invalidConfiguration")
-        } catch ProductServiceError.invalidConfiguration(let message) {
-            XCTAssertTrue(message.contains("Invalid GraphQL URL"))
+            XCTFail("Should have thrown ProductServiceError.commerceNotConfigured")
+        } catch ProductServiceError.commerceNotConfigured {
+            // Expected: environment.graphQLURL is not used for commerce auth.
         } catch {
             XCTFail("Unexpected error: \(error)")
         }

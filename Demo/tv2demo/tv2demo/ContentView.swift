@@ -22,9 +22,10 @@ struct ContentView: View {
                 .onAppear {
                     // 🎯 SDK: discover active campaigns → WS connect → identify → ready for cart_intent
                     Task {
-                        print("🎯 [ContentView] discoverCampaigns() — ver logs [CampaignManager] / [CampaignWebSocket] (respuestas esperadas en 📋 al arranque)")
                         await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
-                        print("🎯 [ContentView] Fin discovery — campaigns en memoria: \(CampaignManager.shared.activeCampaigns.count), WS isConnected: \(CampaignManager.shared.isConnected) (puede ser true un instante después)")
+                        #if DEBUG
+                        print("[TV2Demo] ContentView discovery done campaigns=\(CampaignManager.shared.activeCampaigns.count) wsConnected=\(CampaignManager.shared.isConnected)")
+                        #endif
                     }
                 }
 
@@ -120,7 +121,8 @@ private struct CartIntentProductDetailHost: View {
         defer { isLoading = false }
 
         await CampaignManager.shared.ensureCommerceBootstrapApplied()
-        print("🎯 [cart_intent] CartIntentProductDetailHost — bootstrap aplicado, lanzando loadProduct id=\(productId)")
+
+        print("[TV2Demo] cart_intent overlay loadProduct id=\(productId)")
 
         do {
             let product = try await ProductService.shared.loadProduct(
@@ -133,9 +135,9 @@ private struct CartIntentProductDetailHost: View {
             // Task cancelled (e.g. view identity churn) — do not clear cart intent.
         } catch {
             if let sdk = error as? SdkException {
-                print("❌ [cart_intent] ProductService.loadProduct failed: \(sdk.description) details=\(String(describing: sdk.details))")
+                print("[TV2Demo] cart_intent loadProduct failed: \(sdk.description)")
             } else {
-                print("❌ [cart_intent] ProductService.loadProduct failed: \(String(describing: error))")
+                print("[TV2Demo] cart_intent loadProduct failed: \(String(describing: error))")
             }
             onDismissIntent()
         }

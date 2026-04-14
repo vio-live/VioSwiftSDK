@@ -679,13 +679,19 @@ struct TV2TwoProductsOverlay: View {
             country: "US",
             onAddToCart: { product in
                 if let p = product {
+                    #if DEBUG
                     print("Agregado al carrito (API): \(p.title)")
+                    #endif
                 } else {
+                    #if DEBUG
                     print("Agregado al carrito (WebSocket fallback)")
+                    #endif
                 }
             },
             onDismiss: {
+                #if DEBUG
                 print("Cerrado")
+                #endif
             }
         )
     }
@@ -717,10 +723,14 @@ struct TV2TwoProductsOverlay: View {
                 campaignLogo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Adidas_logo.png/800px-Adidas_logo.png"
             ),
             onAddToCart: {
+                #if DEBUG
                 print("Agregado")
+                #endif
             },
             onDismiss: {
+                #if DEBUG
                 print("Cerrado")
+                #endif
             }
         )
     }

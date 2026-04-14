@@ -2,7 +2,7 @@
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
   "apiKey": "tv2_api_key_91b4fbf634af4bc5",
-  "environment": "testing",
+  "environment": "development",
   "theme": {
     "name": "TV2 Dark Theme",
     "mode": "dark",
@@ -206,7 +206,7 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
   "_e2e_physical_device": {
-    "_comment": "environment: \"testing\" → REST/WS desde restAPIBaseURL/webSocketBaseURL (HTTPS, api-dev). Para backend en Mac/Tailscale/LAN: \"environment\": \"development\" y ajusta devRestAPIBaseURL/devWebSocketBaseURL (y devWsBaseURL si aplica); el SDK solo usa esos en development. Simulador contra API en el Mac: 127.0.0.1:5001."
+    "_comment": "environment \"development\" → REST/WS desde devRestAPIBaseURL / devWsBaseURL (local). \"testing\"|\"sandbox\"|\"production\" → restAPIBaseURL / wsBaseURL (p. ej. api-dev). Simulador + API en el mismo Mac: 127.0.0.1:5001. Dispositivo físico o Tailscale: sustituye por la IP/host que alcance tu Mac (p. ej. 100.x en Tailscale)."
   },
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",

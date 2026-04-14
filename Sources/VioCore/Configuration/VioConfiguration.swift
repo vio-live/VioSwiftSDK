@@ -58,10 +58,15 @@ public class VioConfiguration: ObservableObject {
         return override.isEmpty ? apiKey : override
     }
     
-    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` (overrides SDK `apiKey` for GraphQL).
+    /// Commerce GraphQL `Authorization` from `GET /v1/sdk/config` only (not the SDK root `apiKey`).
     @Published public private(set) var sdkBootstrapCommerceApiKey: String?
     /// Commerce GraphQL URL from bootstrap (`commerce.endpoint` or `endpoints.commerceGraphQL`).
     @Published public private(set) var sdkBootstrapCommerceGraphQLURL: String?
+
+    /// Last successful raw body of ``GET /v1/sdk/config`` (HTTP 2xx). Replaced on each successful fetch.
+    @Published public private(set) var lastSdkConfigRawData: Data?
+    /// Last decoded ``SdkRemoteConfig`` when JSON decoding succeeded; `nil` if only ``lastSdkConfigRawData`` is available.
+    @Published public private(set) var lastSdkConfig: SdkRemoteConfig?
 
     @Published public private(set) var isConfigured: Bool = false
     @Published public private(set) var isMarketAvailable: Bool = true  // If false, SDK should not be used
@@ -90,7 +95,9 @@ public class VioConfiguration: ObservableObject {
         engagementConfig: EngagementConfiguration? = nil
     ) {
         let instance = VioConfiguration.shared
-        
+        instance.resetSdkRemoteConfigSnapshot()
+        instance.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
+
         instance.apiKey = apiKey
         instance.environment = environment
         instance.theme = theme ?? .default
@@ -129,6 +136,11 @@ public class VioConfiguration: ObservableObject {
         // Initialize CampaignManager with new configuration
         Task { @MainActor in
             CampaignManager.shared.reinitialize()
+        }
+
+        // Prime commerce GraphQL credentials from GET /v1/sdk/config so ProductService is ready before cart_intent / overlays.
+        Task { @MainActor in
+            await CampaignManager.shared.ensureCommerceBootstrapApplied()
         }
     }
     
@@ -250,7 +262,8 @@ public class VioConfiguration: ObservableObject {
         return isConfigured && isMarketAvailable
     }
     
-    /// Resolved commerce GraphQL URL: bootstrap from backend, then `campaigns.commerceGraphQLURL` in vio-config, then environment default.
+    /// Resolved commerce GraphQL URL: **solo** `GET /v1/sdk/config` (`commerce.endpoint` / `endpoints.commerceGraphQL`) cuando hay `commerce.apiKey` aplicada.
+    /// Sin bootstrap de commerce, cadena vacía (no hay fallback a `campaigns.commerceGraphQLURL` ni a `environment.graphQLURL`).
     public var resolvedCommerceGraphQLURL: String {
         if let u = sdkBootstrapCommerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
            !u.isEmpty,
@@ -258,27 +271,30 @@ public class VioConfiguration: ObservableObject {
         {
             return Self.normalizeCommerceGraphQLHTTPURL(u)
         }
-        if let u = campaignConfiguration.commerceGraphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !u.isEmpty,
-           URL(string: u) != nil
-        {
-            return Self.normalizeCommerceGraphQLHTTPURL(u)
-        }
-        return environment.graphQLURL
+        return ""
     }
 
-    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then `campaigns.commerceApiKey` in vio-config, then SDK `apiKey`.
+    /// Resolved GraphQL `Authorization` para **commerce**: **solo** clave aplicada desde `GET /v1/sdk/config` (`commerce.apiKey`).
+    /// Sin bootstrap de commerce, cadena vacía (no hay fallback a `campaigns.commerceApiKey` ni al `apiKey` raíz del SDK).
     public var resolvedCommerceApiKey: String {
         if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
             return k
         }
-        let localCommerce = campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !localCommerce.isEmpty {
-            return localCommerce
-        }
-        return apiKey.isEmpty ? "DEMO_KEY" : apiKey
+        return ""
     }
     
+    /// Clears ``lastSdkConfig`` / ``lastSdkConfigRawData`` (e.g. before applying a new static configuration).
+    internal func resetSdkRemoteConfigSnapshot() {
+        lastSdkConfigRawData = nil
+        lastSdkConfig = nil
+    }
+
+    /// Stores the latest `/v1/sdk/config` payload after HTTP 200. Replaces any previous snapshot.
+    internal func storeSdkConfigSnapshotFromBootstrap(raw: Data, typed: SdkRemoteConfig?) {
+        lastSdkConfigRawData = raw
+        lastSdkConfig = typed
+    }
+
     /// Apply commerce credentials from `GET /v1/sdk/config`. Pass `nil` fields to clear bootstrap overrides.
     internal func applySdkBootstrapCommerce(apiKey: String?, graphQLURL: String?) {
         let k = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)

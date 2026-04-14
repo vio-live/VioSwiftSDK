@@ -114,7 +114,9 @@ struct TV2VideoPlayer: View {
                     contest: contest,
                     isChatExpanded: isChatExpanded,
                     onJoin: {
+                        #if DEBUG
                         print("🎁 [Contest] Usuario se unió: \(contest.name)")
+                        #endif
                         // Aquí se enviará la participación al servidor después
                     },
                     onDismiss: {
@@ -135,15 +137,21 @@ struct TV2VideoPlayer: View {
                     country: cartManager.country,
                     onAddToCart: { productDto in
                         if let apiProduct = productDto {
+                            #if DEBUG
                             print("🛍️ [Product] Agregando producto de la API al carrito: \(apiProduct.title)")
+                            #endif
                             // Convertir ProductDto a Product para el CartManager
                             let product = convertDtoToProduct(apiProduct)
                             Task {
                                 await cartManager.addProduct(product, quantity: 1)
+                                #if DEBUG
                                 print("✅ [Product] Producto agregado al carrito")
+                                #endif
                             }
                         } else {
+                            #if DEBUG
                             print("⚠️ [Product] Producto de la API aún no disponible, usando fallback: \(productEvent.name)")
+                            #endif
                             // El producto de la API aún no ha cargado, no hacer nada o usar fallback
                         }
                     },
@@ -161,7 +169,9 @@ struct TV2VideoPlayer: View {
                     poll: poll,
                     isChatExpanded: isChatExpanded,
                     onVote: { option in
+                        #if DEBUG
                         print("📊 [Poll] Votado: \(option)")
+                        #endif
                         // Aquí se enviará el voto al servidor después
                     },
                     onDismiss: {
@@ -213,9 +223,13 @@ struct TV2VideoPlayer: View {
             // 🎯 SDK: discoverCampaigns → WS identify → cart_intent → notificación
             // Legacy WebSocketManager.connect() removed — was opening a 2nd WS to the same endpoint
             Task {
+                #if DEBUG
                 print("🎯 [TV2VideoPlayer] Starting SDK campaign discovery...")
+                #endif
                 await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
+                #if DEBUG
                 print("🎯 [TV2VideoPlayer] SDK campaigns: \(CampaignManager.shared.activeCampaigns.count), connected: \(CampaignManager.shared.isConnected)")
+                #endif
             }
         }
         .onDisappear {
@@ -620,28 +634,38 @@ class VideoPlayerViewModel: ObservableObject {
         // Priority 1: Try local video file (if included in bundle)
         if let localVideoPath = Bundle.main.path(forResource: "match", ofType: "mp4") {
             let url = URL(fileURLWithPath: localVideoPath)
+            #if DEBUG
             print("🎥 [VideoPlayer] Using local video: match.mp4")
+            #endif
             initializePlayer(with: url)
             return
         }
         
         // Priority 2: Load from Firebase Storage (remote video)
         // This video is hosted on Firebase Storage and works perfectly with AVPlayer
+        #if DEBUG
         print("🌐 [VideoPlayer] Loading video from Firebase Storage...")
+        #endif
         
         let firebaseVideoURL = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
         
         guard let videoURL = URL(string: firebaseVideoURL) else {
+            #if DEBUG
             print("❌ [VideoPlayer] Invalid Firebase URL")
+            #endif
             return
         }
         
+        #if DEBUG
         print("✅ [VideoPlayer] Firebase video URL ready")
+        #endif
         initializePlayer(with: videoURL)
     }
     
     private func initializePlayer(with url: URL) {
+        #if DEBUG
         print("▶️ [VideoPlayer] Initializing player...")
+        #endif
         
         player = AVPlayer(url: url)
         player?.allowsExternalPlayback = true // Enable AirPlay

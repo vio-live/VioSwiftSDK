@@ -1,8 +1,7 @@
-// Tests for ModuleConfigurations and CampaignConfiguration
+// Tests for CampaignConfiguration (JSON `campaigns.*` module config).
 // Covers:
-// - commerceApiKey and commerceBaseUrl fields (rename from tipio, commit 98c4da2)
-// - CampaignConfiguration: webSocketBaseURL and restAPIBaseURL defaults + custom values
-// - webSocketBaseURL must use wss:// protocol (not ws://)
+// - commerceApiKey / commerceGraphQLURL (legacy JSON; ProductService uses bootstrap only)
+// - webSocketBaseURL and restAPIBaseURL defaults + custom values
 // - restAPIBaseURL must use https:// protocol (not http://)
 
 import XCTest
@@ -10,44 +9,44 @@ import XCTest
 
 final class ModuleConfigurationsTests: XCTestCase {
 
-    // MARK: - ModuleConfigurations: commerceApiKey
+    // MARK: - CampaignConfiguration: commerce (JSON legacy)
 
     func testCommerceApiKeyDefaultIsEmpty() {
-        let config = ModuleConfigurations()
+        let config = CampaignConfiguration.default
         XCTAssertEqual(config.commerceApiKey, "")
     }
 
     func testCommerceApiKeyCanBeSet() {
-        let config = ModuleConfigurations(commerceApiKey: "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S")
+        let config = CampaignConfiguration(
+            webSocketBaseURL: "wss://api-dev.vio.live",
+            restAPIBaseURL: "https://api-dev.vio.live",
+            commerceApiKey: "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S"
+        )
         XCTAssertEqual(config.commerceApiKey, "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S")
     }
 
     func testCommerceApiKeyIsString() {
-        let config = ModuleConfigurations(commerceApiKey: "test-key")
+        let config = CampaignConfiguration(
+            webSocketBaseURL: "wss://api-dev.vio.live",
+            restAPIBaseURL: "https://api-dev.vio.live",
+            commerceApiKey: "test-key"
+        )
         XCTAssert(type(of: config.commerceApiKey) == String.self)
     }
 
-    // MARK: - ModuleConfigurations: commerceBaseUrl
-
-    func testCommerceBaseUrlHasDefault() {
-        let config = ModuleConfigurations()
-        XCTAssertFalse(config.commerceBaseUrl.isEmpty)
+    func testCommerceGraphQLURLDefaultIsNil() {
+        let config = CampaignConfiguration.default
+        XCTAssertNil(config.commerceGraphQLURL)
     }
 
-    func testCommerceBaseUrlDefaultUsesHttps() {
-        let config = ModuleConfigurations()
-        XCTAssertTrue(
-            config.commerceBaseUrl.hasPrefix("https://"),
-            "commerceBaseUrl default debe usar https://, got: \(config.commerceBaseUrl)"
-        )
-    }
-
-    func testCommerceBaseUrlCanBeSet() {
-        let config = ModuleConfigurations(
+    func testCommerceGraphQLURLCanBeSet() {
+        let config = CampaignConfiguration(
+            webSocketBaseURL: "wss://api-dev.vio.live",
+            restAPIBaseURL: "https://api-dev.vio.live",
             commerceApiKey: "key",
-            commerceBaseUrl: "https://custom-commerce.example.com"
+            commerceGraphQLURL: "https://custom-commerce.example.com/graphql"
         )
-        XCTAssertEqual(config.commerceBaseUrl, "https://custom-commerce.example.com")
+        XCTAssertEqual(config.commerceGraphQLURL, "https://custom-commerce.example.com/graphql")
     }
 
     // MARK: - CampaignConfiguration: webSocketBaseURL
@@ -57,12 +56,12 @@ final class ModuleConfigurationsTests: XCTestCase {
         XCTAssertFalse(config.webSocketBaseURL.isEmpty)
     }
 
-    func testWebSocketBaseURLDefaultUsesWssProtocol() {
-        // webSocketBaseURL must use wss:// (secure WebSocket) — not ws:// or https://
+    func testWebSocketBaseURLDefaultUsesHttps() {
+        // Default matches ``CampaignConfiguration`` initializer (host URL shared with REST in many setups).
         let config = CampaignConfiguration.default
         XCTAssertTrue(
-            config.webSocketBaseURL.hasPrefix("wss://"),
-            "webSocketBaseURL debe usar wss://, got: \(config.webSocketBaseURL)"
+            config.webSocketBaseURL.hasPrefix("https://"),
+            "webSocketBaseURL default should use https://, got: \(config.webSocketBaseURL)"
         )
     }
 

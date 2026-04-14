@@ -25,32 +25,31 @@ struct tv2demoApp: App {
         // Load Vio SDK configuration
         // This reads the vio-config.json file with TV2 colors and theme
         // Stripe is initialized automatically by the SDK
-        print("🚀 [TV2Demo] Loading Vio SDK configuration...")
+        print("[TV2Demo] loading Vio configuration…")
         ConfigurationLoader.loadConfiguration()
         
         let cfg = VioConfiguration.shared
         
-        print("✅ [TV2Demo] Vio SDK configured successfully")
-        print("🎨 [TV2Demo] Theme: \(cfg.theme.name)")
-        print("🎨 [TV2Demo] Mode: \(cfg.theme.mode)")
-        print("🎨 [TV2Demo] environment: \(cfg.environment.rawValue)")
-        print("🎨 [TV2Demo] GraphQL: \(cfg.environment.graphQLURL)")
-        print("🎨 [TV2Demo] REST: \(cfg.campaignConfiguration.restAPIBaseURL)")
-        print("🎨 [TV2Demo] WebSocket: \(cfg.wsBaseURL)")
-        print("🎨 [TV2Demo] autoDiscover: \(cfg.campaignConfiguration.autoDiscover)")
-        print("🎨 [TV2Demo] apiKey: \(cfg.apiKey.prefix(10))…")
+        print("[TV2Demo] Vio configured env=\(cfg.environment.rawValue) theme=\(cfg.theme.name)")
+        #if DEBUG
+        print("[TV2Demo] GraphQL=\(cfg.environment.graphQLURL)")
+        print("[TV2Demo] REST=\(cfg.campaignConfiguration.restAPIBaseURL)")
+        print("[TV2Demo] WebSocket=\(cfg.wsBaseURL)")
+        print("[TV2Demo] autoDiscover=\(cfg.campaignConfiguration.autoDiscover)")
+        print("[TV2Demo] apiKey prefix=\(cfg.apiKey.prefix(10))…")
         let rest = cfg.campaignConfiguration.restAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let ws = cfg.wsBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        print("📋 [TV2Demo] Referencia respuestas (zero-config):")
-        print("    → GET  \(rest)/v1/sdk/campaigns?apiKey=…  esperado: HTTP 200, JSON { \"campaigns\": [...] }")
-        print("    → GET  \(rest)/v1/sdk/config?apiKey=…     esperado: HTTP 200 (commerce en body si el backend lo envía)")
-        print("    → WS   \(ws)/ws/<campaignId>?userId=<uid>  esperado: handshake OK; luego mensaje identify")
-        print("    → POST \(rest)/api/campaigns/<id>/register-device  esperado: HTTP 200, { \"success\": true }")
+        print("[TV2Demo] zero-config reference:")
+        print("    GET \(rest)/v1/sdk/campaigns?apiKey=…")
+        print("    GET \(rest)/v1/sdk/config?apiKey=…")
+        print("    WS \(ws)/ws/<campaignId>?userId=<uid>")
+        print("    POST \(rest)/api/campaigns/<id>/register-device")
+        #endif
         
         // Set demo userId for WS identify — backend uses this to route cart_intent events
         // In production replace with real user identity (e.g. JWT sub claim)
         CampaignManager.shared.userId = "tv2_demo_user"
-        print("👤 [TV2Demo] userId set: tv2_demo_user")
+        print("[TV2Demo] userId=tv2_demo_user")
 
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
     }

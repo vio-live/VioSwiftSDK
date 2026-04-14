@@ -9,6 +9,7 @@ final class VioConfigurationTests: XCTestCase {
     override func tearDown() {
         super.tearDown()
         // Reset shared config to defaults after each test
+        VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
         VioConfiguration.configure(apiKey: "", environment: .sandbox)
     }
 
@@ -172,6 +173,52 @@ final class VioConfigurationTests: XCTestCase {
             campaignConfig: campaign
         )
         XCTAssertEqual(VioConfiguration.shared.resolvedSdkApiKey, "override-key")
+    }
+
+    // MARK: - Commerce bootstrap resolution (no root / campaign fallback)
+
+    func testResolvedCommerceEmptyWithoutBootstrap() {
+        VioConfiguration.configure(apiKey: "root-key")
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceApiKey, "")
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceGraphQLURL, "")
+    }
+
+    func testResolvedCommerceUsesBootstrapOnly() {
+        VioConfiguration.configure(apiKey: "root-key")
+        VioConfiguration.shared.applySdkBootstrapCommerce(
+            apiKey: "commerce-key",
+            graphQLURL: "https://graph.test"
+        )
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceApiKey, "commerce-key")
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceGraphQLURL, "https://graph.test/graphql")
+    }
+
+    func testResolvedCommerceIgnoresCampaignCommerceFields() {
+        let campaign = CampaignConfiguration(
+            webSocketBaseURL: "https://api-dev.vio.live",
+            restAPIBaseURL: "https://api-dev.vio.live",
+            commerceApiKey: "campaign-commerce",
+            commerceGraphQLURL: "https://campaign-gql.example/graphql"
+        )
+        VioConfiguration.configure(apiKey: "root-key", campaignConfig: campaign)
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceApiKey, "")
+        XCTAssertEqual(VioConfiguration.shared.resolvedCommerceGraphQLURL, "")
+    }
+
+    func testResolvedCommerceDoesNotFallBackToRootApiKey() {
+        VioConfiguration.configure(apiKey: "root-key")
+        XCTAssertNotEqual(VioConfiguration.shared.resolvedCommerceApiKey, VioConfiguration.shared.apiKey)
+    }
+
+    func testConfigureClearsSdkRemoteConfigSnapshot() {
+        let raw = Data("{\"sdkVersion\":\"1\"}".utf8)
+        VioConfiguration.shared.storeSdkConfigSnapshotFromBootstrap(raw: raw, typed: nil)
+        XCTAssertNotNil(VioConfiguration.shared.lastSdkConfigRawData)
+
+        // Empty apiKey avoids async bootstrap network touching the snapshot after reset.
+        VioConfiguration.configure(apiKey: "", environment: .sandbox)
+        XCTAssertNil(VioConfiguration.shared.lastSdkConfigRawData)
+        XCTAssertNil(VioConfiguration.shared.lastSdkConfig)
     }
 
     // MARK: - Singleton

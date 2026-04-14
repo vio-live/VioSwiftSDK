@@ -382,6 +382,43 @@ internal struct SdkBootstrapResponse: Codable {
     let commerce: CommerceBlock?
     let endpoints: EndpointsBlock?
     let features: FeaturesBlock?
+
+    /// Same commerce rules as ``SdkRemoteConfig/commerceCredentialsForBootstrap()`` for fallback decode when the full snapshot fails.
+    func commerceCredentialsForBootstrap() -> (apiKey: String?, graphQLURL: String?) {
+        let key = commerce?.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let keyNonEmpty = (key?.isEmpty == false) ? key : nil
+        let gqlForApply: String? = {
+            guard keyNonEmpty != nil else { return nil }
+            let g = commerce?.endpoint ?? endpoints?.commerceGraphQL
+            let t = g?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (t?.isEmpty == false) ? t : nil
+        }()
+        let featCommerce = features?.commerce
+        let applyKey: String?
+        let applyGql: String?
+        switch featCommerce {
+        case .some(false):
+            applyKey = nil
+            applyGql = nil
+        case .some(true):
+            if let k = keyNonEmpty {
+                applyKey = k
+                applyGql = gqlForApply
+            } else {
+                applyKey = nil
+                applyGql = nil
+            }
+        case .none:
+            if let k = keyNonEmpty {
+                applyKey = k
+                applyGql = gqlForApply
+            } else {
+                applyKey = nil
+                applyGql = nil
+            }
+        }
+        return (applyKey, applyGql)
+    }
 }
 
 /// Campaigns Discovery Response from GET /v1/sdk/campaigns

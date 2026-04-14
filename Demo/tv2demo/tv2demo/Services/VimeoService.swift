@@ -16,7 +16,9 @@ class VimeoService {
     /// - Parameter videoId: The Vimeo video ID (e.g., "1124046641")
     /// - Returns: The streaming URL (HLS or progressive MP4)
     func getVideoStreamURL(videoId: String) async throws -> URL {
+        #if DEBUG
         print("🔍 [VimeoService] Fetching stream URL for video: \(videoId)")
+        #endif
         
         // For public videos, use the player embed URL directly
         // This works without authentication and extracts the stream from the player config
@@ -25,7 +27,9 @@ class VimeoService {
             throw VimeoError.invalidURL
         }
         
+        #if DEBUG
         print("📡 [VimeoService] Fetching player config...")
+        #endif
         
         var request = URLRequest(url: playerURL)
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15", forHTTPHeaderField: "User-Agent")
@@ -35,7 +39,9 @@ class VimeoService {
         
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
+            #if DEBUG
             print("❌ [VimeoService] Failed to fetch player page")
+            #endif
             throw VimeoError.invalidResponse
         }
         
@@ -43,25 +49,37 @@ class VimeoService {
             throw VimeoError.invalidResponse
         }
         
+        #if DEBUG
         print("📄 [VimeoService] Player HTML fetched (\(html.count) chars)")
+        #endif
         
         // Extract config JSON from the player HTML
         // The player embeds a JSON config with all stream URLs
         guard let configJSON = extractPlayerConfig(from: html) else {
+            #if DEBUG
             print("❌ [VimeoService] Could not extract player config")
+            #endif
             throw VimeoError.streamURLNotFound
         }
         
+        #if DEBUG
         print("✅ [VimeoService] Player config extracted")
+        #endif
         
         // Parse the config and extract stream URLs
         guard let streamURL = extractStreamURL(from: configJSON) else {
+            #if DEBUG
             print("❌ [VimeoService] No stream URL found in config")
+            #endif
             throw VimeoError.streamURLNotFound
         }
         
+        #if DEBUG
         print("✅ [VimeoService] Stream URL found!")
+        #endif
+        #if DEBUG
         print("🔗 [VimeoService] URL: \(streamURL.absoluteString.prefix(150))...")
+        #endif
         return streamURL
     }
     
@@ -162,7 +180,9 @@ class VimeoService {
         cachedAccessToken = tokenResponse.accessToken
         tokenExpirationDate = Date().addingTimeInterval(23 * 3600) // 23 hours to be safe
         
+        #if DEBUG
         print("✅ [VimeoService] New access token obtained")
+        #endif
         return tokenResponse.accessToken
     }
 }

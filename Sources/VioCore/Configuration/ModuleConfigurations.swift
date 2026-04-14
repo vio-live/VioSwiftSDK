@@ -432,10 +432,10 @@ public struct CampaignConfiguration {
     public let autoDiscover: Bool
     /// Optional channel ID to filter campaigns during auto-discovery
     public let channelId: Int?
-    /// Fallback Commerce GraphQL `Authorization` when `GET /v1/sdk/config` omits `commerce.apiKey` (e.g. local dev / sponsor sin key).
-    /// Prefer bootstrap from backend; set in `vio-config.json` as `campaigns.commerceApiKey` only when needed.
+    /// **Deprecated for ProductService / commerce GraphQL:** catalog auth and endpoint come **only** from `GET /v1/sdk/config` (`commerce.apiKey` and endpoint) via bootstrap — not from this field.
+    /// Kept for JSON compatibility and any legacy readers; ``VioConfiguration/resolvedCommerceApiKey`` does **not** use `campaigns.commerceApiKey` or the SDK root `apiKey`.
     public let commerceApiKey: String
-    /// Optional override for Commerce GraphQL endpoint when using `commerceApiKey` without bootstrap URL.
+    /// **Deprecated for ProductService / commerce GraphQL:** ``VioConfiguration/resolvedCommerceGraphQLURL`` uses **only** bootstrap URLs, not `campaigns.commerceGraphQLURL` or `environment.graphQLURL`.
     public let commerceGraphQLURL: String?
 
     public init(

@@ -38,13 +38,18 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
 
     private func logPayload(_ userInfo: [AnyHashable: Any], phase: String) {
         let safe = redactNotificationPayload(userInfo)
+        #if DEBUG
         if JSONSerialization.isValidJSONObject(safe),
            let data = try? JSONSerialization.data(withJSONObject: safe, options: [.prettyPrinted, .sortedKeys]),
            let json = String(data: data, encoding: .utf8) {
-            print("🎯 [TV2Demo] Notificación [\(phase)] payload JSON (redactado):\n\(json)")
+            print("[TV2Demo] notification [\(phase)] payload JSON (redacted):\n\(json)")
         } else {
-            print("🎯 [TV2Demo] Notificación [\(phase)] payload (redactado): \(safe)")
+            print("[TV2Demo] notification [\(phase)] payload (redacted): \(safe)")
         }
+        #else
+        let keys = safe.keys.map { String(describing: $0) }.sorted()
+        print("[TV2Demo] notification [\(phase)] keys=\(keys)")
+        #endif
     }
 
     func userNotificationCenter(
@@ -55,12 +60,11 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         let info = notification.request.content.userInfo
         logPayload(info, phase: "willPresent(foreground)")
         if CampaignManager.isVioCartIntentNotificationUserInfo(info) {
-            print("🎯 [TV2Demo] Notificación willPresent → Vio cart_intent — discoverCampaigns + handlePush (overlay + commerce)")
+            print("[TV2Demo] notification willPresent cart_intent")
             Task { @MainActor in
                 await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
                 await CampaignManager.shared.ensureCommerceBootstrapApplied()
                 CampaignManager.shared.handlePushNotificationUserInfo(info)
-                print("🎯 [TV2Demo] Notificación willPresent → handlePush terminado (revisa logs [CampaignManager] / [ProductService])")
             }
             completionHandler(VioCartIntentNotificationPresentation.willPresentOptions())
             return
@@ -76,17 +80,16 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         let userInfo = response.notification.request.content.userInfo
         logPayload(userInfo, phase: "didReceive(tap)")
         guard CampaignManager.isVioCartIntentNotificationUserInfo(userInfo) else {
-            print("🎯 [TV2Demo] Notificación tap → no es cart_intent Vio (ignorado para overlay)")
+            print("[TV2Demo] notification tap ignored (not Vio cart_intent)")
             completionHandler()
             return
         }
 
-        print("🎯 [TV2Demo] Notificación tap → Vio cart_intent — discoverCampaigns + handlePush (commerce)")
+        print("[TV2Demo] notification tap cart_intent")
         Task { @MainActor in
             await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
             await CampaignManager.shared.ensureCommerceBootstrapApplied()
             CampaignManager.shared.handlePushNotificationUserInfo(userInfo)
-            print("🎯 [TV2Demo] Notificación tap → handlePush terminado")
         }
         completionHandler()
     }
