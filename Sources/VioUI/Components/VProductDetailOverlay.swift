@@ -376,24 +376,15 @@ public struct VProductDetailOverlay: View {
                         .font(VioTypography.title3)
                         .foregroundColor(adaptiveColors.priceColor)
                         .onAppear {
-                            print("🎯 [VProductDetailOverlay] Product detail opened")
-                            print("🎯 [VProductDetailOverlay] Product: \(product.title)")
-                            print("🎯 [VProductDetailOverlay] Product ID: \(product.id)")
-                            print("🎯 [VProductDetailOverlay] Base price amount: \(product.price.amount)")
-                            print("🎯 [VProductDetailOverlay] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                            print("🎯 [VProductDetailOverlay] Total variants: \(product.variants.count)")
-                            if let variant = selectedVariant {
-                                print("🎯 [VProductDetailOverlay] ⚠️ VARIANT SELECTED!")
-                                print("🎯 [VProductDetailOverlay] Variant title: \(variant.title)")
-                                print("🎯 [VProductDetailOverlay] Variant ID: \(variant.id)")
-                                print("🎯 [VProductDetailOverlay] Variant price amount: \(variant.price.amount)")
-                                print("🎯 [VProductDetailOverlay] Variant price with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
+                            let variantHint: String
+                            if let v = selectedVariant {
+                                variantHint = "variant=\(v.id):\(v.title)"
                             } else {
-                                print("🎯 [VProductDetailOverlay] No variant selected, using product price")
+                                variantHint = "variant=none"
                             }
-                            print("🎯 [VProductDetailOverlay] Current price with taxes: \(currentPriceWithTaxes)")
-                            print("🎯 [VProductDetailOverlay] Currency: \(product.price.currency_code)")
-                            print("🎯 [VProductDetailOverlay] Formatted display: \(formatted(amount: Double(currentPriceWithTaxes)))")
+                            print(
+                                "🎯 [VProductDetailOverlay] Opened: \(product.title) id=\(product.id) variants=\(product.variants.count) \(variantHint) currency=\(product.price.currency_code) taxes=\(currentPriceWithTaxes) display=\(formatted(amount: Double(currentPriceWithTaxes)))",
+                            )
                         }
                     
                     // Compare at price (if available) - use compare at with taxes if available
@@ -861,38 +852,25 @@ public struct VProductDetailOverlay: View {
     
     /// Initialize default options from first variant
     private func initializeDefaultOptions() {
-        print("🔧 [VProductDetailOverlay] Initializing default options...")
-        print("🔧 [VProductDetailOverlay] Total variants: \(product.variants.count)")
-        
-        for (index, variant) in product.variants.enumerated() {
-            print("🔧 [VProductDetailOverlay] Variant[\(index)]: \(variant.title)")
-            print("🔧 [VProductDetailOverlay]   Price: \(variant.price.amount), with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
-        }
-        
         guard let firstVariant = product.variants.first else {
-            print("🔧 [VProductDetailOverlay] No variants, selectedVariant = nil")
             selectedVariant = nil
             return
         }
-        
+
         let sortedOpts = sortedOptions
         guard !sortedOpts.isEmpty else {
-            print("🔧 [VProductDetailOverlay] No options, selecting first variant: \(firstVariant.title)")
-            print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
             selectedVariant = firstVariant
             return
         }
-        
-        let components = parseVariantTitle(firstVariant.title)        
+
+        let components = parseVariantTitle(firstVariant.title)
         for (index, value) in components.enumerated() {
             if index < sortedOpts.count {
                 let optionName = sortedOpts[index].name
                 selectedOptions[optionName] = value.trimmingCharacters(in: .whitespaces)
             }
         }
-        
-        print("🔧 [VProductDetailOverlay] Selecting first variant with options: \(firstVariant.title)")
-        print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
+
         selectedVariant = firstVariant
     }
     

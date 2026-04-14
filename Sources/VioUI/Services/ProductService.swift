@@ -76,8 +76,7 @@ public class ProductService {
         let client = SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
         cachedSdkClient = client
         
-        print("[Vio:Commerce] GraphQL auth source=GET /v1/sdk/config (bootstrap) authKeyLen=\(resolvedApiKey.count)")
-        VioLogger.debug("Created SDK client (bootstrap commerce)", component: "ProductService")
+        VioLogger.debug("Created SDK client (bootstrap commerce) authKeyLen=\(resolvedApiKey.count)", component: "ProductService")
         
         return client
     }
@@ -121,15 +120,9 @@ public class ProductService {
         currency: String,
         country: String
     ) async throws -> Product {
-        VioLogger.debug("Loading product with ID: \(productId)", component: "ProductService")
-        VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
+        VioLogger.debug("loadProduct id=\(productId) country=\(country) currency=\(currency)", component: "ProductService")
         
         let sdk = try getSdkClient()
-        print("[Vio:Commerce] loadProduct id=\(productId) auth=bootstrap country=\(country) currency=\(currency)")
-        #if DEBUG
-        let gqlURL = VioConfiguration.shared.resolvedCommerceGraphQLURL
-        print("[Vio:Commerce] loadProduct GraphQL=\(gqlURL)")
-        #endif
 
         let dtoProducts = try await sdk.channel.product.get(
             currency: currency,
@@ -144,12 +137,11 @@ public class ProductService {
         
         guard let dtoProduct = dtoProducts.first else {
             VioLogger.warning("Product not found for ID: \(productId)", component: "ProductService")
-            print("[Vio:Commerce] loadProduct id=\(productId) not found (0 rows)")
             throw ProductServiceError.productNotFound(productId)
         }
         
         let product = dtoProduct.toDomainProduct()
-        print("[Vio:Commerce] loadProduct OK id=\(product.id) title=\(product.title)")
+        VioLogger.debug("loadProduct OK id=\(product.id) title=\(product.title)", component: "ProductService")
         return product
     }
     

@@ -284,11 +284,10 @@ public class ConfigurationLoader {
             
             VioConfiguration.setMarketAvailable(true)
         }
-        
-        // Reinitialize CampaignManager with new configuration
-        Task { @MainActor in
-            CampaignManager.shared.reinitialize()
-        }
+
+        // Campaign warm-up (`reinitialize` + `GET /v1/sdk/config`) is scheduled inside ``VioConfiguration.configure``
+        // as a single sequential MainActor task. Do **not** enqueue another `reinitialize()` here: it races that
+        // bootstrap and clears `sdkBootstrapInFlight`, producing duplicate `GET /v1/sdk/config`.
     }
     
     /// Check if market is available for the given country code

@@ -206,15 +206,15 @@
     "showSpecifications": "Boolean - true: show product specifications section, false: hide specifications"
   },
   "_e2e_physical_device": {
-    "_comment": "environment \"development\" → REST/WS desde devRestAPIBaseURL / devWsBaseURL (local). \"testing\"|\"sandbox\"|\"production\" → restAPIBaseURL / wsBaseURL (p. ej. api-dev). Simulador + API en el mismo Mac: 127.0.0.1:5001. Dispositivo físico o Tailscale: sustituye por la IP/host que alcance tu Mac (p. ej. 100.x en Tailscale)."
+    "_comment": "environment \"development\" → devRestAPIBaseURL / devWsBaseURL (túnel HTTPS/WSS p. ej. api-local-*.vio.live). Otros envs → restAPIBaseURL / wsBaseURL. Ver Documentation/DEVELOPMENT_NETWORKING.md."
   },
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "ws://100.84.32.36:5001",
-    "devRestAPIBaseURL": "http://100.84.32.36:5001",
+    "devWebSocketBaseURL": "wss://api-local-angelo.vio.live",
+    "devRestAPIBaseURL": "https://api-local-angelo.vio.live",
     "autoDiscover": true,
     "wsBaseURL": "wss://api-dev.vio.live",
-    "devWsBaseURL": "ws://100.84.32.36:5001"
+    "devWsBaseURL": "wss://api-local-angelo.vio.live"
   }
 }

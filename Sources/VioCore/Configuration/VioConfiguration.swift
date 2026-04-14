@@ -133,13 +133,10 @@ public class VioConfiguration: ObservableObject {
             AnalyticsManager.shared.configure(instance.analyticsConfiguration)
         }
         
-        // Initialize CampaignManager with new configuration
+        // Initialize CampaignManager and prime commerce bootstrap in **one** MainActor task so `reinitialize()` cannot
+        // interleave with an in-flight bootstrap and clear `sdkBootstrapInFlight` (duplicate GET /v1/sdk/config).
         Task { @MainActor in
             CampaignManager.shared.reinitialize()
-        }
-
-        // Prime commerce GraphQL credentials from GET /v1/sdk/config so ProductService is ready before cart_intent / overlays.
-        Task { @MainActor in
             await CampaignManager.shared.ensureCommerceBootstrapApplied()
         }
     }

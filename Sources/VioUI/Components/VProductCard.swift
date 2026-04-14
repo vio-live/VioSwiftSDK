@@ -392,13 +392,6 @@ public struct VProductCard: View {
                 )
                 .fontWeight(.semibold)
                 .foregroundColor(adaptiveColors.priceColor)
-                .onAppear {
-                    print("💰 [VProductCard] Showing product: \(product.title)")
-                    print("💰 [VProductCard] Price amount: \(product.price.amount)")
-                    print("💰 [VProductCard] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                    print("💰 [VProductCard] Display amount: \(product.price.displayAmount)")
-                    print("💰 [VProductCard] Currency: \(product.price.currency_code)")
-                }
             
             if let compareAtAmount = product.price.displayCompareAtAmount {
                 Text(compareAtAmount)

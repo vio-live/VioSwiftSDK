@@ -8,17 +8,7 @@
 		<true/>
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
-		<!-- Belt-and-suspenders: bare IPs (p. ej. Tailscale 100.x) a veces siguen chocando con ATS según target/SDK host. -->
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>100.84.32.36</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<true/>
-			</dict>
-		</dict>
+		<!-- Dev REST/WS: https://api-local-angelo.vio.live (túnel TLS). Excepción por IP (p. ej. Tailscale) ya no aplica; añade NSExceptionDomains aquí solo si un host dev usa HTTP o cert no estándar. -->
 	</dict>
 </dict>
 </plist>

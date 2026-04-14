@@ -30,8 +30,8 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     public var onConnectionStatusChanged: ((Bool) -> Void)?
     /// Called when backend triggers lineup display. Carries the video timestamp and optional broadcastId.
     public var onLineupShow: ((LineupShowEvent) -> Void)?
-    /// Called when backend sends a cart_intent event for this user.
-    public var onCartIntent: ((CartIntentEvent) -> Void)?
+    /// Called when backend sends a cart_intent event for this user (with WebSocket delivery metadata for logging).
+    public var onCartIntent: ((CartIntentEvent, CartIntentWebSocketDeliveryInfo) -> Void)?
     
     /// Optional user ID for WS identification and URL routing.
     /// When set, appended as `?userId=<uid>` to the WS URL and sent via `identify` message post-connect.
@@ -75,7 +75,6 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             return
         }
         
-        print("[Vio:WS] connecting campaignId=\(campaignId) url=\(urlString)")
         #if DEBUG
         VioLogger.debug("Connecting to: \(urlString) - Base URL: \(baseURL), Campaign ID: \(campaignId)", component: "CampaignWebSocket")
         #endif
@@ -255,8 +254,31 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             case "cart_intent":
                 let event = try CartIntentEvent.parse(jsonData: data)
                 VioLogger.debug("Decoded cart_intent event (productId: \(event.productId ?? "nil"), productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
-                onCartIntent?(event)
-                scheduleCartIntentNotification(for: event)
+                let localSummary = scheduleCartIntentNotification(for: event)
+                let rawPretty = VioLogJSONRedaction.prettyRedactedString(fromJSONText: text)
+                let preview = rawPretty
+                    .replacingOccurrences(of: "\n", with: " ")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let previewClamped = preview.count > 240 ? String(preview.prefix(240)) + "…" : preview
+                let delivery = CartIntentWebSocketDeliveryInfo(
+                    socketConnected: isConnected,
+                    campaignSocketId: campaignId,
+                    localNotificationSummary: localSummary,
+                    rawJSONRedactedPreview: previewClamped,
+                )
+                #if DEBUG
+                print(
+                    """
+                    [Vio:WS] cart_intent
+                      socketConnected=\(isConnected) campaignSocketId=\(campaignId)
+                      localNotification=\(localSummary)
+                      rawJSON (redacted):
+                    \(rawPretty)
+                      parsed: productId=\(event.productId ?? "nil") campaignId=\(event.campaignId.map(String.init) ?? "nil") name=\(event.productName ?? "nil") notifTitle=\(event.notificationTitle ?? "nil") notifBody=\(event.notificationBody ?? "nil")
+                    """,
+                )
+                #endif
+                onCartIntent?(event, delivery)
 
             case "ping":
                 // App-level heartbeat — respond immediately with pong
@@ -308,10 +330,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
         do {
             try await task.send(.string(text))
-            #if DEBUG
-            print("[Vio:WS] identify sent payload=\(text)")
-            #endif
-            VioLogger.debug("Sent identify for userId: \(userId)", component: "CampaignWebSocket")
+            VioLogger.debug("Sent identify for userId: \(userId) payload=\(text)", component: "CampaignWebSocket")
         } catch {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
             // Mark as disconnected so listenForMessages doesn't start on a dead socket
@@ -333,54 +352,38 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         #endif
     }
     
-    private func scheduleCartIntentNotification(for event: CartIntentEvent) {
+    /// Schedules an immediate local notification so foreground behavior matches APNs. Returns a short summary for logs (`skipped(...)` / `enqueued`).
+    @discardableResult
+    private func scheduleCartIntentNotification(for event: CartIntentEvent) -> String {
         if shouldSkipCartIntentLocalNotificationForForeground() {
             VioLogger.debug("cart_intent: skipping local notification — app is active (overlay)", component: "CampaignWebSocket")
-            return
+            return "skipped(foregroundAppActivePolicy)"
         }
-        
-        enum Defaults {
-            static let title = "Tienes un artículo esperando"
-            static let bodyNoProduct = "Un producto está listo para añadir al carrito"
-        }
-        
-        let content = UNMutableNotificationContent()
-        let tTrim = event.notificationTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        content.title = tTrim.isEmpty ? Defaults.title : tTrim
-        let bTrim = event.notificationBody?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !bTrim.isEmpty {
-            content.body = bTrim
-        } else if let name = event.productName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            content.body = name
-        } else {
-            content.body = Defaults.bodyNoProduct
-        }
-        content.sound = .default
-        var info: [String: Any] = [
-            VioNotificationUserInfoKeys.notificationVersion: 1,
-            VioNotificationUserInfoKeys.eventType: VioPushEventType.cartIntent.rawValue,
-            CartIntentNotificationKeys.kind: CartIntentNotificationKeys.kindValueCartIntent,
-        ]
-        if let pid = event.productId, !pid.isEmpty { info[CartIntentNotificationKeys.productId] = pid }
-        if let name = event.productName { info[CartIntentNotificationKeys.productName] = name }
-        if let cid = event.campaignId { info[CartIntentNotificationKeys.campaignId] = cid }
-        if !tTrim.isEmpty { info[CartIntentNotificationKeys.notificationTitle] = tTrim }
-        if !bTrim.isEmpty { info[CartIntentNotificationKeys.notificationBody] = bTrim }
-        content.userInfo = info
-        
+
+        let cm = CampaignManager.shared
+        let content = VioCartIntentLocalNotificationContentBuilder.makeContent(
+            for: event,
+            defaultTitle: cm.cartIntentLocalNotificationDefaultTitle,
+            defaultBodyWhenNoProductName: cm.cartIntentLocalNotificationDefaultBody,
+        )
+
         let request = UNNotificationRequest(
             identifier: "cart_intent_\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
-        
+
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 VioLogger.error("Failed to schedule cart_intent notification: \(error)", component: "CampaignWebSocket")
+                #if DEBUG
+                print("[Vio:WS] cart_intent localNotification enqueueError=\(error.localizedDescription)")
+                #endif
             } else {
                 VioLogger.success("cart_intent notification scheduled", component: "CampaignWebSocket")
             }
         }
+        return "enqueued"
     }
     
     // MARK: - Reconnection Logic
@@ -425,7 +428,6 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
                 VioLogger.debug("Ignoring didOpen for stale webSocketTask", component: "CampaignWebSocket")
                 return
             }
-            print("[Vio:WS] open campaignId=\(self.campaignId)")
             self.isConnected = true
             self.reconnectAttempts = 0
             self.onConnectionStatusChanged?(true)

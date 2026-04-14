@@ -10,6 +10,13 @@ import UserNotifications
 import VioCore
 import VioUI
 
+private enum TV2DemoConsole {
+    private static let tag = "\u{1F3AF} [TV2Demo]"
+    static func log(_ message: String) {
+        print("\(tag) \(message)")
+    }
+}
+
 @main
 struct tv2demoApp: App {
     @UIApplicationDelegateAdaptor(TV2AppDelegate.self) private var appDelegate
@@ -22,34 +29,29 @@ struct tv2demoApp: App {
     @StateObject private var checkoutDraft = CheckoutDraft()
     
     init() {
-        // Load Vio SDK configuration
-        // This reads the vio-config.json file with TV2 colors and theme
-        // Stripe is initialized automatically by the SDK
-        print("[TV2Demo] loading Vio configuration…")
         ConfigurationLoader.loadConfiguration()
-        
+
         let cfg = VioConfiguration.shared
-        
-        print("[TV2Demo] Vio configured env=\(cfg.environment.rawValue) theme=\(cfg.theme.name)")
         #if DEBUG
-        print("[TV2Demo] GraphQL=\(cfg.environment.graphQLURL)")
-        print("[TV2Demo] REST=\(cfg.campaignConfiguration.restAPIBaseURL)")
-        print("[TV2Demo] WebSocket=\(cfg.wsBaseURL)")
-        print("[TV2Demo] autoDiscover=\(cfg.campaignConfiguration.autoDiscover)")
-        print("[TV2Demo] apiKey prefix=\(cfg.apiKey.prefix(10))…")
-        let rest = cfg.campaignConfiguration.restAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let ws = cfg.wsBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        print("[TV2Demo] zero-config reference:")
-        print("    GET \(rest)/v1/sdk/campaigns?apiKey=…")
-        print("    GET \(rest)/v1/sdk/config?apiKey=…")
-        print("    WS \(ws)/ws/<campaignId>?userId=<uid>")
-        print("    POST \(rest)/api/campaigns/<id>/register-device")
+        let rest = cfg.campaignConfiguration.restAPIBaseURL
+        let ws = cfg.wsBaseURL
+        let keyHint = cfg.apiKey.count >= 10 ? "\(cfg.apiKey.prefix(10))…" : "(short)"
+        TV2DemoConsole.log(
+            "SDK ready env=\(cfg.environment.rawValue) theme=\(cfg.theme.name) autoDiscover=\(cfg.campaignConfiguration.autoDiscover) | REST \(rest) WS \(ws) apiKey \(keyHint)",
+        )
+        #else
+        TV2DemoConsole.log(
+            "SDK ready env=\(cfg.environment.rawValue) theme=\(cfg.theme.name) autoDiscover=\(cfg.campaignConfiguration.autoDiscover)",
+        )
         #endif
-        
-        // Set demo userId for WS identify — backend uses this to route cart_intent events
-        // In production replace with real user identity (e.g. JWT sub claim)
+
         CampaignManager.shared.userId = "tv2_demo_user"
-        print("[TV2Demo] userId=tv2_demo_user")
+
+        CampaignManager.shared.onCartIntentFromWebSocket = { event, delivery in
+            TV2DemoCartIntentLogging.logSocketCartIntent(event, delivery: delivery)
+        }
+
+        CampaignManager.shared.showsCartIntentLocalNotificationWhenAppIsActive = false
 
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
     }

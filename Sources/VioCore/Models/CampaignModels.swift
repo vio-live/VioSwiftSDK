@@ -1108,7 +1108,9 @@ public struct CartIntentEvent: Equatable {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
             let notifTitle = stringFromAny(top[CartIntentNotificationKeys.notificationTitle])
+                ?? stringFromAny(payload["notification_title"] ?? payload["notificationTitle"])
             let notifBody = stringFromAny(top[CartIntentNotificationKeys.notificationBody])
+                ?? stringFromAny(payload["notification_body"] ?? payload["notificationBody"])
             return CartIntentEvent(
                 type: evt.isEmpty ? VioPushEventType.cartIntent.rawValue : evt,
                 productName: name,
@@ -1220,8 +1222,9 @@ public enum CartIntentNotificationKeys {
     public static let productId = "vio_cartIntent_productId"
     public static let productName = "vio_cartIntent_productName"
     public static let campaignId = "vio_cartIntent_campaignId"
-    /// Optional; aligns WebSocket → local notification with partner `aps.alert` copy.
+    /// Optional title for WebSocket → local notification and for merging with partner `aps.alert.title` on push. If empty, the SDK uses ``VioCartIntentLocalNotificationCopy/defaultTitle`` or ``CampaignManager/cartIntentLocalNotificationDefaultTitle``.
     public static let notificationTitle = "vio_cartIntent_notificationTitle"
+    /// Optional body (same sources as ``notificationTitle``). If empty, product name or ``VioCartIntentLocalNotificationCopy/defaultBodyWithoutProductName`` / ``CampaignManager/cartIntentLocalNotificationDefaultBody``.
     public static let notificationBody = "vio_cartIntent_notificationBody"
     public static let kindValueCartIntent = "cart_intent"
 }

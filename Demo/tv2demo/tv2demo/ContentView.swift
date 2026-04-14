@@ -9,10 +9,20 @@ import SwiftUI
 import VioUI
 import VioCore
 
+/// Same console shape as VioUI overlays: bullseye + bracket tag + message.
+private enum TV2DemoConsole {
+    private static let tag = "\u{1F3AF} [TV2Demo]"
+    static func log(_ message: String) {
+        print("\(tag) \(message)")
+    }
+}
+
 struct ContentView: View {
     @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var castingManager = CastingManager.shared
     @State private var showCastingView = false
+    @State private var didLogWebSocketConnected = false
+    @State private var didLogWebSocketTimeout = false
     @EnvironmentObject var cartManager: CartManager
 
     var body: some View {
@@ -20,11 +30,22 @@ struct ContentView: View {
             // Main app content
             HomeView()
                 .onAppear {
-                    // 🎯 SDK: discover active campaigns → WS connect → identify → ready for cart_intent
                     Task {
+                        TV2DemoConsole.log("Discovering campaigns…")
                         await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
+                        let n = campaignManager.activeCampaigns.count
+                        TV2DemoConsole.log("Discovery complete: campaigns=\(n) (WebSocket finishes connecting shortly after)")
                         #if DEBUG
-                        print("[TV2Demo] ContentView discovery done campaigns=\(CampaignManager.shared.activeCampaigns.count) wsConnected=\(CampaignManager.shared.isConnected)")
+                        Task {
+                            try? await Task.sleep(nanoseconds: 10_000_000_000)
+                            await MainActor.run {
+                                guard !didLogWebSocketConnected, !didLogWebSocketTimeout else { return }
+                                didLogWebSocketTimeout = true
+                                if !campaignManager.isConnected {
+                                    TV2DemoConsole.log("WebSocket not connected after 10s timeout")
+                                }
+                            }
+                        }
                         #endif
                     }
                 }
@@ -53,6 +74,7 @@ struct ContentView: View {
                let productId = event.productId, !productId.isEmpty {
                 CartIntentProductDetailHost(
                     productId: productId,
+                    campaignId: event.campaignId,
                     onDismissIntent: { campaignManager.dismissCartIntent() }
                 )
                 .zIndex(1000)
@@ -69,6 +91,11 @@ struct ContentView: View {
                 showCastingView = false
             }
         }
+        .onChange(of: campaignManager.isConnected) { _, connected in
+            guard connected, !didLogWebSocketConnected else { return }
+            didLogWebSocketConnected = true
+            TV2DemoConsole.log("WebSocket connected")
+        }
     }
 }
 
@@ -76,11 +103,18 @@ struct ContentView: View {
 
 private struct CartIntentProductDetailHost: View {
     let productId: String
+    let campaignId: Int?
     let onDismissIntent: () -> Void
 
     @EnvironmentObject private var cartManager: CartManager
     @State private var loadedProduct: Product?
     @State private var isLoading = false
+
+    /// Stable id for `.task` so same product in a different campaign reloads; identical to ``CampaignManager`` presentation key (productId + campaignId).
+    private var cartIntentLoadTaskId: String {
+        let c = campaignId.map(String.init) ?? ""
+        return "\(productId)|\(c)"
+    }
 
     var body: some View {
         ZStack {
@@ -98,7 +132,7 @@ private struct CartIntentProductDetailHost: View {
                     .tint(.white)
             }
         }
-        .task(id: productId) {
+        .task(id: cartIntentLoadTaskId) {
             await loadProduct()
         }
         .sheet(item: $loadedProduct, onDismiss: {
@@ -122,7 +156,7 @@ private struct CartIntentProductDetailHost: View {
 
         await CampaignManager.shared.ensureCommerceBootstrapApplied()
 
-        print("[TV2Demo] cart_intent overlay loadProduct id=\(productId)")
+        TV2DemoConsole.log("cart_intent overlay loadProduct id=\(productId)")
 
         do {
             let product = try await ProductService.shared.loadProduct(
@@ -135,9 +169,9 @@ private struct CartIntentProductDetailHost: View {
             // Task cancelled (e.g. view identity churn) — do not clear cart intent.
         } catch {
             if let sdk = error as? SdkException {
-                print("[TV2Demo] cart_intent loadProduct failed: \(sdk.description)")
+                TV2DemoConsole.log("cart_intent loadProduct failed: \(sdk.description)")
             } else {
-                print("[TV2Demo] cart_intent loadProduct failed: \(String(describing: error))")
+                TV2DemoConsole.log("cart_intent loadProduct failed: \(String(describing: error))")
             }
             onDismissIntent()
         }

@@ -410,7 +410,7 @@
 				DEVELOPMENT_TEAM = U4R2B2U7E6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TV2Demo-ATS-Info.plist;
+				INFOPLIST_FILE = "TV2Demo-ATS-Info.plist";
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses camera access for live streaming and interactive features provided by the Vio SDK.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses microphone access for live streaming and interactive features provided by the Vio SDK.";
@@ -447,7 +447,7 @@
 				DEVELOPMENT_TEAM = U4R2B2U7E6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TV2Demo-ATS-Info.plist;
+				INFOPLIST_FILE = "TV2Demo-ATS-Info.plist";
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses camera access for live streaming and interactive features provided by the Vio SDK.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app uses microphone access for live streaming and interactive features provided by the Vio SDK.";

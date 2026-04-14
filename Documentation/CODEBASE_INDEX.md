@@ -1,6 +1,6 @@
 # VioSwiftSDK — Índice del codebase
 
-**Documentación de flujo, red y convenciones:** [VIO_SWIFT_SDK.md](VIO_SWIFT_SDK.md)
+**Documentación de flujo, red y convenciones:** [VIO_SWIFT_SDK.md](VIO_SWIFT_SDK.md) · **Red en desarrollo (simulador, iPhone, Tailscale, túneles):** [DEVELOPMENT_NETWORKING.md](DEVELOPMENT_NETWORKING.md)
 
 > Mapa para agentes y humanos. Verificado con `Package.swift` y árbol `Sources/`.
 
@@ -34,6 +34,7 @@ Definidos en [`Package.swift`](../Package.swift):
 | Componentes / offer banner WS (Replit hardcode) | `Sources/VioCore/Models/OfferBannerModels.swift` (`ComponentManager`) |
 | Sesión por broadcast | `Sources/VioCore/Managers/VioSessionContext.swift` |
 | Productos GraphQL | `Sources/VioUI/Services/ProductService.swift` |
+| Red dev / dispositivo físico / bootstrap | [DEVELOPMENT_NETWORKING.md](DEVELOPMENT_NETWORKING.md), `ConfigurationLoader` (`devRestAPIBaseURL`), `CampaignManager` (`/v1/sdk/config`) |
 | Casting + validación en player | `Sources/VioCastingUI/Components/Video/VCastingVideoPlayer.swift` |
 | Demos | `Demo/` (cada app con su `vio-config.json`) |
 
