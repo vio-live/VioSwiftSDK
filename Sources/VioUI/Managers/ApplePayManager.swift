@@ -44,6 +44,25 @@ public final class ApplePayManager: NSObject, ObservableObject {
     private var pendingPublishableKey: String?
     private var pendingCartManager: CartManager?
 
+    /// Shown when the cart never got a server id (e.g. offline, SDK disabled, or `addProduct` fell back to local-only).
+    private static let cartNotSyncedUserMessage =
+        "Cannot start Apple Pay: cart could not be synced with the server. Check your connection and try again."
+
+    /// Ensures `createCart` ran and `cartId` / `currentCartId` exist before we mutate the cart for payment.
+    private func prepareServerCart(cartManager: CartManager) async -> Bool {
+        cartManager.syncSdkCredentials()
+        guard VioConfiguration.shared.shouldUseSDK else {
+            VioLogger.error("Apple Pay: shouldUseSDK is false — no server cart", component: "ApplePayManager")
+            return false
+        }
+        await cartManager.ensureCartIDForCheckout()
+        if let id = cartManager.cartId, !id.isEmpty { return true }
+        await cartManager.createCart(currency: cartManager.currency, country: cartManager.country)
+        if let id = cartManager.cartId, !id.isEmpty { return true }
+        if let id = cartManager.currentCartId, !id.isEmpty { return true }
+        return false
+    }
+
     public func pay(
         product: Product? = nil,
         variant: Variant? = nil,
@@ -55,87 +74,163 @@ public final class ApplePayManager: NSObject, ObservableObject {
         self.isProcessing = true
         self.paymentResult = nil
         self.pendingCartManager = cartManager
+        merchantIdentifier = "merchant.live.vio"
+        cartManager.syncSdkCredentials()
 
-        var resolvedId = checkoutId
-        
-        // 1. Ensure Cart exists
-        if cartManager.cartId == nil {
-            VioLogger.debug("Apple Pay: No Cart ID, ensuring cart...", component: "ApplePayManager")
-            await cartManager.ensureCartIDForCheckout()
+        var resolvedId: String? = {
+            guard let raw = checkoutId else { return nil }
+            let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? nil : t
+        }()
+
+        // 1. Server-backed cart must exist before add/checkout. Otherwise `addProduct` can use
+        // `addProductLocally` and we would show Apple Pay totals that never match the backend.
+        let serverCartReady = await prepareServerCart(cartManager: cartManager)
+        if !serverCartReady {
+            paymentResult = .failure(Self.cartNotSyncedUserMessage)
+            isProcessing = false
+            return
         }
-        
+
         // 2. Add product to cart if provided (Direct Buy Flow)
         if let p = product {
             VioLogger.debug("Apple Pay: Direct Buy - Adding product \(p.title) to cart...", component: "ApplePayManager")
             await cartManager.addProduct(p, variant: variant, quantity: 1)
+            if let err = cartManager.errorMessage, !err.isEmpty {
+                VioLogger.error("Apple Pay: cart error after addProduct: \(err)", component: "ApplePayManager")
+                paymentResult = .failure(Self.cartNotSyncedUserMessage)
+                isProcessing = false
+                return
+            }
         }
-        
-        // 3. Create Checkout from Cart (The ID we need for Payment mutations)
-        if let cartId = cartManager.cartId {
+
+        // 3. Create Checkout from Cart (payment mutations require checkout id, not cart id)
+
+        guard let cartId = cartManager.cartId, !cartId.isEmpty else {
+            VioLogger.error("Apple Pay: no cart id after setup (likely local-only cart)", component: "ApplePayManager")
+            paymentResult = .failure(Self.cartNotSyncedUserMessage)
+            isProcessing = false
+            return
+        }
+
+        if resolvedId == nil {
             VioLogger.debug("Apple Pay: Creating checkout from cart \(cartId)...", component: "ApplePayManager")
             do {
                 let checkoutDto = try await cartManager.sdk.checkout.create(cart_id: cartId)
-                resolvedId = checkoutDto.id
+                let trimmedCheckout = checkoutDto.id.trimmingCharacters(in: .whitespacesAndNewlines)
+                resolvedId = trimmedCheckout.isEmpty ? nil : trimmedCheckout
+                cartManager.checkoutId = resolvedId
                 VioLogger.debug("Apple Pay: Checkout created: \(resolvedId ?? "nil")", component: "ApplePayManager")
             } catch {
                 VioLogger.error("Apple Pay: Failed to create checkout: \(error.localizedDescription)", component: "ApplePayManager")
-                // Fallback to cartId if checkout creation fails (some backends use them interchangeably)
-                resolvedId = resolvedId ?? cartId
+                paymentResult = .failure("Could not start checkout. \(error.localizedDescription)")
+                isProcessing = false
+                return
             }
         }
 
-        self.pendingCheckoutId = resolvedId
-        VioLogger.debug("Apple Pay start — resolved ID: \(resolvedId ?? "demo-mode")", component: "ApplePayManager")
+        guard let cid = resolvedId, !cid.isEmpty else {
+            VioLogger.error("Apple Pay: missing checkout id after create", component: "ApplePayManager")
+            paymentResult = .failure("Checkout is not ready. Try again.")
+            isProcessing = false
+            return
+        }
 
-        // 4. Fetch Stripe intent and applePayInit
-        if let cid = resolvedId {
-            let intent = try? await cartManager.sdk.payment.stripeIntent(checkoutId: cid, returnEphemeralKey: false)
-            self.pendingPublishableKey = intent?.publishableKey
-            if let pubKey = intent?.publishableKey {
-                STPAPIClient.shared.publishableKey = pubKey
+        self.pendingCheckoutId = cid
+        VioLogger.debug("Apple Pay start — checkoutId=\(cid)", component: "ApplePayManager")
+
+        // 4. Stripe PaymentIntent publishable key (required for STPAPIClient tokenization in test/live)
+        do {
+            print(
+                "🍏 [ApplePayManager] StripeIntent START checkoutId=\(cid) graphQL=\(VioConfiguration.shared.resolvedCommerceGraphQLURL)"
+            )
+            let intent = try await cartManager.sdk.payment.stripeIntent(checkoutId: cid, returnEphemeralKey: false)
+            let pubKey = intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            pendingPublishableKey = pubKey.isEmpty ? nil : pubKey
+            guard !pubKey.isEmpty else {
+                VioLogger.error("Apple Pay: stripeIntent returned no publishableKey", component: "ApplePayManager")
+                paymentResult = .failure("Payment setup incomplete (no Stripe key).")
+                isProcessing = false
+                return
             }
-            
-            do {
-                let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: cid)
-                VioLogger.debug(
-                    "Apple Pay init OK — gateway=\(initDto.gateway)",
-                    component: "ApplePayManager")
-            } catch {
-                VioLogger.warning(
-                    "Apple Pay init failed: \(error.localizedDescription)",
-                    component: "ApplePayManager")
+            STPAPIClient.shared.publishableKey = pubKey
+        } catch let sdkError as SdkException {
+            print(
+                "🍏 [ApplePayManager] StripeIntent FAIL code=\(sdkError.code ?? "nil") status=\(sdkError.status.map(String.init) ?? "nil") message=\(sdkError.message) details=\(sdkError.details ?? [:])"
+            )
+            VioLogger.error(
+                "Apple Pay: stripeIntent failed code=\(sdkError.code ?? "nil") status=\(sdkError.status.map(String.init) ?? "nil") details=\(sdkError.details ?? [:])",
+                component: "ApplePayManager")
+            paymentResult = .failure("Could not prepare payment: \(sdkError.message)")
+            isProcessing = false
+            return
+        } catch {
+            print("🍏 [ApplePayManager] StripeIntent FAIL non-sdk error=\(String(describing: error))")
+            VioLogger.error("Apple Pay: stripeIntent failed: \(error.localizedDescription)", component: "ApplePayManager")
+            paymentResult = .failure("Could not prepare payment: \(error.localizedDescription)")
+            isProcessing = false
+            return
+        }
+
+        // 5. Apple Pay on backend: merchant id must match PassKit / Stripe Apple Pay config
+        do {
+            print("🍏 [ApplePayManager] ApplePayInit START checkoutId=\(cid)")
+            let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: cid)
+            let mid = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !mid.isEmpty {
+                merchantIdentifier = mid
             }
+            VioLogger.debug(
+                "Apple Pay init OK — gateway=\(initDto.gateway) merchantId=\(merchantIdentifier)",
+                component: "ApplePayManager")
+        } catch let sdkError as SdkException {
+            print(
+                "🍏 [ApplePayManager] ApplePayInit FAIL code=\(sdkError.code ?? "nil") status=\(sdkError.status.map(String.init) ?? "nil") message=\(sdkError.message) details=\(sdkError.details ?? [:])"
+            )
+            VioLogger.warning(
+                "Apple Pay init failed code=\(sdkError.code ?? "nil") status=\(sdkError.status.map(String.init) ?? "nil") details=\(sdkError.details ?? [:])",
+                component: "ApplePayManager")
+        } catch {
+            print("🍏 [ApplePayManager] ApplePayInit FAIL non-sdk error=\(String(describing: error))")
+            VioLogger.warning(
+                "Apple Pay init failed (using default merchant): \(error.localizedDescription)",
+                component: "ApplePayManager")
         }
 
         let request = PKPaymentRequest()
         request.merchantIdentifier = merchantIdentifier
         request.supportedNetworks = supportedNetworks
         request.merchantCapabilities = [.capability3DS, .capabilityCredit, .capabilityDebit]
-        request.countryCode = cartManager.country
-        request.currencyCode = cartManager.currency
-        
-        
+        request.countryCode = Self.normalizedRegionCode(from: cartManager.country)
+        request.currencyCode = Self.normalizedCurrencyCode(from: cartManager.currency)
+
         // Shipping/Billing requirements
         request.requiredShippingContactFields = [.postalAddress, .name, .emailAddress]
-        request.requiredBillingContactFields = [.postalAddress, .name]        
-        // Set payment summary items
+        request.requiredBillingContactFields = [.postalAddress, .name]
+        // Set payment summary items (last line must be total; use .final for the charged total)
         var summaryItems: [PKPaymentSummaryItem] = []
         let merchantName = VioConfiguration.shared.brandConfiguration.name
         if cartManager.items.isEmpty, let name = productName, let amt = amount {
-            // Standalone product payment
-            let price = NSDecimalNumber(value: amt)
-            summaryItems.append(PKPaymentSummaryItem(label: name, amount: price))
-            summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: price))
+            let price = Self.roundedDecimal(amount: amt)
+            summaryItems.append(PKPaymentSummaryItem(label: Self.summaryLineLabel(from: name), amount: price))
+            summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: price, type: .final))
         } else {
-            // Cart-based payment
             for item in cartManager.items {
-                let itemAmt = NSDecimalNumber(value: item.price * Double(item.quantity))
-                summaryItems.append(PKPaymentSummaryItem(label: item.title, amount: itemAmt))
+                let itemAmt = Self.roundedDecimal(amount: item.price * Double(item.quantity))
+                summaryItems.append(PKPaymentSummaryItem(label: Self.summaryLineLabel(from: item.title), amount: itemAmt))
             }
             if cartManager.shippingTotal > 0 {
-                summaryItems.append(PKPaymentSummaryItem(label: "Shipping", amount: NSDecimalNumber(value: cartManager.shippingTotal)))
+                summaryItems.append(
+                    PKPaymentSummaryItem(
+                        label: "Shipping",
+                        amount: Self.roundedDecimal(amount: cartManager.shippingTotal)))
             }
-            summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: NSDecimalNumber(value: cartManager.cartTotal + cartManager.shippingTotal)))
+            let grand = cartManager.cartTotal + cartManager.shippingTotal
+            summaryItems.append(
+                PKPaymentSummaryItem(
+                    label: merchantName,
+                    amount: Self.roundedDecimal(amount: grand),
+                    type: .final))
         }
         request.paymentSummaryItems = summaryItems
 
@@ -149,13 +244,58 @@ public final class ApplePayManager: NSObject, ObservableObject {
         }
     }
 
+    /// ISO 3166-1 alpha-2 for `PKPaymentRequest.countryCode`.
+    private static func normalizedRegionCode(from raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if t.count == 2, t.allSatisfy({ $0.isLetter }) { return t }
+        let fb = VioConfiguration.shared.marketConfiguration.countryCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        if fb.count == 2, fb.allSatisfy({ $0.isLetter }) { return fb }
+        return "US"
+    }
+
+    /// ISO 4217 for `PKPaymentRequest.currencyCode`.
+    private static func normalizedCurrencyCode(from raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if t.count == 3, t.allSatisfy({ $0.isLetter }) { return t }
+        let fb = VioConfiguration.shared.marketConfiguration.currencyCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        if fb.count == 3, fb.allSatisfy({ $0.isLetter }) { return fb }
+        return "USD"
+    }
+
+    private static func summaryLineLabel(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let max = 64
+        guard trimmed.count > max else { return trimmed.isEmpty ? "Order" : trimmed }
+        let idx = trimmed.index(trimmed.startIndex, offsetBy: max - 1)
+        return String(trimmed[..<idx]) + "…"
+    }
+
+    private static func roundedDecimal(amount: Double) -> NSDecimalNumber {
+        let behavior = NSDecimalNumberHandler(
+            roundingMode: .plain,
+            scale: 2,
+            raiseOnExactness: false,
+            raiseOnOverflow: false,
+            raiseOnUnderflow: false,
+            raiseOnDivideByZero: false)
+        return NSDecimalNumber(value: amount).rounding(accordingToBehavior: behavior)
+    }
+
+    private static func normalizedPaymentStatus(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
     /// Internal helper to tokenize and confirm with backend
     private func tokenizeAndConfirm(payment: PKPayment, cartManager: CartManager) async -> Bool {
         var checkoutId = pendingCheckoutId
         
-        // Final fallback if pendingCheckoutId was missed
+        // Final fallback: only real checkout id (never cart id — confirm expects checkout)
         if checkoutId == nil {
-            checkoutId = cartManager.checkoutId ?? cartManager.cartId
+            checkoutId = cartManager.checkoutId
         }
 
         guard let finalId = checkoutId else {
@@ -203,14 +343,37 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // 3. Confirm with backend
         do {
             cartManager.syncSdkCredentials()
+            let shippingKeys = shippingAddressInput.map { addr in
+                [
+                    ("firstName", addr.firstName),
+                    ("lastName", addr.lastName),
+                    ("address1", addr.address1),
+                    ("address2", addr.address2),
+                    ("city", addr.city),
+                    ("province", addr.province),
+                    ("zip", addr.zip),
+                    ("country", addr.country),
+                    ("countryCode", addr.countryCode),
+                ]
+                .compactMap { $0.1 == nil ? nil : $0.0 }
+                .sorted()
+            } ?? []
+            let hasEmail = (capturedContact?.emailAddress?.isEmpty == false)
+            VioLogger.debug(
+                "ApplePayConfirm PREP checkoutId=\(finalId) tokenPrefix=\(String(stripeToken.prefix(12))) tokenLength=\(stripeToken.count) tokenIsStripeTok=\(stripeToken.hasPrefix("tok_")) emailPresent=\(hasEmail) shippingPresent=\(shippingAddressInput != nil) shippingKeys=\(shippingKeys)",
+                component: "ApplePayManager")
             let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
                 checkoutId: finalId,
                 applePayToken: stripeToken,
                 email: capturedContact?.emailAddress,
                 shippingAddress: shippingAddressInput
             )
-            
-            if confirmDto.status == "SUCCESS" {
+
+            let normalizedStatus = Self.normalizedPaymentStatus(confirmDto.status)
+            VioLogger.debug(
+                "ApplePayConfirm RESULT statusRaw=\(confirmDto.status) statusNormalized=\(normalizedStatus) orderId=\(confirmDto.orderId ?? "nil")",
+                component: "ApplePayManager")
+            if normalizedStatus == "SUCCESS" {
                 paymentResult = .success
                 return true
             } else {
@@ -228,24 +391,24 @@ public final class ApplePayManager: NSObject, ObservableObject {
     private func buildSummaryItems(cartManager: CartManager) -> [PKPaymentSummaryItem] {
         var summaryItems: [PKPaymentSummaryItem] = []
         let merchantName = VioConfiguration.shared.brandConfiguration.name
-        
-        // Add items
+
         for item in cartManager.items {
-            let label = "\(item.quantity)x \(item.title)"
-            let amount = NSDecimalNumber(value: item.price * Double(item.quantity))
+            let label = Self.summaryLineLabel(from: "\(item.quantity)x \(item.title)")
+            let amount = Self.roundedDecimal(amount: item.price * Double(item.quantity))
             summaryItems.append(PKPaymentSummaryItem(label: label, amount: amount))
         }
-        
-        // Add shipping if selected
+
         let shippingTotal = cartManager.shippingTotal
         if shippingTotal > 0 {
-            summaryItems.append(PKPaymentSummaryItem(label: "Shipping", amount: NSDecimalNumber(value: shippingTotal)))
+            summaryItems.append(
+                PKPaymentSummaryItem(
+                    label: "Shipping",
+                    amount: Self.roundedDecimal(amount: shippingTotal)))
         }
-        
-        // Add grand total
-        let total = NSDecimalNumber(value: cartManager.cartTotal + shippingTotal)
+
+        let total = Self.roundedDecimal(amount: cartManager.cartTotal + shippingTotal)
         summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: total, type: .final))
-        
+
         return summaryItems
     }
 }

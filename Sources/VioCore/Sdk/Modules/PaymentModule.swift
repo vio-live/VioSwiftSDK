@@ -29,6 +29,14 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             "checkoutId": checkoutId,
             "returnEphemeralKey": returnEphemeralKey,
         ]
+        let sanitizedVars: [String: Any] = [
+            "checkoutId": checkoutId,
+            "returnEphemeralKey": returnEphemeralKey as Any,
+        ]
+        print("💳 [PaymentModule] StripeIntent REQUEST vars=\(sanitizedVars)")
+        VioLogger.warning(
+            "StripeIntent REQUEST vars=\(sanitizedVars)",
+            component: "PaymentRepositoryGQL")
 
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.STRIPE_INTENT_PAYMENT_MUTATION,
@@ -38,9 +46,14 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             let obj: [String: Any] = GraphQLPick.pickPath(
                 res.data, path: ["Payment", "CreatePaymentIntentStripe"])
         else {
+            print("💳 [PaymentModule] StripeIntent RESPONSE path missing data.Payment.CreatePaymentIntentStripe")
             throw SdkException("Empty response in Payment.stripeIntent", code: "EMPTY_RESPONSE")
         }
-        return try GraphQLPick.decodeJSON(obj, as: PaymentIntentStripeDto.self)
+        let dto = try GraphQLPick.decodeJSON(obj, as: PaymentIntentStripeDto.self)
+        let pubKeyPrefix = String(dto.publishableKey.prefix(12))
+        print(
+            "💳 [PaymentModule] StripeIntent RESPONSE publishableKeyPrefix=\(pubKeyPrefix) customer=\(dto.customer)")
+        return dto
     }
 
     public func stripeLink(
@@ -285,6 +298,7 @@ public final class PaymentRepositoryGQL: PaymentRepository {
 
     public func applePayInit(checkoutId: String) async throws -> InitPaymentApplePayDto {
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
+        print("💳 [PaymentModule] ApplePayInit REQUEST checkoutId=\(checkoutId)")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_INIT_MUTATION,
             variables: ["checkoutId": checkoutId]
@@ -293,9 +307,12 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             let obj: [String: Any] = GraphQLPick.pickPath(
                 res.data, path: ["Payment", "CreatePaymentApplePay"])
         else {
+            print("💳 [PaymentModule] ApplePayInit RESPONSE path missing data.Payment.CreatePaymentApplePay")
             throw SdkException("Empty response in Payment.applePayInit", code: "EMPTY_RESPONSE")
         }
-        return try GraphQLPick.decodeJSON(obj, as: InitPaymentApplePayDto.self)
+        let dto = try GraphQLPick.decodeJSON(obj, as: InitPaymentApplePayDto.self)
+        print("💳 [PaymentModule] ApplePayInit RESPONSE gateway=\(dto.gateway) merchantId=\(dto.gatewayMerchantId)")
+        return dto
     }
 
     public func applePayConfirm(
@@ -316,6 +333,11 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         if let shipping = shippingAddress {
             vars["shippingAddress"] = try encodeToDictionary(shipping)
         }
+        let sanitized = sanitizeApplePayConfirmVariables(vars)
+        print("💳 [PaymentModule] ApplePayConfirm REQUEST vars=\(sanitized)")
+        VioLogger.debug(
+            "ApplePayConfirm REQUEST vars=\(sanitized)",
+            component: "PaymentRepositoryGQL")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_CONFIRM_MUTATION,
             variables: vars.compactMapValues { $0 }
@@ -324,9 +346,21 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             let obj: [String: Any] = GraphQLPick.pickPath(
                 res.data, path: ["Payment", "ConfirmPaymentApplePay"])
         else {
+            VioLogger.error(
+                "ApplePayConfirm RESPONSE path missing data.Payment.ConfirmPaymentApplePay",
+                component: "PaymentRepositoryGQL")
             throw SdkException("Empty response in Payment.applePayConfirm", code: "EMPTY_RESPONSE")
         }
-        return try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
+        VioLogger.debug(
+            "ApplePayConfirm RESPONSE pathOK keys=\(Array(obj.keys).sorted())",
+            component: "PaymentRepositoryGQL")
+        print("💳 [PaymentModule] ApplePayConfirm RESPONSE keys=\(Array(obj.keys).sorted())")
+        let dto = try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
+        VioLogger.debug(
+            "ApplePayConfirm RESPONSE decoded status=\(dto.status) orderId=\(dto.orderId ?? "nil")",
+            component: "PaymentRepositoryGQL")
+        print("💳 [PaymentModule] ApplePayConfirm RESPONSE status=\(dto.status) orderId=\(dto.orderId ?? "nil")")
+        return dto
     }
 
     private func encodeToDictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
@@ -338,5 +372,30 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             throw SdkException("Failed to encode input as dictionary", code: "ENCODING_ERROR")
         }
         return dict
+    }
+
+    private func sanitizeApplePayConfirmVariables(_ vars: [String: Any?]) -> [String: Any] {
+        var out: [String: Any] = [:]
+        if let checkoutId = vars["checkoutId"] as? String {
+            out["checkoutId"] = checkoutId
+        }
+        if let token = vars["applePayToken"] as? String {
+            out["applePayTokenPrefix"] = String(token.prefix(12))
+            out["applePayTokenLength"] = token.count
+            out["applePayTokenLooksLikeStripeTok"] = token.hasPrefix("tok_")
+        }
+        if let email = vars["email"] as? String, !email.isEmpty {
+            out["emailPresent"] = true
+            out["emailDomain"] = email.split(separator: "@").last.map(String.init) ?? "unknown"
+        } else {
+            out["emailPresent"] = false
+        }
+        if let shipping = vars["shippingAddress"] as? [String: Any] {
+            out["shippingPresent"] = true
+            out["shippingKeys"] = Array(shipping.keys).sorted()
+        } else {
+            out["shippingPresent"] = false
+        }
+        return out
     }
 }

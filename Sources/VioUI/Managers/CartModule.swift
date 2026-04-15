@@ -162,7 +162,7 @@ extension CartManager {
         
         currentCartId = cart.cartId
         self.cartId = cart.cartId
-        self.checkoutId = cart.cartId // Use cartId as checkoutId fallback
+        // Do not assign checkoutId here: it must come from Checkout.create, not the cart id.
         currency = cart.currency
         country = cart.shippingCountry ?? country
 
