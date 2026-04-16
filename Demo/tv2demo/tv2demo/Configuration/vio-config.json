@@ -2,7 +2,7 @@
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
   "apiKey": "tv2_api_key_91b4fbf634af4bc5",
-  "environment": "development",
+  "environment": "testing",
   "theme": {
     "name": "TV2 Dark Theme",
     "mode": "dark",

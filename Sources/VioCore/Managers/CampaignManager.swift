@@ -46,6 +46,7 @@ public class CampaignManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var baseURL: String  // For REST API (GraphQL base URL)
     private var isInitializing = false  // Flag to prevent multiple simultaneous initializations
+    private var campaignRestBaseOverride: String?
     private var commerceBootstrapTask: Task<Void, Never>?
     private var commerceBootstrapTaskApiKey: String?
     private var discoverCampaignsTask: Task<Void, Never>?
@@ -60,7 +61,7 @@ public class CampaignManager: ObservableObject {
     }
     
     private var campaignRestAPIBaseURL: String {
-        VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
+        campaignRestBaseOverride ?? VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
     }
     
     // MARK: - Initialization
@@ -126,6 +127,7 @@ public class CampaignManager: ObservableObject {
         VioLogger.debug("Reinitializing", component: "CampaignManager")
         disconnect()
         pendingApnsDeviceTokenHex = nil
+        campaignRestBaseOverride = nil
         commerceBootstrapTask?.cancel()
         commerceBootstrapTask = nil
         commerceBootstrapTaskApiKey = nil
@@ -671,7 +673,7 @@ public class CampaignManager: ObservableObject {
         }
     }
 
-    private func fetchAndApplySdkBootstrapNow(usingSdkApiKey apiKey: String) async {
+    private func fetchAndApplySdkBootstrapNow(usingSdkApiKey apiKey: String, allowRestFallback: Bool = true) async {
         guard !apiKey.isEmpty else {
             VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
             return
@@ -749,6 +751,11 @@ public class CampaignManager: ObservableObject {
             let src = cfg.sdkBootstrapCommerceApiKey != nil ? "bootstrap(/v1/sdk/config)" : "fallback(apiKey campaña)"
             print("🎯 [CampaignManager] sdk/bootstrap    → commerce listo: fuente=\(src) GraphQL=\(cfg.resolvedCommerceGraphQLURL) authKey len=\(cfg.resolvedCommerceApiKey.count) (sin imprimir)")
         } catch {
+            if allowRestFallback,
+               activateRestBaseFallbackIfNeeded(currentBase: restBase, error: error, context: "sdk/bootstrap") {
+                await fetchAndApplySdkBootstrapNow(usingSdkApiKey: apiKey, allowRestFallback: false)
+                return
+            }
             VioLogger.warning("SDK bootstrap failed: \(error.localizedDescription)", component: "CampaignManager")
         }
     }
@@ -1029,9 +1036,14 @@ public class CampaignManager: ObservableObject {
         }
     }
 
-    private func discoverCampaignsNow(broadcastId: String? = nil, apiKey: String) async {
+    private func discoverCampaignsNow(
+        broadcastId: String? = nil,
+        apiKey: String,
+        allowRestFallback: Bool = true
+    ) async {
         
-        var urlString = "\(campaignRestAPIBaseURL)/v1/sdk/campaigns?apiKey=\(apiKey)"
+        let restBase = campaignRestAPIBaseURL
+        var urlString = "\(restBase)/v1/sdk/campaigns?apiKey=\(apiKey)"
         if let broadcastId = broadcastId {
             urlString += "&broadcastId=\(broadcastId)"
             // Also include matchId for backward compatibility with backend
@@ -1240,8 +1252,38 @@ public class CampaignManager: ObservableObject {
             lastSuccessfulDiscoveryBroadcastId = broadcastId
             
         } catch {
+            if allowRestFallback,
+               activateRestBaseFallbackIfNeeded(currentBase: restBase, error: error, context: "discoverCampaigns") {
+                await discoverCampaignsNow(broadcastId: broadcastId, apiKey: apiKey, allowRestFallback: false)
+                return
+            }
             VioLogger.error("Failed to discover campaigns: \(error)", component: "CampaignManager")
         }
+    }
+
+    private func activateRestBaseFallbackIfNeeded(
+        currentBase: String,
+        error: Error,
+        context: String
+    ) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        let connectivityCodes: Set<URLError.Code> = [
+            .cannotConnectToHost, .timedOut, .networkConnectionLost, .notConnectedToInternet
+        ]
+        guard connectivityCodes.contains(urlError.code) else { return false }
+
+        let fallbackRaw = CampaignConfiguration.default.restAPIBaseURL
+        let fallbackBase = fallbackRaw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let trimmedCurrent = currentBase.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !fallbackBase.isEmpty, fallbackBase != trimmedCurrent else { return false }
+
+        campaignRestBaseOverride = fallbackBase
+        print("🎯 [CampaignManager] \(context) fallback REST base activated → \(fallbackBase)")
+        VioLogger.warning(
+            "\(context) connectivity failed on \(trimmedCurrent); retrying with environment REST base \(fallbackBase)",
+            component: "CampaignManager"
+        )
+        return true
     }
     
     // Backward compatibility method
@@ -1404,9 +1446,12 @@ public class CampaignManager: ObservableObject {
             print("🎯 [CampaignManager] connectWebSocket - Already connected, skipping")
             return
         }
-        if webSocketManager != nil {
-            print("🎯 [CampaignManager] connectWebSocket - Manager already exists, skipping (prevents double-connect)")
-            return
+        if let existingManager = webSocketManager {
+            // If a stale manager exists while disconnected, recycle it so startup/discovery
+            // can actively reconnect after transport resets or exhausted internal retries.
+            print("🎯 [CampaignManager] connectWebSocket - Recreating stale manager while disconnected")
+            existingManager.disconnect()
+            webSocketManager = nil
         }
         
         let resolvedCampaignId: Int

@@ -437,6 +437,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
             if normalizedStatus == "success" {
                 print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
                 paymentResult = .success
+                await cartManager.resetCartAndCreateNew()
                 return true
             } else if normalizedStatus == "processing" || normalizedStatus == "pending" {
                 print("⚠️ [ApplePayManager] applePayConfirm pending status=\(confirmDto.status ?? "UNKNOWN")")

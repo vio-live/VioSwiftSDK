@@ -758,6 +758,11 @@ extension CartManager {
         cartId = nil
         
         await createCart(currency: currency, country: country)
+        // Pre-create a fresh checkout session so completed checkouts are never reused.
+        let freshCheckoutId = await createCheckout()
+        if freshCheckoutId == nil {
+            VioLogger.debug("resetCartAndCreateNew: fresh checkout will be created on next checkout action", component: "CartModule")
+        }
     }
 
     public var itemCount: Int {
