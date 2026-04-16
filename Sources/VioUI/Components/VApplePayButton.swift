@@ -30,9 +30,54 @@ public struct VApplePayButton: View {
     ) {
         self.product = product
         self.variant = variant
-        self.productName = productName ?? product?.title ?? "Product"
-        self.productImageUrl = productImageUrl ?? product?.images.first?.url
-        self.amount = amount ?? Double(variant?.price.amount_incl_taxes ?? variant?.price.amount ?? product?.price.amount_incl_taxes ?? product?.price.amount ?? 0)
+        
+        // Resolve product name
+        let resolvedProductName: String
+        if let productName = productName {
+            resolvedProductName = productName
+        } else if let productTitle = product?.title {
+            resolvedProductName = productTitle
+        } else {
+            resolvedProductName = "Product"
+        }
+        self.productName = resolvedProductName
+        
+        // Resolve product image URL
+        let resolvedImageUrl: String?
+        if let productImageUrl = productImageUrl {
+            resolvedImageUrl = productImageUrl
+        } else {
+            resolvedImageUrl = product?.images.first?.url
+        }
+        self.productImageUrl = resolvedImageUrl
+        
+        // Resolve amount
+        let resolvedAmount: Double
+        if let amount = amount {
+            resolvedAmount = amount
+        } else {
+            // Try variant prices first
+            let variantAmountIncl = variant?.price.amount_incl_taxes
+            let variantAmount = variant?.price.amount
+            
+            // Try product prices as fallback
+            let productAmountIncl = product?.price.amount_incl_taxes
+            let productAmount = product?.price.amount
+            
+            if let variantAmountIncl = variantAmountIncl {
+                resolvedAmount = Double(variantAmountIncl)
+            } else if let variantAmount = variantAmount {
+                resolvedAmount = Double(variantAmount)
+            } else if let productAmountIncl = productAmountIncl {
+                resolvedAmount = Double(productAmountIncl)
+            } else if let productAmount = productAmount {
+                resolvedAmount = Double(productAmount)
+            } else {
+                resolvedAmount = 0
+            }
+        }
+        self.amount = resolvedAmount
+        
         self.onPaymentComplete = onPaymentComplete
     }
 

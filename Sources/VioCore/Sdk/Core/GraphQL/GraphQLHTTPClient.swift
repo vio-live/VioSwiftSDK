@@ -37,7 +37,8 @@ public final class GraphQLHTTPClient {
     private func runOperationSafe(query: String, variables: [String: Any]) async throws
         -> GraphQLHTTPResponse
     {
-        print("📡 [GraphQLHTTPClient] POST \(baseURL)")
+        let operation = parseOperation(from: query)
+        print("📡 [GraphQLHTTPClient] POST \(baseURL) [\(operation.kind) \(operation.name)]")
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -86,5 +87,20 @@ public final class GraphQLHTTPClient {
             print("🛑 [GraphQLHTTPClient] Network failure: \(error.localizedDescription)")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
+    }
+
+    private func parseOperation(from query: String) -> (kind: String, name: String) {
+        let compact = query.replacingOccurrences(of: "\n", with: " ")
+        let tokens = compact
+            .split(whereSeparator: { $0.isWhitespace || $0 == "(" || $0 == "{" })
+            .map(String.init)
+        guard !tokens.isEmpty else { return ("operation", "Unknown") }
+
+        if tokens[0] == "query" || tokens[0] == "mutation" || tokens[0] == "subscription" {
+            let kind = tokens[0]
+            let name = tokens.count > 1 ? tokens[1] : "Anonymous"
+            return (kind, name)
+        }
+        return ("operation", tokens[0])
     }
 }

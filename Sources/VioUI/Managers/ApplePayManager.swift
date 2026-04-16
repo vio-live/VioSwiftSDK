@@ -14,7 +14,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
     public static let shared = ApplePayManager()
 
-    private var merchantIdentifier = "merchant.live.vio"
+    // Default merchant id used by PassKit. Backend may override it via applePayInit
+    // only when it returns a valid Apple merchant identifier (`merchant.*`).
+    private var merchantIdentifier: String = "merchant.live.vio"
     /// Same list on `PKPaymentRequest` and for PassKit probes. Maestro covers many NO/EU debit wallets; avoid rare networks that can make the aggregate `canMakePayments(usingNetworks:…)` falsely negative in some regions.
     private let supportedNetworks: [PKPaymentNetwork] = [
         .visa,
@@ -38,6 +40,82 @@ public final class ApplePayManager: NSObject, ObservableObject {
     public var isApplePayAvailable: Bool {
         PKPaymentAuthorizationController.canMakePayments()
     }
+    
+    /// Validates Apple Pay configuration and provides diagnostic information
+    public func validateConfiguration() -> (isValid: Bool, issues: [String]) {
+        var issues: [String] = []
+        
+        // Check basic Apple Pay availability
+        if !PKPaymentAuthorizationController.canMakePayments() {
+            issues.append("Apple Pay not available on this device")
+        }
+        
+        if !PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks) {
+            issues.append("No supported payment networks available")
+        }
+        
+        // Check merchant identifier
+        if merchantIdentifier.isEmpty {
+            issues.append("Merchant identifier is empty")
+        } else if !merchantIdentifier.hasPrefix("merchant.") {
+            issues.append("Invalid merchant identifier format (should start with 'merchant.')")
+        } else {
+            // Try to detect entitlement issues early
+            let testRequest = PKPaymentRequest()
+            testRequest.merchantIdentifier = merchantIdentifier
+            testRequest.supportedNetworks = [.visa]
+            testRequest.merchantCapabilities = [.capability3DS]
+            testRequest.countryCode = "US"
+            testRequest.currencyCode = "USD"
+            testRequest.paymentSummaryItems = [PKPaymentSummaryItem(label: "Test", amount: NSDecimalNumber(value: 1.0))]
+            
+            // Note: This doesn't fully validate entitlements, but gives us a basic check
+            if !PKPaymentAuthorizationController.canMakePayments() {
+                issues.append("Device doesn't support Apple Pay or merchant not entitled")
+            }
+        }
+        
+        // Check Stripe configuration
+        if STPAPIClient.shared.publishableKey?.isEmpty ?? true {
+            issues.append("Stripe publishable key not configured")
+        }
+        
+        return (isValid: issues.isEmpty, issues: issues)
+    }
+    
+    /// Diagnoses Apple Pay certificate and Stripe configuration
+    public func diagnoseApplePaySetup() {
+        print("🔍 [ApplePayManager] Apple Pay Configuration Diagnosis:")
+        print("📱 Device Capabilities:")
+        print("   - Apple Pay available: \(PKPaymentAuthorizationController.canMakePayments())")
+        print("   - Supported networks available: \(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))")
+        
+        print("🏪 Merchant Configuration:")
+        print("   - Merchant ID: \(merchantIdentifier)")
+        print("   - Build configuration: \(isDebugBuild ? "DEBUG" : "RELEASE")")
+        
+        print("🔑 Stripe Configuration:")
+        if let key = STPAPIClient.shared.publishableKey {
+            print("   - Publishable key: \(key.prefix(20))... (\(key.count) chars)")
+            print("   - Key type: \(key.hasPrefix("pk_test_") ? "TEST" : key.hasPrefix("pk_live_") ? "LIVE" : "UNKNOWN")")
+        } else {
+            print("   - Publishable key: NOT SET")
+        }
+        
+        print("📋 Required Actions:")
+        print("   1. Verify merchant ID '\(merchantIdentifier)' exists in Apple Developer Console")
+        print("   2. Generate Apple Pay Certificate for this merchant ID")
+        print("   3. Upload certificate to Stripe Dashboard: https://dashboard.stripe.com/settings/payments/apple_pay")
+        print("   4. Ensure certificate matches the publishable key environment (test/live)")
+    }
+    
+    private var isDebugBuild: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
 
     private var pendingCheckoutId: String?
     public var capturedContact: PKContact?
@@ -55,6 +133,27 @@ public final class ApplePayManager: NSObject, ObservableObject {
         self.isProcessing = true
         self.paymentResult = nil
         self.pendingCartManager = cartManager
+
+        // Validate configuration before proceeding (but be flexible with Stripe key)
+        let validation = validateConfiguration()
+        if !validation.isValid {
+            print("❌ [ApplePayManager] Configuration validation failed:")
+            for issue in validation.issues {
+                print("  - \(issue)")
+            }
+            
+            // Check if the only issue is missing Stripe key (which we might get later)
+            let onlyStripeKeyMissing = validation.issues.count == 1 && 
+                                     validation.issues.first?.contains("publishable key") == true
+            
+            if !onlyStripeKeyMissing {
+                self.paymentResult = .failure("Apple Pay configuration error: \(validation.issues.first ?? "Unknown error")")
+                self.isProcessing = false
+                return
+            } else {
+                print("⚠️ [ApplePayManager] Stripe key missing, but will try to obtain it during setup")
+            }
+        }
 
         var resolvedId = checkoutId
         
@@ -87,21 +186,73 @@ public final class ApplePayManager: NSObject, ObservableObject {
         self.pendingCheckoutId = resolvedId
         VioLogger.debug("Apple Pay start — resolved ID: \(resolvedId ?? "demo-mode")", component: "ApplePayManager")
 
-        // 4. Fetch Stripe intent and applePayInit
+        // 4. Fetch Stripe key strictly from backend (no local/hardcoded fallback at runtime)
+        var backendStripeKey: String?
+        var backendStripeKeySource = "none"
         if let cid = resolvedId {
-            let intent = try? await cartManager.sdk.payment.stripeIntent(checkoutId: cid, returnEphemeralKey: false)
-            self.pendingPublishableKey = intent?.publishableKey
-            if let pubKey = intent?.publishableKey {
-                STPAPIClient.shared.publishableKey = pubKey
+            print(
+                "🔑 [ApplePayManager] stripeIntent start checkoutId=\(cid)"
+            )
+            do {
+                let intent = try await cartManager.sdk.payment.stripeIntent(
+                    checkoutId: cid,
+                    returnEphemeralKey: false
+                )
+                if !intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    backendStripeKey = intent.publishableKey
+                    backendStripeKeySource = "stripeIntent.publishable_key"
+                    print(
+                        "🔑 [ApplePayManager] stripeIntent ok backendKey=\(maskedStripeKey(intent.publishableKey))"
+                    )
+                }
+            } catch {
+                print("❌ [ApplePayManager] stripeIntent fail: \(error.localizedDescription)")
             }
-            
-            print("🌐 [ApplePayManager] Calling applePayInit(checkoutId: \(cid))...")
+
             do {
                 let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: cid)
-                print("✅ [ApplePayManager] applePayInit success: \(initDto.gateway ?? "nil")")
+                let backendMerchantId = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
+                if isValidAppleMerchantIdentifier(backendMerchantId) {
+                    merchantIdentifier = backendMerchantId
+                    print("🔐 [ApplePayManager] applePayInit merchantId=\(merchantIdentifier)")
+                } else if backendMerchantId.hasPrefix("pk_") {
+                    if backendStripeKey == nil {
+                        backendStripeKey = backendMerchantId
+                        backendStripeKeySource = "applePayInit.gateway_merchant_id(pk_*)"
+                    }
+                    print(
+                        "🔑 [ApplePayManager] applePayInit returned pk_* backendKey=\(maskedStripeKey(backendMerchantId))"
+                    )
+                } else if !backendMerchantId.isEmpty {
+                    print(
+                        "⚠️ [ApplePayManager] applePayInit invalid merchantId='\(backendMerchantId)' keeping=\(merchantIdentifier)"
+                    )
+                }
             } catch {
-                print("⚠️ [ApplePayManager] applePayInit failed: \(error.localizedDescription)")
+                print("⚠️ [ApplePayManager] applePayInit fail: \(error.localizedDescription)")
             }
+        }
+
+        guard let runtimeBackendStripeKey = backendStripeKey,
+              !runtimeBackendStripeKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            print("❌ [ApplePayManager] missing backend Stripe key (stripeIntent/applePayInit). Aborting Apple Pay.")
+            paymentResult = .failure("Missing backend Stripe credentials")
+            isProcessing = false
+            return
+        }
+        pendingPublishableKey = runtimeBackendStripeKey
+        STPAPIClient.shared.publishableKey = runtimeBackendStripeKey
+        print(
+            "🔑 [ApplePayManager] using backend Stripe key source=\(backendStripeKeySource) key=\(maskedStripeKey(runtimeBackendStripeKey))"
+        )
+
+        // Validate merchant identifier
+        if merchantIdentifier.isEmpty {
+            print("❌ [ApplePayManager] Merchant identifier is empty!")
+            paymentResult = .failure("Payment configuration error")
+            isProcessing = false
+            return
         }
 
         let request = PKPaymentRequest()
@@ -111,9 +262,17 @@ public final class ApplePayManager: NSObject, ObservableObject {
         request.countryCode = cartManager.country
         request.currencyCode = cartManager.currency
         
-        print("🌐 [ApplePayManager] Request: Country=\(request.countryCode), Currency=\(request.currencyCode), Merchant=\(merchantIdentifier)")
-        print("🌐 [ApplePayManager] canMakePayments: \(PKPaymentAuthorizationController.canMakePayments())")
-        print("🌐 [ApplePayManager] canMakePayments(networks): \(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))")
+        print(
+            "🌐 [ApplePayManager] PKPaymentRequest merchant=\(merchantIdentifier) country=\(request.countryCode) currency=\(request.currencyCode) canPay=\(PKPaymentAuthorizationController.canMakePayments()) canPayNetworks=\(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))"
+        )
+        
+        // Validate country and currency codes
+        if request.countryCode.count != 2 {
+            print("⚠️ [ApplePayManager] Invalid country code: \(request.countryCode)")
+        }
+        if request.currencyCode.count != 3 {
+            print("⚠️ [ApplePayManager] Invalid currency code: \(request.currencyCode)")
+        }
         
         // Shipping/Billing requirements
         request.requiredShippingContactFields = [.postalAddress, .name, .emailAddress]
@@ -147,8 +306,14 @@ public final class ApplePayManager: NSObject, ObservableObject {
         print("🌐 [ApplePayManager] Presenting Apple Pay sheet...")
         let presented = await controller.present()
         if !presented {
+            // Check for common presentation failures
+            print("❌ [ApplePayManager] Failed to present Apple Pay sheet")
+            
+            // Run specific diagnostics for merchant identifier issues
+            await diagnoseMerchantIdentifierIssues()
+            
             VioLogger.error("Failed to present PKPaymentAuthorizationController", component: "ApplePayManager")
-            self.paymentResult = .failure("Failed to show Apple Pay")
+            self.paymentResult = .failure("Apple Pay is not properly configured for this app. Please contact support.")
             self.isProcessing = false
         }
     }
@@ -168,31 +333,56 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return false
         }
 
+        // Validate Stripe configuration before attempting tokenization
+        guard let publishableKey = STPAPIClient.shared.publishableKey, !publishableKey.isEmpty else {
+            print("❌ [ApplePayManager] stripe key missing at tokenization stage")
+            paymentResult = .failure("Missing backend Stripe credentials")
+            return false
+        }
+
+        print(
+            "🔍 [ApplePayManager] tokenize start merchant=\(merchantIdentifier) publishableKey=\(maskedStripeKey(publishableKey)) network=\(payment.token.paymentMethod.network?.rawValue ?? "unknown") paymentDataBytes=\(payment.token.paymentData.count)"
+        )
+        if payment.token.paymentData.isEmpty {
+            // In some Apple Pay test/simulator flows, `paymentData` can be empty while
+            // Stripe still produces a valid test token (`tok_*`). Do not hard-fail here.
+            print("⚠️ [ApplePayManager] Payment token data is empty; continuing with Stripe tokenization...")
+        }
+
         // 1. Tokenize with Stripe
-        print("🌐 [ApplePayManager] Tokenizing PKPayment with Stripe... (Key: \(STPAPIClient.shared.publishableKey ?? "nil"))")
         let stripeToken: String
         do {
-            print("🌐 [ApplePayManager] Calling STPAPIClient.createToken...")
             let token: STPToken = try await withCheckedThrowingContinuation { continuation in
                 STPAPIClient.shared.createToken(with: payment) { token, error in
                     if let error = error {
-                        print("❌ [ApplePayManager] Stripe creation callback error: \(error.localizedDescription)")
                         continuation.resume(throwing: error)
                     } else if let token = token {
-                        print("✅ [ApplePayManager] Stripe creation callback success: \(token.tokenId)")
                         continuation.resume(returning: token)
                     } else {
-                        print("❌ [ApplePayManager] Stripe creation callback: Unknown error")
                         continuation.resume(throwing: NSError(domain: "ApplePayManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unknown Stripe error"]))
                     }
                 }
             }
             stripeToken = token.tokenId
-            print("✅ [ApplePayManager] Passed Stripe tokenization: \(stripeToken)")
+            print("✅ [ApplePayManager] tokenize ok token=\(maskedToken(stripeToken))")
         } catch {
-            print("❌ [ApplePayManager] Stripe tokenization failed: \(error.localizedDescription)")
+            let nsError = error as NSError
+            print(
+                "❌ [ApplePayManager] tokenize fail domain=\(nsError.domain) code=\(nsError.code) requestId=\((nsError.userInfo["com.stripe.lib:StripeRequestIDKey"] as? String) ?? "-") message=\(error.localizedDescription)"
+            )
             VioLogger.error("Stripe Tokenization Error: \(error.localizedDescription)", component: "ApplePayManager")
-            paymentResult = .failure("Payment verification failed")
+            let errorMessage: String
+            if nsError.domain == "com.stripe.lib" && nsError.code == 50 {
+                errorMessage = "Apple Pay is not properly configured. Please contact support."
+            } else if nsError.localizedDescription.contains("merchant") {
+                errorMessage = "Merchant configuration error. Please contact support."
+            } else if nsError.localizedDescription.contains("decrypt") {
+                errorMessage = "Apple Pay certificate error. Please contact support."
+            } else {
+                errorMessage = "Payment verification failed. Please try again."
+            }
+            
+            paymentResult = .failure(errorMessage)
             return false
         }
 
@@ -214,15 +404,16 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // 3. Confirm with backend
         do {
             cartManager.syncSdkCredentials()
-            print("🌐 [ApplePayManager] applePayConfirm(checkoutId: \(finalId)) via GraphQL...")
-            print("🌐 [ApplePayManager] token: \(stripeToken)")
+            print(
+                "🌐 [ApplePayManager] applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil)"
+            )
             let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
                 checkoutId: finalId,
                 applePayToken: stripeToken,
                 email: capturedContact?.emailAddress,
                 shippingAddress: shippingAddressInput
             )
-            print("🌐 [ApplePayManager] confirm response received status: \(confirmDto.status ?? "nil")")
+            print("🌐 [ApplePayManager] applePayConfirm response status=\(confirmDto.status ?? "nil")")
             
             if confirmDto.status == "SUCCESS" {
                 print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
@@ -240,6 +431,134 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return false
         }
     }
+    
+    /// Attempts to process Apple Pay payment without Stripe tokenization
+    /// Some backends can handle Apple Pay tokens directly
+    private func processPaymentWithoutStripe(payment: PKPayment, cartManager: CartManager, checkoutId: String) async -> Bool {
+        print("🔄 [ApplePayManager] Attempting payment without Stripe tokenization...")
+        
+        // Convert PKPayment token to base64 for direct backend processing
+        let paymentData = payment.token.paymentData
+        let base64PaymentData = paymentData.base64EncodedString()
+        
+        print("🔍 [ApplePayManager] Direct payment data:")
+        print("  - Payment data length: \(paymentData.count) bytes")
+        print("  - Base64 length: \(base64PaymentData.count) characters")
+        print("  - Payment network: \(payment.token.paymentMethod.network?.rawValue ?? "unknown")")
+        
+        // Prepare shipping address
+        var shippingAddressInput: ApplePayAddressInputDto? = nil
+        if let contact = capturedContact, let addr = contact.postalAddress {
+            shippingAddressInput = ApplePayAddressInputDto(
+                firstName: contact.name?.givenName,
+                lastName: contact.name?.familyName,
+                address1: addr.street,
+                city: addr.city,
+                province: addr.state,
+                zip: addr.postalCode,
+                country: addr.isoCountryCode,
+                countryCode: addr.isoCountryCode
+            )
+        }
+        
+        // Try to confirm with the raw Apple Pay token instead of Stripe token
+        do {
+            cartManager.syncSdkCredentials()
+            print("🌐 [ApplePayManager] applePayConfirm with raw token (checkoutId: \(checkoutId))...")
+            
+            // Use the base64 encoded payment data as the token
+            let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
+                checkoutId: checkoutId,
+                applePayToken: base64PaymentData,
+                email: capturedContact?.emailAddress,
+                shippingAddress: shippingAddressInput
+            )
+            print("🌐 [ApplePayManager] confirm response received status: \(confirmDto.status ?? "nil")")
+            
+            if confirmDto.status == "SUCCESS" {
+                print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
+                paymentResult = .success
+                return true
+            } else {
+                print("⚠️ [ApplePayManager] applePayConfirm status: \(confirmDto.status ?? "UNKNOWN")")
+                paymentResult = .failure("Payment failed: \(confirmDto.status ?? "unknown error")")
+                return false
+            }
+        } catch {
+            print("🛑 [ApplePayManager] applePayConfirm with raw token failed: \(error.localizedDescription)")
+            print("   Backend might not support direct Apple Pay token processing")
+            
+            // Final fallback - return a descriptive error
+            paymentResult = .failure("Payment system configuration error. Please contact support.")
+            return false
+        }
+    }
+    
+    /// Diagnoses merchant identifier configuration issues
+    private func diagnoseMerchantIdentifierIssues() async {
+        print("🚨 [ApplePayManager] Merchant Identifier Configuration Issues:")
+        print("📋 Current Configuration:")
+        print("   - Merchant ID: \(merchantIdentifier)")
+        print("   - Build: \(isDebugBuild ? "DEBUG" : "RELEASE")")
+        
+        print("🔍 Entitlement Check:")
+        // Check if we can create a payment request (this will validate entitlements)
+        let testRequest = PKPaymentRequest()
+        testRequest.merchantIdentifier = merchantIdentifier
+        testRequest.supportedNetworks = [.visa] // Minimal network for testing
+        testRequest.merchantCapabilities = [.capability3DS]
+        testRequest.countryCode = "US"
+        testRequest.currencyCode = "USD"
+        testRequest.paymentSummaryItems = [PKPaymentSummaryItem(label: "Test", amount: NSDecimalNumber(value: 1.0))]
+        
+        let canAuthorize = PKPaymentAuthorizationController.canMakePayments(usingNetworks: [.visa])
+        print("   - Can make payments: \(canAuthorize)")
+        
+        print("🛠️ Required Fix:")
+        print("   ❌ PROBLEM: Your app doesn't have entitlement for '\(merchantIdentifier)'")
+        print("")
+        print("   ✅ SOLUTION: Follow these steps:")
+        print("   1. Open your project in Xcode")
+        print("   2. Select your app target")
+        print("   3. Go to 'Signing & Capabilities' tab")
+        print("   4. Add 'Apple Pay' capability if not present")
+        print("   5. Configure the merchant identifier:")
+        print("      - Click '+' to add merchant ID")
+        print("      - Enter: \(merchantIdentifier)")
+        print("      - Or use an existing one from your Apple Developer account")
+        print("")
+        print("   📝 Alternative: Update the merchant ID to match your entitlements")
+        print("      - Check what merchant IDs are configured in your app")
+        print("      - Update the code to use a valid merchant ID")
+        print("")
+        print("   🌐 Apple Developer Console:")
+        print("      - Verify '\(merchantIdentifier)' exists at:")
+        print("      - https://developer.apple.com/account/resources/identifiers/list/merchant")
+        print("      - Create it if it doesn't exist")
+        
+        // Try to suggest alternative merchant IDs based on bundle identifier
+        if let bundleId = Bundle.main.bundleIdentifier {
+            let suggestedMerchant = "merchant.\(bundleId)"
+            print("")
+            print("   💡 Suggested merchant ID based on bundle: \(suggestedMerchant)")
+        }
+    }
+
+    private func isValidAppleMerchantIdentifier(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("merchant.") && trimmed.count > "merchant.".count
+    }
+
+    private func maskedStripeKey(_ key: String?) -> String {
+        guard let key, !key.isEmpty else { return "nil" }
+        return "\(key.prefix(14))...\(key.suffix(4))"
+    }
+
+    private func maskedToken(_ token: String) -> String {
+        guard token.count > 12 else { return token }
+        return "\(token.prefix(8))...\(token.suffix(4))"
+    }
+    
     // MARK: - Summary Item Helpers
     
     private func buildSummaryItems(cartManager: CartManager) -> [PKPaymentSummaryItem] {

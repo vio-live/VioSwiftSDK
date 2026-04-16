@@ -24,8 +24,11 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         -> PaymentIntentStripeDto
     {
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
+        print(
+            "💳 [PaymentModule] stripeIntent request checkoutId=\(checkoutId) returnEphemeralKey=\(returnEphemeralKey.map(String.init) ?? "nil")"
+        )
 
-        var vars: [String: Any?] = [
+        let vars: [String: Any?] = [
             "checkoutId": checkoutId,
             "returnEphemeralKey": returnEphemeralKey,
         ]
@@ -40,7 +43,11 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         else {
             throw SdkException("Empty response in Payment.stripeIntent", code: "EMPTY_RESPONSE")
         }
-        return try GraphQLPick.decodeJSON(obj, as: PaymentIntentStripeDto.self)
+        let dto = try GraphQLPick.decodeJSON(obj, as: PaymentIntentStripeDto.self)
+        print(
+            "💳 [PaymentModule] stripeIntent response publishableKey=\(maskedStripeKey(dto.publishableKey)) customer=\(dto.customer)"
+        )
+        return dto
     }
 
     public func stripeLink(
@@ -306,26 +313,21 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         email: String?,
         shippingAddress: ApplePayAddressInputDto?
     ) async throws -> ConfirmPaymentApplePayDto {
-        print("🛠️ [PaymentModule] applePayConfirm(checkoutId: \(checkoutId)) calling GraphQL...")
-        print("🛠️ [PaymentModule] applePayConfirm(applePayToken: \(applePayToken)) calling GraphQL...")
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         try Validation.requireNonEmpty(applePayToken, field: "applePayToken")
-        print("🛠️ [PaymentModule] pase 1")
+        print(
+            "💳 [PaymentModule] applePayConfirm request checkoutId=\(checkoutId) token=\(maskedToken(applePayToken)) emailPresent=\(email?.isEmpty == false) shippingPresent=\(shippingAddress != nil)"
+        )
 
         var vars: [String: Any?] = [
             "checkoutId": checkoutId,
             "applePayToken": applePayToken,
             "email": email,
         ]
-        print("🛠️ [PaymentModule] pase 2")
         
         if let shipping = shippingAddress {
-            print("🛠️ [PaymentModule] entre if")
             vars["shippingAddress"] = try encodeToDictionary(shipping)
         }
-        print("🛠️ [PaymentModule] pase 3")
-        print("🛠️ [PaymentModule] applePayConfirm(checkoutId: \(checkoutId)) calling GraphQL")
-        print("🛠️ [PaymentModule] vars: \(vars)")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_CONFIRM_MUTATION,
             variables: vars.compactMapValues { $0 }
@@ -336,7 +338,9 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         else {
             throw SdkException("Empty response in Payment.applePayConfirm", code: "EMPTY_RESPONSE")
         }
-        return try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
+        let dto = try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
+        print("💳 [PaymentModule] applePayConfirm response status=\(dto.status) orderId=\(dto.orderId ?? "-")")
+        return dto
     }
 
     private func encodeToDictionary<T: Encodable>(_ value: T) throws -> [String: Any] {
@@ -348,5 +352,15 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             throw SdkException("Failed to encode input as dictionary", code: "ENCODING_ERROR")
         }
         return dict
+    }
+
+    private func maskedStripeKey(_ key: String?) -> String {
+        guard let key = key, !key.isEmpty else { return "nil" }
+        return "\(key.prefix(14))...\(key.suffix(4))"
+    }
+
+    private func maskedToken(_ token: String) -> String {
+        guard token.count > 10 else { return token }
+        return "\(token.prefix(8))...\(token.suffix(4))"
     }
 }

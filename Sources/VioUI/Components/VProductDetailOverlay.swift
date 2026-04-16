@@ -375,26 +375,6 @@ public struct VProductDetailOverlay: View {
                     Text(formatted(amount: Double(currentPriceWithTaxes)))
                         .font(VioTypography.title3)
                         .foregroundColor(adaptiveColors.priceColor)
-                        .onAppear {
-                            print("🎯 [VProductDetailOverlay] Product detail opened")
-                            print("🎯 [VProductDetailOverlay] Product: \(product.title)")
-                            print("🎯 [VProductDetailOverlay] Product ID: \(product.id)")
-                            print("🎯 [VProductDetailOverlay] Base price amount: \(product.price.amount)")
-                            print("🎯 [VProductDetailOverlay] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-                            print("🎯 [VProductDetailOverlay] Total variants: \(product.variants.count)")
-                            if let variant = selectedVariant {
-                                print("🎯 [VProductDetailOverlay] ⚠️ VARIANT SELECTED!")
-                                print("🎯 [VProductDetailOverlay] Variant title: \(variant.title)")
-                                print("🎯 [VProductDetailOverlay] Variant ID: \(variant.id)")
-                                print("🎯 [VProductDetailOverlay] Variant price amount: \(variant.price.amount)")
-                                print("🎯 [VProductDetailOverlay] Variant price with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
-                            } else {
-                                print("🎯 [VProductDetailOverlay] No variant selected, using product price")
-                            }
-                            print("🎯 [VProductDetailOverlay] Current price with taxes: \(currentPriceWithTaxes)")
-                            print("🎯 [VProductDetailOverlay] Currency: \(product.price.currency_code)")
-                            print("🎯 [VProductDetailOverlay] Formatted display: \(formatted(amount: Double(currentPriceWithTaxes)))")
-                        }
                     
                     // Compare at price (if available) - use compare at with taxes if available
                     if let compareAt = compareAtWithTaxes, compareAt > currentPriceWithTaxes {

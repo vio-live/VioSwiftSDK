@@ -155,11 +155,6 @@ extension CartManager {
     // MARK: - Sync
 
     internal func sync(from cart: CartDto) {
-        print("🔄 [CartModule] ========== SYNC FROM BACKEND ==========")
-        print("🔄 [CartModule] Cart ID: \(cart.cartId)")
-        print("🔄 [CartModule] Currency: \(cart.currency)")
-        print("🔄 [CartModule] Line items count: \(cart.lineItems.count)")
-        
         currentCartId = cart.cartId
         self.cartId = cart.cartId
         self.checkoutId = cart.cartId // Use cartId as checkoutId fallback
@@ -167,12 +162,6 @@ extension CartManager {
         country = cart.shippingCountry ?? country
 
         items = cart.lineItems.map { line in
-            print("🔄 [CartModule] --- Line Item ---")
-            print("🔄 [CartModule] Product: \(line.title ?? "Unknown")")
-            print("🔄 [CartModule] Product ID: \(line.productId)")
-            print("🔄 [CartModule] Backend price amount: \(line.price.amount)")
-            print("🔄 [CartModule] Backend price with taxes: \(line.price.amountInclTaxes ?? 0.0)")
-            print("🔄 [CartModule] Quantity: \(line.quantity)")
             let sortedImages = (line.image ?? []).sorted { lhs, rhs in
                 let lOrder = lhs.order ?? 0
                 let rOrder = rhs.order ?? 0
@@ -238,16 +227,9 @@ extension CartManager {
 
         // Recalculate cartTotal using prices with taxes from items (what customer actually pays)
         cartTotal = items.reduce(0) { total, item in
-            let itemTotal = item.price * Double(item.quantity)
-            print("🔄 [CartModule] Item '\(item.title)': price=\(item.price) × qty=\(item.quantity) = \(itemTotal)")
-            return total + itemTotal
+            total + (item.price * Double(item.quantity))
         }
-        
-        print("🔄 [CartModule] ========== SYNC COMPLETE ==========")
-        print("🔄 [CartModule] Cart Total: \(cartTotal)")
-        print("🔄 [CartModule] Currency: \(currency)")
-        print("🔄 [CartModule] Total items in cart: \(items.count)")
-        
+
         // Recalculate shippingTotal using shipping prices with taxes from items (what customer actually pays)
         shippingTotal = items.reduce(0) { total, item in
             total + (item.shippingAmount ?? 0.0)

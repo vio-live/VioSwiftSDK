@@ -737,7 +737,7 @@ public class ConfigurationLoader {
         #if canImport(StripeCore) && os(iOS)
         VioLogger.debug("Initializing Stripe payment...", component: "Config")
         
-        let defaultPublishableKey = "pk_test_51MvQONBjfRnXLEB43vxVNP53LmkC13ZruLbNqDYIER8GmRgLX97vWKw9gPuhYLuOSwXaXpDFYAKsZhYtBpcAWvcy00zQ9ZES0L"
+        let defaultPublishableKey = "pk_test_51TMTc5E7CXHlMk3LY2NayKbmH7zFRPkGqibtHlSVI8qZ1Y1HsEprCv3fNGLO91oyl4Jv0dztUAQc0XX1g5EZY3i600DDm9APm7"
         
         // Get configuration
         let config = VioConfiguration.shared
