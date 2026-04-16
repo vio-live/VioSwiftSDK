@@ -157,7 +157,7 @@ extension CartManager {
     internal func sync(from cart: CartDto) {
         currentCartId = cart.cartId
         self.cartId = cart.cartId
-        self.checkoutId = cart.cartId // Use cartId as checkoutId fallback
+        // Keep checkoutId independent from cartId. It must come from Checkout.create.
         currency = cart.currency
         country = cart.shippingCountry ?? country
 

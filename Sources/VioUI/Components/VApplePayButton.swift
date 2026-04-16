@@ -166,7 +166,7 @@ public struct VApplePayButton: View {
                 variant: variant,
                 productName: productName,
                 amount: amount,
-                checkoutId: cartManager.checkoutId ?? cartManager.cartId,
+                checkoutId: cartManager.checkoutId,
                 cartManager: cartManager
             )
         }

@@ -169,68 +169,67 @@ public final class ApplePayManager: NSObject, ObservableObject {
             await cartManager.addProduct(p, variant: variant, quantity: 1)
         }
         
-        // 3. Create Checkout from Cart (The ID we need for Payment mutations)
+        // 3. Create Checkout from Cart (the required id for Payment mutations)
         if let cartId = cartManager.cartId {
             VioLogger.debug("Apple Pay: Creating checkout from cart \(cartId)...", component: "ApplePayManager")
-            do {
-                let checkoutDto = try await cartManager.sdk.checkout.create(cart_id: cartId)
-                resolvedId = checkoutDto.id
-                VioLogger.debug("Apple Pay: Checkout created: \(resolvedId ?? "nil")", component: "ApplePayManager")
-            } catch {
-                VioLogger.error("Apple Pay: Failed to create checkout: \(error.localizedDescription)", component: "ApplePayManager")
-                // Fallback to cartId if checkout creation fails (some backends use them interchangeably)
-                resolvedId = resolvedId ?? cartId
+            resolvedId = await cartManager.createCheckout()
+            if resolvedId == nil {
+                VioLogger.error("Apple Pay: Failed to create checkout from cart \(cartId)", component: "ApplePayManager")
             }
         }
 
-        self.pendingCheckoutId = resolvedId
-        VioLogger.debug("Apple Pay start — resolved ID: \(resolvedId ?? "demo-mode")", component: "ApplePayManager")
+        guard let checkoutId = resolvedId, !checkoutId.isEmpty else {
+            paymentResult = .failure("No active checkout session. Please try again.")
+            isProcessing = false
+            return
+        }
+
+        self.pendingCheckoutId = checkoutId
+        VioLogger.debug("Apple Pay start — resolved checkoutId: \(checkoutId)", component: "ApplePayManager")
 
         // 4. Fetch Stripe key strictly from backend (no local/hardcoded fallback at runtime)
         var backendStripeKey: String?
         var backendStripeKeySource = "none"
-        if let cid = resolvedId {
-            print(
-                "🔑 [ApplePayManager] stripeIntent start checkoutId=\(cid)"
+        print(
+            "🔑 [ApplePayManager] stripeIntent start checkoutId=\(checkoutId)"
+        )
+        do {
+            let intent = try await cartManager.sdk.payment.stripeIntent(
+                checkoutId: checkoutId,
+                returnEphemeralKey: false
             )
-            do {
-                let intent = try await cartManager.sdk.payment.stripeIntent(
-                    checkoutId: cid,
-                    returnEphemeralKey: false
+            if !intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                backendStripeKey = intent.publishableKey
+                backendStripeKeySource = "stripeIntent.publishable_key"
+                print(
+                    "🔑 [ApplePayManager] stripeIntent ok backendKey=\(maskedStripeKey(intent.publishableKey))"
                 )
-                if !intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    backendStripeKey = intent.publishableKey
-                    backendStripeKeySource = "stripeIntent.publishable_key"
-                    print(
-                        "🔑 [ApplePayManager] stripeIntent ok backendKey=\(maskedStripeKey(intent.publishableKey))"
-                    )
-                }
-            } catch {
-                print("❌ [ApplePayManager] stripeIntent fail: \(error.localizedDescription)")
             }
+        } catch {
+            print("❌ [ApplePayManager] stripeIntent fail: \(error.localizedDescription)")
+        }
 
-            do {
-                let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: cid)
-                let backendMerchantId = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
-                if isValidAppleMerchantIdentifier(backendMerchantId) {
-                    merchantIdentifier = backendMerchantId
-                    print("🔐 [ApplePayManager] applePayInit merchantId=\(merchantIdentifier)")
-                } else if backendMerchantId.hasPrefix("pk_") {
-                    if backendStripeKey == nil {
-                        backendStripeKey = backendMerchantId
-                        backendStripeKeySource = "applePayInit.gateway_merchant_id(pk_*)"
-                    }
-                    print(
-                        "🔑 [ApplePayManager] applePayInit returned pk_* backendKey=\(maskedStripeKey(backendMerchantId))"
-                    )
-                } else if !backendMerchantId.isEmpty {
-                    print(
-                        "⚠️ [ApplePayManager] applePayInit invalid merchantId='\(backendMerchantId)' keeping=\(merchantIdentifier)"
-                    )
+        do {
+            let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: checkoutId)
+            let backendMerchantId = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
+            if isValidAppleMerchantIdentifier(backendMerchantId) {
+                merchantIdentifier = backendMerchantId
+                print("🔐 [ApplePayManager] applePayInit merchantId=\(merchantIdentifier)")
+            } else if backendMerchantId.hasPrefix("pk_") {
+                if backendStripeKey == nil {
+                    backendStripeKey = backendMerchantId
+                    backendStripeKeySource = "applePayInit.gateway_merchant_id(pk_*)"
                 }
-            } catch {
-                print("⚠️ [ApplePayManager] applePayInit fail: \(error.localizedDescription)")
+                print(
+                    "🔑 [ApplePayManager] applePayInit returned pk_* backendKey=\(maskedStripeKey(backendMerchantId))"
+                )
+            } else if !backendMerchantId.isEmpty {
+                print(
+                    "⚠️ [ApplePayManager] applePayInit invalid merchantId='\(backendMerchantId)' keeping=\(merchantIdentifier)"
+                )
             }
+        } catch {
+            print("⚠️ [ApplePayManager] applePayInit fail: \(error.localizedDescription)")
         }
 
         guard let runtimeBackendStripeKey = backendStripeKey,
@@ -324,7 +323,7 @@ public final class ApplePayManager: NSObject, ObservableObject {
         
         // Final fallback if pendingCheckoutId was missed
         if checkoutId == nil {
-            checkoutId = cartManager.checkoutId ?? cartManager.cartId
+            checkoutId = cartManager.checkoutId
         }
 
         guard let finalId = checkoutId else {
