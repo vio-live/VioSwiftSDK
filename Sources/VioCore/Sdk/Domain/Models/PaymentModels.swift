@@ -315,7 +315,7 @@ public struct InitPaymentApplePayDto: Codable, Equatable {
 }
 
 public struct ConfirmPaymentApplePayDto: Codable, Equatable {
-    public let status: String
+    public let status: String?
     public let orderId: String?
 
     enum CodingKeys: String, CodingKey {

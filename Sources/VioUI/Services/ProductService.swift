@@ -83,6 +83,39 @@ public class ProductService {
         cachedSdkClient = nil
         VioLogger.debug("Cleared SDK client cache", component: "ProductService")
     }
+
+    private func isCommerceAuthFailure(_ error: Error) -> Bool {
+        if let sdkError = error as? SdkException {
+            let code = sdkError.code?.uppercased() ?? ""
+            if code == "UNAUTHENTICATED" || code == "AUTHENTICATION_FAILED" {
+                return true
+            }
+            if let status = sdkError.status, status == 401 || status == 403 {
+                return true
+            }
+            let msg = sdkError.message.lowercased()
+            return msg.contains("authentication failed") || msg.contains("unauthenticated")
+        }
+        let msg = error.localizedDescription.lowercased()
+        return msg.contains("authentication failed") || msg.contains("unauthenticated")
+    }
+
+    private func runWithCommerceAuthRetry<T>(
+        operationName: String,
+        operation: (SdkClient) async throws -> T
+    ) async throws -> T {
+        do {
+            let sdk = try getSdkClient()
+            return try await operation(sdk)
+        } catch {
+            guard isCommerceAuthFailure(error) else { throw error }
+            VioLogger.warning("\(operationName) auth failed — refreshing commerce bootstrap and retrying once", component: "ProductService")
+            await CampaignManager.shared.ensureCommerceBootstrapApplied()
+            clearCache()
+            let sdk = try getSdkClient()
+            return try await operation(sdk)
+        }
+    }
     
     // MARK: - Product Loading
     
@@ -120,21 +153,21 @@ public class ProductService {
         VioLogger.debug("Loading product with ID: \(productId)", component: "ProductService")
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
         
-        let sdk = try getSdkClient()
         let gqlURL = VioConfiguration.shared.resolvedCommerceGraphQLURL
         let keySrc = VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
         print("🎯 [ProductService] loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)")
-
-        let dtoProducts = try await sdk.channel.product.get(
-            currency: currency,
-            imageSize: "medium",
-            barcodeList: nil as [String]?,
-            categoryIds: nil as [Int]?,
-            productIds: [productId],
-            skuList: nil as [String]?,
-            useCache: true,
-            shippingCountryCode: country
-        )
+        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProduct") { sdk in
+            try await sdk.channel.product.get(
+                currency: currency,
+                imageSize: "medium",
+                barcodeList: nil as [String]?,
+                categoryIds: nil as [Int]?,
+                productIds: [productId],
+                skuList: nil as [String]?,
+                useCache: true,
+                shippingCountryCode: country
+            )
+        }
         
         guard let dtoProduct = dtoProducts.first else {
             VioLogger.warning("Product not found for ID: \(productId)", component: "ProductService")
@@ -169,18 +202,18 @@ public class ProductService {
         
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
         
-        let sdk = try getSdkClient()
-        
-        let dtoProducts = try await sdk.channel.product.get(
-            currency: currency,
-            imageSize: "medium",
-            barcodeList: nil as [String]?,
-            categoryIds: nil as [Int]?,
-            productIds: idsToUse,
-            skuList: nil as [String]?,
-            useCache: true,
-            shippingCountryCode: country
-        )
+        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProducts") { sdk in
+            try await sdk.channel.product.get(
+                currency: currency,
+                imageSize: "medium",
+                barcodeList: nil as [String]?,
+                categoryIds: nil as [Int]?,
+                productIds: idsToUse,
+                skuList: nil as [String]?,
+                useCache: true,
+                shippingCountryCode: country
+            )
+        }
         
         if let ids = idsToUse, !ids.isEmpty, dtoProducts.count < ids.count {
             let foundIds = Set(dtoProducts.map { $0.id })
@@ -211,18 +244,18 @@ public class ProductService {
         VioLogger.debug("Loading products for category ID: \(categoryId)", component: "ProductService")
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
         
-        let sdk = try getSdkClient()
-        
-        let dtoProducts = try await sdk.channel.product.get(
-            currency: currency,
-            imageSize: "medium",
-            barcodeList: nil as [String]?,
-            categoryIds: [categoryId],
-            productIds: nil as [Int]?,
-            skuList: nil as [String]?,
-            useCache: true,
-            shippingCountryCode: country
-        )
+        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProductsByCategory") { sdk in
+            try await sdk.channel.product.get(
+                currency: currency,
+                imageSize: "medium",
+                barcodeList: nil as [String]?,
+                categoryIds: [categoryId],
+                productIds: nil as [Int]?,
+                skuList: nil as [String]?,
+                useCache: true,
+                shippingCountryCode: country
+            )
+        }
         
         let products = dtoProducts.map { $0.toDomainProduct() }
         return products

@@ -737,21 +737,23 @@ public class ConfigurationLoader {
         #if canImport(StripeCore) && os(iOS)
         VioLogger.debug("Initializing Stripe payment...", component: "Config")
         
-        let defaultPublishableKey = "pk_test_51MvQONBjfRnXLEB43vxVNP53LmkC13ZruLbNqDYIER8GmRgLX97vWKw9gPuhYLuOSwXaXpDFYAKsZhYtBpcAWvcy00zQ9ZES0L"
-        
-        // Get configuration
-        let config = VioConfiguration.shared
-        guard let baseURL = URL(string: config.environment.graphQLURL) else {
-            VioLogger.error("Invalid GraphQL URL, using default Stripe key", component: "Config")
-            StripeAPI.defaultPublishableKey = defaultPublishableKey
-            return
-        }
-        
-        let apiKey = config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey
-        let sdkClient = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+        let defaultPublishableKey = "pk_test_51TMTc5E7CXHlMk3LY2NayKbmH7zFRPkGqibtHlSVI8qZ1Y1HsEprCv3fNGLO91oyl4Jv0dztUAQc0XX1g5EZY3i600DDm9APm7"
         
         Task {
             do {
+                await CampaignManager.shared.ensureCommerceBootstrapApplied()
+                let config = VioConfiguration.shared
+                guard let baseURL = URL(string: config.resolvedCommerceGraphQLURL) else {
+                    await MainActor.run {
+                        StripeAPI.defaultPublishableKey = defaultPublishableKey
+                    }
+                    VioLogger.error("Invalid resolved commerce GraphQL URL, using default Stripe key", component: "Config")
+                    return
+                }
+
+                let apiKey = config.resolvedCommerceApiKey
+                let sdkClient = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+
                 // Fetch payment methods from Vio API
                 let paymentMethods = try await sdkClient.payment.getAvailableMethods()
                 VioLogger.debug("Available payment methods from API: \(paymentMethods.map { $0.name })", component: "Config")

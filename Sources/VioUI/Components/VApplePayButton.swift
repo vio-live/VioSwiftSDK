@@ -30,54 +30,58 @@ public struct VApplePayButton: View {
     ) {
         self.product = product
         self.variant = variant
-
-        let titleCandidate: String? = productName ?? product?.title
-        self.productName = titleCandidate ?? "Product"
-
-        let imageCandidate: String? = productImageUrl ?? product?.images.first?.url
-        self.productImageUrl = imageCandidate
-
-        let variantInclTax: Float? = variant?.price.amount_incl_taxes
-        let variantAmount: Float? = variant.map { $0.price.amount }
-        let productInclTax: Float? = product?.price.amount_incl_taxes
-        let productAmount: Float? = product.map { $0.price.amount }
-        let mergedUnit: Float? =
-            variantInclTax ?? variantAmount ?? productInclTax ?? productAmount
-        let unit: Float = mergedUnit ?? 0
-        self.amount = amount ?? Double(unit)
+        
+        // Resolve product name
+        let resolvedProductName: String
+        if let productName = productName {
+            resolvedProductName = productName
+        } else if let productTitle = product?.title {
+            resolvedProductName = productTitle
+        } else {
+            resolvedProductName = "Product"
+        }
+        self.productName = resolvedProductName
+        
+        // Resolve product image URL
+        let resolvedImageUrl: String?
+        if let productImageUrl = productImageUrl {
+            resolvedImageUrl = productImageUrl
+        } else {
+            resolvedImageUrl = product?.images.first?.url
+        }
+        self.productImageUrl = resolvedImageUrl
+        
+        // Resolve amount
+        let resolvedAmount: Double
+        if let amount = amount {
+            resolvedAmount = amount
+        } else {
+            // Try variant prices first
+            let variantAmountIncl = variant?.price.amount_incl_taxes
+            let variantAmount = variant?.price.amount
+            
+            // Try product prices as fallback
+            let productAmountIncl = product?.price.amount_incl_taxes
+            let productAmount = product?.price.amount
+            
+            if let variantAmountIncl = variantAmountIncl {
+                resolvedAmount = Double(variantAmountIncl)
+            } else if let variantAmount = variantAmount {
+                resolvedAmount = Double(variantAmount)
+            } else if let productAmountIncl = productAmountIncl {
+                resolvedAmount = Double(productAmountIncl)
+            } else if let productAmount = productAmount {
+                resolvedAmount = Double(productAmount)
+            } else {
+                resolvedAmount = 0
+            }
+        }
+        self.amount = resolvedAmount
+        
         self.onPaymentComplete = onPaymentComplete
     }
 
-    private func handlePaymentResultChange(_ newValue: ApplePayManager.PaymentResult?) {
-        guard let result = newValue else { return }
-        switch result {
-        case .success:
-            showConfirmation = true
-        case .failure(let msg):
-            errorMessage = msg
-            showError = true
-        case .cancelled:
-            break
-        }
-    }
-
     public var body: some View {
-        availabilityContent
-            .onChange(of: applePayManager.paymentResult) { newValue in
-                handlePaymentResultChange(newValue)
-            }
-            .sheet(isPresented: $showConfirmation, content: confirmationSheet)
-            .alert(
-                "Betaling feilet",
-                isPresented: $showError,
-                actions: {
-                    Button("OK") { applePayManager.paymentResult = nil }
-                },
-                message: { Text(errorMessage) }
-            )
-    }
-
-    private var availabilityContent: some View {
         Group {
             if applePayManager.isApplePayAvailable {
                 applePayButton
@@ -85,24 +89,38 @@ public struct VApplePayButton: View {
                 unavailableView
             }
         }
-    }
-
-    @ViewBuilder
-    private func confirmationSheet() -> some View {
-        VApplePayConfirmationSheet(
-            productName: productName,
-            productImageUrl: productImageUrl,
-            amount: amount,
-            currencyCode: cartManager.currency,
-            contact: applePayManager.capturedContact
-        ) {
-            showConfirmation = false
-            applePayManager.paymentResult = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                onPaymentComplete?()
+        .onChange(of: applePayManager.paymentResult) { newValue in
+            switch newValue {
+            case .success:
+                showConfirmation = true
+            case .failure(let msg):
+                errorMessage = msg
+                showError = true
+            case .cancelled, .none:
+                break
             }
         }
-        .applyApplePaySheetChrome()
+        .sheet(isPresented: $showConfirmation) {
+            VApplePayConfirmationSheet(
+                productName: productName,
+                productImageUrl: productImageUrl,
+                amount: amount,
+                currencyCode: cartManager.currency,
+                contact: applePayManager.capturedContact
+            ) {
+                showConfirmation = false
+                applePayManager.paymentResult = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    onPaymentComplete?()
+                }
+            }
+            .applyApplePaySheetChrome()
+        }
+        .alert("Betaling feilet", isPresented: $showError) {
+            Button("OK") { applePayManager.paymentResult = nil }
+        } message: {
+            Text(errorMessage)
+        }
     }
 
     private var applePayButton: some View {
@@ -140,6 +158,7 @@ public struct VApplePayButton: View {
     }
 
     private func initiatePayment() {
+        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount)")
         applePayManager.paymentResult = nil
         Task {
             await applePayManager.pay(

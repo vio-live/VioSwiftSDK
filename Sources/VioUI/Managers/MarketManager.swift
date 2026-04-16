@@ -38,7 +38,21 @@ extension CartManager {
 
         do {
             logRequest("sdk.market.getAvailable")
-            let dtos = try await sdk.market.getAvailable()
+            var didRetryAfterBootstrap = false
+            let dtos: [GetAvailableGlobalMarketsDto]
+            do {
+                dtos = try await sdk.market.getAvailable()
+            } catch {
+                if !didRetryAfterBootstrap && isCommerceAuthFailure(error) {
+                    didRetryAfterBootstrap = true
+                    VioLogger.warning("loadMarkets auth failed — refreshing commerce bootstrap and retrying once", component: "MarketManager")
+                    await CampaignManager.shared.ensureCommerceBootstrapApplied()
+                    syncSdkCredentials()
+                    dtos = try await sdk.market.getAvailable()
+                } else {
+                    throw error
+                }
+            }
             logResponse("sdk.market.getAvailable", payload: ["count": dtos.count])
             var mapped = dtos.compactMap { $0.toMarket(fallback: fallbackConfig) }
 

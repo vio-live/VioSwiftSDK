@@ -37,10 +37,12 @@ public final class GraphQLHTTPClient {
     private func runOperationSafe(query: String, variables: [String: Any]) async throws
         -> GraphQLHTTPResponse
     {
-        VioLogger.debug("GraphQL POST \(baseURL.absoluteString)", component: "GraphQLHTTPClient")
+        let operation = parseOperation(from: query)
+        print("📡 [GraphQLHTTPClient] POST \(baseURL) [\(operation.kind) \(operation.name)]")
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        print("Authorization: \(apiKey)")
         req.setValue(apiKey, forHTTPHeaderField: "Authorization")
         let payload: [String: Any] = ["query": query, "variables": variables]
         req.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
@@ -50,10 +52,9 @@ public final class GraphQLHTTPClient {
             let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
             let bodyString = String(data: data, encoding: .utf8) ?? ""
 
+            print("📬 [GraphQLHTTPClient] Response status: \(status)")
             if status != 200 {
-                VioLogger.warning(
-                    "GraphQL HTTP status=\(status) body=\(bodyString.prefix(500))",
-                    component: "GraphQLHTTPClient")
+                print("⚠️ [GraphQLHTTPClient] Non-200 body: \(bodyString)")
             }
 
             let root = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
@@ -61,7 +62,7 @@ public final class GraphQLHTTPClient {
             let dataObj = root["data"] as? [String: Any]
 
             if let errs = errors, !errs.isEmpty {
-                VioLogger.error("GraphQL errors: \(errs)", component: "GraphQLHTTPClient")
+                print("❌ [GraphQLHTTPClient] GraphQL Errors: \(errs)")
                 let first = errs[0]
                 let message = (first["message"] as? String) ?? "GraphQL error"
                 var det: [String: Any] = [:]
@@ -83,9 +84,23 @@ public final class GraphQLHTTPClient {
         } catch let e as SdkException {
             throw e
         } catch {
-            VioLogger.error(
-                "Network failure: \(error.localizedDescription)", component: "GraphQLHTTPClient")
+            print("🛑 [GraphQLHTTPClient] Network failure: \(error.localizedDescription)")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
+    }
+
+    private func parseOperation(from query: String) -> (kind: String, name: String) {
+        let compact = query.replacingOccurrences(of: "\n", with: " ")
+        let tokens = compact
+            .split(whereSeparator: { $0.isWhitespace || $0 == "(" || $0 == "{" })
+            .map(String.init)
+        guard !tokens.isEmpty else { return ("operation", "Unknown") }
+
+        if tokens[0] == "query" || tokens[0] == "mutation" || tokens[0] == "subscription" {
+            let kind = tokens[0]
+            let name = tokens.count > 1 ? tokens[1] : "Anonymous"
+            return (kind, name)
+        }
+        return ("operation", tokens[0])
     }
 }
