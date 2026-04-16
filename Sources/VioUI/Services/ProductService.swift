@@ -40,28 +40,7 @@ public class ProductService {
     /// Recreates the client if the resolved key or GraphQL URL changes.
     private func getSdkClient() throws -> SdkClient {
         let config = VioConfiguration.shared
-        let graphQLURLString = config.resolvedCommerceGraphQLURL
-        
-        guard let baseURL = URL(string: graphQLURLString) else {
-            throw ProductServiceError.invalidConfiguration("Invalid GraphQL URL: \(graphQLURLString)")
-        }
-        
-        // Backend `GET /v1/sdk/config` → `sdkBootstrapCommerceApiKey`, then SDK `apiKey`
-        let resolvedApiKey = config.resolvedCommerceApiKey
-        
-        // Invalidate cache if the key or URL has changed (e.g. bootstrap loaded after first call)
-        if let cached = cachedSdkClient {
-            let cachedKeyMatches = cached.apiKey == resolvedApiKey
-            let cachedURLMatches = cached.baseUrl == baseURL
-            if cachedKeyMatches && cachedURLMatches {
-                return cached
-            }
-            let fromBootstrap = config.sdkBootstrapCommerceApiKey != nil
-            VioLogger.debug("SDK client config changed — recreating (bootstrap commerce: \(fromBootstrap))", component: "ProductService")
-            cachedSdkClient = nil
-        }
-        
-        let client = SdkClient(baseUrl: baseURL, apiKey: resolvedApiKey)
+        let client = try CommerceSdkClientProvider.shared.client(configuration: config)
         cachedSdkClient = client
         
         let commerceSource: String
@@ -72,7 +51,7 @@ public class ProductService {
         } else {
             commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
         }
-        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(resolvedApiKey.count) (valor no logueado)")
+        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(client.apiKey.count) (valor no logueado)")
         VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
         
         return client
@@ -81,6 +60,7 @@ public class ProductService {
     /// Clear cached SDK client (useful for testing or reconfiguration)
     public func clearCache() {
         cachedSdkClient = nil
+        CommerceSdkClientProvider.shared.clear()
         VioLogger.debug("Cleared SDK client cache", component: "ProductService")
     }
 

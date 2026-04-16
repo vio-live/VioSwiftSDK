@@ -3906,14 +3906,15 @@ extension VCheckoutOverlay {
         
         // 2. Create SDK client to fetch available methods from Vio API
         let config = VioConfiguration.shared
-        guard let baseURL = URL(string: config.resolvedCommerceGraphQLURL) else {
-            VioLogger.error("Invalid GraphQL URL", component: "VCheckoutOverlay")
+        let sdk: SdkClient
+        do {
+            sdk = try CommerceSdkClientProvider.shared.client(configuration: config)
+        } catch {
+            VioLogger.error("Invalid GraphQL URL or credentials: \(error.localizedDescription)", component: "VCheckoutOverlay")
             await setFallbackPaymentMethods(configMethods)
             return
         }
-        
-        let sdk = SdkClient(baseUrl: baseURL, apiKey: config.resolvedCommerceApiKey)
-        
+
         // 3. Fetch available methods from Vio API (API is the source of truth)
         do {
             let apiMethods = try await sdk.payment.getAvailableMethods()
