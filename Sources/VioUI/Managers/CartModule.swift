@@ -47,21 +47,41 @@ extension CartManager {
             ]
         )
 
-        do {
-            let dto = try await sdk.cart.create(
-                customer_session_id: session,
-                currency: currency,
-                shippingCountry: country
-            )
-            sync(from: dto)
-        } catch let e as SdkException {
-            errorMessage = e.description
-            logError("sdk.cart.create", error: e)
-            VioLogger.error("createCart FAIL \(e.description)", component: "CartModule")
-        } catch {
-            errorMessage = error.localizedDescription
-            logError("sdk.cart.create", error: error)
-            VioLogger.error("createCart FAIL \(error.localizedDescription)", component: "CartModule")
+        var didRetryAfterBootstrap = false
+        while true {
+            do {
+                let dto = try await sdk.cart.create(
+                    customer_session_id: session,
+                    currency: currency,
+                    shippingCountry: country
+                )
+                sync(from: dto)
+                break
+            } catch let e as SdkException {
+                if !didRetryAfterBootstrap && isCommerceAuthFailure(e) {
+                    didRetryAfterBootstrap = true
+                    VioLogger.warning("createCart auth failed — refreshing commerce bootstrap and retrying once", component: "CartModule")
+                    await CampaignManager.shared.ensureCommerceBootstrapApplied()
+                    syncSdkCredentials()
+                    continue
+                }
+                errorMessage = e.description
+                logError("sdk.cart.create", error: e)
+                VioLogger.error("createCart FAIL \(e.description)", component: "CartModule")
+                break
+            } catch {
+                if !didRetryAfterBootstrap && isCommerceAuthFailure(error) {
+                    didRetryAfterBootstrap = true
+                    VioLogger.warning("createCart auth failed — refreshing commerce bootstrap and retrying once", component: "CartModule")
+                    await CampaignManager.shared.ensureCommerceBootstrapApplied()
+                    syncSdkCredentials()
+                    continue
+                }
+                errorMessage = error.localizedDescription
+                logError("sdk.cart.create", error: error)
+                VioLogger.error("createCart FAIL \(error.localizedDescription)", component: "CartModule")
+                break
+            }
         }
 
         isLoading = false
@@ -502,26 +522,12 @@ extension CartManager {
         variant: VioCore.Variant? = nil,
         quantity: Int = 1
     ) async {
-        print("🛒 [CartModule] ========== ADD PRODUCT TO CART ==========")
-        print("🛒 [CartModule] Product: \(product.title)")
-        print("🛒 [CartModule] Product ID: \(product.id)")
-        print("🛒 [CartModule] Base price amount: \(product.price.amount)")
-        print("🛒 [CartModule] Price with taxes: \(product.price.amount_incl_taxes ?? 0.0)")
-        print("🛒 [CartModule] Currency: \(product.price.currency_code)")
-        print("🛒 [CartModule] Quantity to add: \(quantity)")
-        
         isLoading = true
         errorMessage = nil
 
         let previousCount = itemCount
         let selectedVariant = variant ?? product.variants.first
         let selectedVariantId = selectedVariant?.id
-        
-        if let v = selectedVariant {
-            print("🛒 [CartModule] Variant selected: \(v.title)")
-            print("🛒 [CartModule] Variant price amount: \(v.price.amount)")
-            print("🛒 [CartModule] Variant price with taxes: \(v.price.amount_incl_taxes ?? 0.0)")
-        }
 
         let hadExistingItem = items.contains {
             $0.productId == product.id && $0.variantId == selectedVariantId

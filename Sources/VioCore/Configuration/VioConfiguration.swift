@@ -90,6 +90,8 @@ public class VioConfiguration: ObservableObject {
         engagementConfig: EngagementConfiguration? = nil
     ) {
         let instance = VioConfiguration.shared
+        // Prevent stale sponsor commerce credentials when configuration is re-applied.
+        instance.applySdkBootstrapCommerce(apiKey: nil, graphQLURL: nil)
         
         instance.apiKey = apiKey
         instance.environment = environment
@@ -281,10 +283,15 @@ public class VioConfiguration: ObservableObject {
     
     /// Apply commerce credentials from `GET /v1/sdk/config`. Pass `nil` fields to clear bootstrap overrides.
     internal func applySdkBootstrapCommerce(apiKey: String?, graphQLURL: String?) {
+        let previousKey = sdkBootstrapCommerceApiKey
+        let previousURL = sdkBootstrapCommerceGraphQLURL
         let k = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         let u = graphQLURL?.trimmingCharacters(in: .whitespacesAndNewlines)
         sdkBootstrapCommerceApiKey = (k?.isEmpty == false) ? k : nil
         sdkBootstrapCommerceGraphQLURL = (u?.isEmpty == false) ? u : nil
+        if previousKey != sdkBootstrapCommerceApiKey || previousURL != sdkBootstrapCommerceGraphQLURL {
+            NotificationCenter.default.post(name: .vioCommerceBootstrapDidApply, object: nil)
+        }
     }
 
     /// `true` cuando la autorización GraphQL de **commerce** viene de `GET /v1/sdk/config` (clave dinámica del sponsor).

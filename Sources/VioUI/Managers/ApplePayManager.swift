@@ -168,6 +168,23 @@ public final class ApplePayManager: NSObject, ObservableObject {
             VioLogger.debug("Apple Pay: Direct Buy - Adding product \(p.title) to cart...", component: "ApplePayManager")
             await cartManager.addProduct(p, variant: variant, quantity: 1)
         }
+
+        // Ensure server-side cart is reachable before creating checkout/payment state.
+        guard let currentCartId = cartManager.cartId, !currentCartId.isEmpty else {
+            paymentResult = .failure("Cart is not ready. Please try again.")
+            isProcessing = false
+            return
+        }
+        do {
+            cartManager.syncSdkCredentials()
+            let serverCart = try await cartManager.sdk.cart.getById(cart_id: currentCartId)
+            cartManager.sync(from: serverCart)
+        } catch {
+            VioLogger.error("Apple Pay: Unable to sync cart from backend before checkout: \(error.localizedDescription)", component: "ApplePayManager")
+            paymentResult = .failure("Unable to sync cart. Please try again.")
+            isProcessing = false
+            return
+        }
         
         // 3. Create Checkout from Cart (the required id for Payment mutations)
         if let cartId = cartManager.cartId {
@@ -190,25 +207,6 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // 4. Fetch Stripe key strictly from backend (no local/hardcoded fallback at runtime)
         var backendStripeKey: String?
         var backendStripeKeySource = "none"
-        print(
-            "🔑 [ApplePayManager] stripeIntent start checkoutId=\(checkoutId)"
-        )
-        do {
-            let intent = try await cartManager.sdk.payment.stripeIntent(
-                checkoutId: checkoutId,
-                returnEphemeralKey: false
-            )
-            if !intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                backendStripeKey = intent.publishableKey
-                backendStripeKeySource = "stripeIntent.publishable_key"
-                print(
-                    "🔑 [ApplePayManager] stripeIntent ok backendKey=\(maskedStripeKey(intent.publishableKey))"
-                )
-            }
-        } catch {
-            print("❌ [ApplePayManager] stripeIntent fail: \(error.localizedDescription)")
-        }
-
         do {
             let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: checkoutId)
             let backendMerchantId = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -230,6 +228,27 @@ public final class ApplePayManager: NSObject, ObservableObject {
             }
         } catch {
             print("⚠️ [ApplePayManager] applePayInit fail: \(error.localizedDescription)")
+        }
+
+        if backendStripeKey == nil {
+            print(
+                "🔑 [ApplePayManager] stripeIntent start checkoutId=\(checkoutId)"
+            )
+            do {
+                let intent = try await cartManager.sdk.payment.stripeIntent(
+                    checkoutId: checkoutId,
+                    returnEphemeralKey: false
+                )
+                if !intent.publishableKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    backendStripeKey = intent.publishableKey
+                    backendStripeKeySource = "stripeIntent.publishable_key"
+                    print(
+                        "🔑 [ApplePayManager] stripeIntent ok backendKey=\(maskedStripeKey(intent.publishableKey))"
+                    )
+                }
+            } catch {
+                print("⚠️ [ApplePayManager] stripeIntent fail: \(error.localizedDescription) — no key from applePayInit, cannot continue without backend key")
+            }
         }
 
         guard let runtimeBackendStripeKey = backendStripeKey,
@@ -413,11 +432,16 @@ public final class ApplePayManager: NSObject, ObservableObject {
                 shippingAddress: shippingAddressInput
             )
             print("🌐 [ApplePayManager] applePayConfirm response status=\(confirmDto.status ?? "nil")")
-            
-            if confirmDto.status == "SUCCESS" {
+
+            let normalizedStatus = normalizedPaymentStatus(confirmDto.status)
+            if normalizedStatus == "success" {
                 print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
                 paymentResult = .success
                 return true
+            } else if normalizedStatus == "processing" || normalizedStatus == "pending" {
+                print("⚠️ [ApplePayManager] applePayConfirm pending status=\(confirmDto.status ?? "UNKNOWN")")
+                paymentResult = .failure("Payment is still processing. Please verify the order status.")
+                return false
             } else {
                 print("⚠️ [ApplePayManager] applePayConfirm status: \(confirmDto.status ?? "UNKNOWN")")
                 paymentResult = .failure("Payment failed: \(confirmDto.status ?? "unknown error")")
@@ -427,68 +451,6 @@ public final class ApplePayManager: NSObject, ObservableObject {
             print("🛑 [ApplePayManager] applePayConfirm GraphQL error: \(error.localizedDescription)")
             VioLogger.error("Confirm Mutation Error: \(error.localizedDescription)", component: "ApplePayManager")
             paymentResult = .failure(error.localizedDescription)
-            return false
-        }
-    }
-    
-    /// Attempts to process Apple Pay payment without Stripe tokenization
-    /// Some backends can handle Apple Pay tokens directly
-    private func processPaymentWithoutStripe(payment: PKPayment, cartManager: CartManager, checkoutId: String) async -> Bool {
-        print("🔄 [ApplePayManager] Attempting payment without Stripe tokenization...")
-        
-        // Convert PKPayment token to base64 for direct backend processing
-        let paymentData = payment.token.paymentData
-        let base64PaymentData = paymentData.base64EncodedString()
-        
-        print("🔍 [ApplePayManager] Direct payment data:")
-        print("  - Payment data length: \(paymentData.count) bytes")
-        print("  - Base64 length: \(base64PaymentData.count) characters")
-        print("  - Payment network: \(payment.token.paymentMethod.network?.rawValue ?? "unknown")")
-        
-        // Prepare shipping address
-        var shippingAddressInput: ApplePayAddressInputDto? = nil
-        if let contact = capturedContact, let addr = contact.postalAddress {
-            shippingAddressInput = ApplePayAddressInputDto(
-                firstName: contact.name?.givenName,
-                lastName: contact.name?.familyName,
-                address1: addr.street,
-                city: addr.city,
-                province: addr.state,
-                zip: addr.postalCode,
-                country: addr.isoCountryCode,
-                countryCode: addr.isoCountryCode
-            )
-        }
-        
-        // Try to confirm with the raw Apple Pay token instead of Stripe token
-        do {
-            cartManager.syncSdkCredentials()
-            print("🌐 [ApplePayManager] applePayConfirm with raw token (checkoutId: \(checkoutId))...")
-            
-            // Use the base64 encoded payment data as the token
-            let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
-                checkoutId: checkoutId,
-                applePayToken: base64PaymentData,
-                email: capturedContact?.emailAddress,
-                shippingAddress: shippingAddressInput
-            )
-            print("🌐 [ApplePayManager] confirm response received status: \(confirmDto.status ?? "nil")")
-            
-            if confirmDto.status == "SUCCESS" {
-                print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
-                paymentResult = .success
-                return true
-            } else {
-                print("⚠️ [ApplePayManager] applePayConfirm status: \(confirmDto.status ?? "UNKNOWN")")
-                paymentResult = .failure("Payment failed: \(confirmDto.status ?? "unknown error")")
-                return false
-            }
-        } catch {
-            print("🛑 [ApplePayManager] applePayConfirm with raw token failed: \(error.localizedDescription)")
-            print("   Backend might not support direct Apple Pay token processing")
-            
-            // Final fallback - return a descriptive error
-            paymentResult = .failure("Payment system configuration error. Please contact support.")
             return false
         }
     }
@@ -556,6 +518,12 @@ public final class ApplePayManager: NSObject, ObservableObject {
     private func maskedToken(_ token: String) -> String {
         guard token.count > 12 else { return token }
         return "\(token.prefix(8))...\(token.suffix(4))"
+    }
+
+    private func normalizedPaymentStatus(_ status: String?) -> String {
+        status?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased() ?? ""
     }
     
     // MARK: - Summary Item Helpers

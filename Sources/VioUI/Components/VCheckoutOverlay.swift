@@ -3900,16 +3900,19 @@ extension VCheckoutOverlay {
         // 1. Get supported methods from config
         let configMethods = VioConfiguration.shared.cartConfiguration.supportedPaymentMethods
         VioLogger.debug("Config supported methods: \(configMethods)", component: "VCheckoutOverlay")
+
+        // Ensure commerce bootstrap has had a chance to apply dynamic GraphQL credentials.
+        await CampaignManager.shared.ensureCommerceBootstrapApplied()
         
         // 2. Create SDK client to fetch available methods from Vio API
         let config = VioConfiguration.shared
-        guard let baseURL = URL(string: config.environment.graphQLURL) else {
+        guard let baseURL = URL(string: config.resolvedCommerceGraphQLURL) else {
             VioLogger.error("Invalid GraphQL URL", component: "VCheckoutOverlay")
             await setFallbackPaymentMethods(configMethods)
             return
         }
         
-        let sdk = SdkClient(baseUrl: baseURL, apiKey: config.apiKey)
+        let sdk = SdkClient(baseUrl: baseURL, apiKey: config.resolvedCommerceApiKey)
         
         // 3. Fetch available methods from Vio API (API is the source of truth)
         do {

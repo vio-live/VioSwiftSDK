@@ -840,24 +840,13 @@ public struct VProductDetailOverlay: View {
     
     /// Initialize default options from first variant
     private func initializeDefaultOptions() {
-        print("🔧 [VProductDetailOverlay] Initializing default options...")
-        print("🔧 [VProductDetailOverlay] Total variants: \(product.variants.count)")
-        
-        for (index, variant) in product.variants.enumerated() {
-            print("🔧 [VProductDetailOverlay] Variant[\(index)]: \(variant.title)")
-            print("🔧 [VProductDetailOverlay]   Price: \(variant.price.amount), with taxes: \(variant.price.amount_incl_taxes ?? 0.0)")
-        }
-        
         guard let firstVariant = product.variants.first else {
-            print("🔧 [VProductDetailOverlay] No variants, selectedVariant = nil")
             selectedVariant = nil
             return
         }
         
         let sortedOpts = sortedOptions
         guard !sortedOpts.isEmpty else {
-            print("🔧 [VProductDetailOverlay] No options, selecting first variant: \(firstVariant.title)")
-            print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
             selectedVariant = firstVariant
             return
         }
@@ -869,9 +858,6 @@ public struct VProductDetailOverlay: View {
                 selectedOptions[optionName] = value.trimmingCharacters(in: .whitespaces)
             }
         }
-        
-        print("🔧 [VProductDetailOverlay] Selecting first variant with options: \(firstVariant.title)")
-        print("🔧 [VProductDetailOverlay] First variant price: \(firstVariant.price.amount), with taxes: \(firstVariant.price.amount_incl_taxes ?? 0.0)")
         selectedVariant = firstVariant
     }
     

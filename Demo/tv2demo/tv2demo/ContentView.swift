@@ -22,7 +22,7 @@ struct ContentView: View {
                 .onAppear {
                     // 🎯 SDK: discover active campaigns → WS connect → identify → ready for cart_intent
                     Task {
-                        print("🎯 [ContentView] discoverCampaigns() — ver logs [CampaignManager] / [CampaignWebSocket] (respuestas esperadas en 📋 al arranque)")
+                        print("🎯 [ContentView] discoverCampaigns()")
                         await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
                         print("🎯 [ContentView] Fin discovery — campaigns en memoria: \(CampaignManager.shared.activeCampaigns.count), WS isConnected: \(CampaignManager.shared.isConnected) (puede ser true un instante después)")
                     }

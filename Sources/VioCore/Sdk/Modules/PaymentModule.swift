@@ -339,7 +339,7 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             throw SdkException("Empty response in Payment.applePayConfirm", code: "EMPTY_RESPONSE")
         }
         let dto = try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
-        print("💳 [PaymentModule] applePayConfirm response status=\(dto.status) orderId=\(dto.orderId ?? "-")")
+        print("💳 [PaymentModule] applePayConfirm response status=\(dto.status ?? "nil") orderId=\(dto.orderId ?? "-")")
         return dto
     }
 

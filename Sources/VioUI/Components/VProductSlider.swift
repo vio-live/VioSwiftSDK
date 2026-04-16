@@ -283,7 +283,7 @@ public struct VProductSlider: View {
                 categoryId: categoryId,
                 currency: resolvedCurrency,
                 country: resolvedCountry,
-                forceRefresh: true
+                forceRefresh: viewModel.products.isEmpty
             )
         }
     }

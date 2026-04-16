@@ -46,6 +46,7 @@ public class CartManager: ObservableObject {
     internal var activeProductRequestID: UUID?
     internal var lastLoadedProductCurrency: String?
     internal var lastLoadedProductCountry: String?
+    private var bootstrapObserver: NSObjectProtocol?
 
     internal var sdk: CartManagingSDK
 
@@ -93,10 +94,28 @@ public class CartManager: ObservableObject {
                     return
                 }
                 
+                await CampaignManager.shared.ensureCommerceBootstrapApplied()
+                self.syncSdkCredentials()
                 VioLogger.debug("init → scheduling createCart(currency:\(currency), country:\(country))", component: "CartManager")
                 await createCart(currency: currency, country: country)
                 await loadMarketsIfNeeded()
             }
+        }
+
+        bootstrapObserver = NotificationCenter.default.addObserver(
+            forName: .vioCommerceBootstrapDidApply,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.syncSdkCredentials()
+            }
+        }
+    }
+
+    deinit {
+        if let observer = bootstrapObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
@@ -111,6 +130,22 @@ public class CartManager: ObservableObject {
             VioLogger.debug("Syncing SDK credentials to resolved values...", component: "CartManager")
             concreteSdk.updateCredentials(baseUrl: currentUrl, apiKey: currentKey)
         }
+    }
+
+    internal func isCommerceAuthFailure(_ error: Error) -> Bool {
+        if let sdkError = error as? SdkException {
+            let code = sdkError.code?.uppercased() ?? ""
+            if code == "UNAUTHENTICATED" || code == "AUTHENTICATION_FAILED" {
+                return true
+            }
+            if let status = sdkError.status, status == 401 || status == 403 {
+                return true
+            }
+            let msg = sdkError.message.lowercased()
+            return msg.contains("authentication failed") || msg.contains("unauthenticated")
+        }
+        let msg = error.localizedDescription.lowercased()
+        return msg.contains("authentication failed") || msg.contains("unauthenticated")
     }
 
     public func showCheckout() {
