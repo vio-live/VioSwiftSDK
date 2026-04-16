@@ -37,12 +37,13 @@ public final class GraphQLHTTPClient {
     private func runOperationSafe(query: String, variables: [String: Any]) async throws
         -> GraphQLHTTPResponse
     {
+        let requestId = String(UUID().uuidString.prefix(8))
         let operation = parseOperation(from: query)
-        print("📡 [GraphQLHTTPClient] POST \(baseURL) [\(operation.kind) \(operation.name)]")
+        print("📡 [GraphQLHTTPClient][\(requestId)] POST \(baseURL) [\(operation.kind) \(operation.name)]")
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        print("Authorization: \(apiKey)")
+        print("🔐 [GraphQLHTTPClient][\(requestId)] Authorization=\(maskedApiKey(apiKey))")
         req.setValue(apiKey, forHTTPHeaderField: "Authorization")
         let payload: [String: Any] = ["query": query, "variables": variables]
         req.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
@@ -52,9 +53,9 @@ public final class GraphQLHTTPClient {
             let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
             let bodyString = String(data: data, encoding: .utf8) ?? ""
 
-            print("📬 [GraphQLHTTPClient] Response status: \(status)")
+            print("📬 [GraphQLHTTPClient][\(requestId)] Response status: \(status)")
             if status != 200 {
-                print("⚠️ [GraphQLHTTPClient] Non-200 body: \(bodyString)")
+                print("⚠️ [GraphQLHTTPClient][\(requestId)] Non-200 body: \(bodyString)")
             }
 
             let root = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
@@ -62,7 +63,7 @@ public final class GraphQLHTTPClient {
             let dataObj = root["data"] as? [String: Any]
 
             if let errs = errors, !errs.isEmpty {
-                print("❌ [GraphQLHTTPClient] GraphQL Errors: \(errs)")
+                print("❌ [GraphQLHTTPClient][\(requestId)] GraphQL Errors: \(errs)")
                 let first = errs[0]
                 let message = (first["message"] as? String) ?? "GraphQL error"
                 var det: [String: Any] = [:]
@@ -84,9 +85,17 @@ public final class GraphQLHTTPClient {
         } catch let e as SdkException {
             throw e
         } catch {
-            print("🛑 [GraphQLHTTPClient] Network failure: \(error.localizedDescription)")
+            print("🛑 [GraphQLHTTPClient][\(requestId)] Network failure: \(error.localizedDescription)")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
+    }
+
+    private func maskedApiKey(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "empty" }
+        let prefix = String(trimmed.prefix(6))
+        let suffix = String(trimmed.suffix(4))
+        return "\(prefix)...\(suffix) (len=\(trimmed.count))"
     }
 
     private func parseOperation(from query: String) -> (kind: String, name: String) {

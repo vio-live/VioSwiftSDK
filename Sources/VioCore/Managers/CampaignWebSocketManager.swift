@@ -16,7 +16,7 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     private var urlSession: URLSession!
     private var reconnectTimer: Timer?
     private var reconnectAttempts: Int = 0
-    private let maxReconnectAttempts: Int = 5
+    private let maxReconnectAttempts: Int = VioRuntimeRetryPolicy.webSocketMaxReconnectAttempts
     private var isConnected: Bool = false
     private var pendingRequest: URLRequest?
     
@@ -60,8 +60,9 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     
     /// Connect to campaign WebSocket
     public func connect() async {
-        // Build WebSocket URL — uses VioConfiguration.wsBaseURL (already wss://)
-        let wsBase = VioConfiguration.shared.wsBaseURL
+        // Build WebSocket URL from the base injected by CampaignManager to keep
+        // transport coherent with runtime endpoint fallback decisions.
+        let wsBase = normalizedWebSocketBase(from: baseURL)
         var urlString = "\(wsBase)/ws/\(campaignId)"
         if let uid = userId, !uid.isEmpty {
             var allowed = CharacterSet.urlQueryAllowed
@@ -83,11 +84,12 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10.0
         
-        // Add API key to headers if available
+        // Add SDK API key to headers if available
         let config = VioConfiguration.shared
-        if !config.apiKey.isEmpty {
-            request.setValue(config.apiKey, forHTTPHeaderField: "X-API-Key")
-            VioLogger.debug("Using API Key: \(config.apiKey.prefix(8))...", component: "CampaignWebSocket")
+        let sdkApiKey = config.resolvedSdkApiKey
+        if !sdkApiKey.isEmpty {
+            request.setValue(sdkApiKey, forHTTPHeaderField: "X-API-Key")
+            VioLogger.debug("Using SDK API Key: \(sdkApiKey.prefix(8))...", component: "CampaignWebSocket")
         }
         
         // Guard: skip if already connected and running — prevents double-connect from
@@ -107,6 +109,21 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         webSocketTask?.resume()
         // Connection established confirmed via URLSessionWebSocketDelegate
         // (didOpenWithProtocol fires when handshake completes)
+    }
+
+    private func normalizedWebSocketBase(from raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard var components = URLComponents(string: trimmed) else {
+            return trimmed
+        }
+        if components.scheme == "https" {
+            components.scheme = "wss"
+        } else if components.scheme == "http" {
+            components.scheme = "ws"
+        } else if components.scheme == nil {
+            components.scheme = "wss"
+        }
+        return (components.string ?? trimmed).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
     
     /// Disconnect from WebSocket
@@ -390,7 +407,10 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
         
         reconnectAttempts += 1
-        let delay = min(30.0, pow(2.0, Double(reconnectAttempts))) // Exponential backoff, max 30s
+        let delay = min(
+            VioRuntimeRetryPolicy.webSocketMaxBackoffSeconds,
+            pow(2.0, Double(reconnectAttempts))
+        )
         
         VioLogger.debug("Reconnecting in \(delay) seconds (attempt \(reconnectAttempts)/\(maxReconnectAttempts))", component: "CampaignWebSocket")
         

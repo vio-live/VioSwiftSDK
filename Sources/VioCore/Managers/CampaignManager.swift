@@ -47,6 +47,7 @@ public class CampaignManager: ObservableObject {
     private var baseURL: String  // For REST API (GraphQL base URL)
     private var isInitializing = false  // Flag to prevent multiple simultaneous initializations
     private var campaignRestBaseOverride: String?
+    private var campaignWebSocketBaseOverride: String?
     private var commerceBootstrapTask: Task<Void, Never>?
     private var commerceBootstrapTaskApiKey: String?
     private var discoverCampaignsTask: Task<Void, Never>?
@@ -57,7 +58,7 @@ public class CampaignManager: ObservableObject {
     
     // Campaign endpoints from configuration
     private var campaignWebSocketBaseURL: String {
-        VioConfiguration.shared.wsBaseURL
+        campaignWebSocketBaseOverride ?? VioConfiguration.shared.wsBaseURL
     }
     
     private var campaignRestAPIBaseURL: String {
@@ -128,6 +129,7 @@ public class CampaignManager: ObservableObject {
         disconnect()
         pendingApnsDeviceTokenHex = nil
         campaignRestBaseOverride = nil
+        campaignWebSocketBaseOverride = nil
         commerceBootstrapTask?.cancel()
         commerceBootstrapTask = nil
         commerceBootstrapTaskApiKey = nil
@@ -153,6 +155,7 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Initialize campaign connection (called automatically if campaignId > 0)
+    @available(*, deprecated, message: "Use VioSession.shared.start(...) / VioRuntime.startSession(...) for orchestrated startup.")
     public func initializeCampaign() async {
         guard let campaignId = currentCampaign?.id, campaignId > 0 else {
             print("🎯 [CampaignManager] initializeCampaign - No discovered campaignId, skipping")
@@ -640,6 +643,7 @@ public class CampaignManager: ObservableObject {
     }
     
     /// Re-runs commerce bootstrap from `GET /v1/sdk/config` (e.g. before ``ProductService`` load in cart_intent overlay). Idempotent.
+    @available(*, deprecated, message: "Use VioRuntime.ensureCommerceReady() or VioRuntime.startSession(...)")
     public func ensureCommerceBootstrapApplied() async {
         let apiKey = VioConfiguration.shared.resolvedSdkApiKey
         guard !apiKey.isEmpty else {
@@ -1277,13 +1281,31 @@ public class CampaignManager: ObservableObject {
         let trimmedCurrent = currentBase.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !fallbackBase.isEmpty, fallbackBase != trimmedCurrent else { return false }
 
+        // Keep REST and WS on the same environment/base to avoid split-brain behavior.
+        let fallbackWs = deriveWebSocketBase(fromRestBase: fallbackBase)
         campaignRestBaseOverride = fallbackBase
-        print("🎯 [CampaignManager] \(context) fallback REST base activated → \(fallbackBase)")
+        campaignWebSocketBaseOverride = fallbackWs
+        print("🎯 [CampaignManager] \(context) fallback activated → REST=\(fallbackBase) WS=\(fallbackWs)")
         VioLogger.warning(
-            "\(context) connectivity failed on \(trimmedCurrent); retrying with environment REST base \(fallbackBase)",
+            "\(context) connectivity failed on \(trimmedCurrent); retrying with REST=\(fallbackBase) WS=\(fallbackWs)",
             component: "CampaignManager"
         )
         return true
+    }
+
+    private func deriveWebSocketBase(fromRestBase restBase: String) -> String {
+        let trimmed = restBase.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard var components = URLComponents(string: trimmed) else {
+            return campaignWebSocketBaseURL
+        }
+        if components.scheme == "https" {
+            components.scheme = "wss"
+        } else if components.scheme == "http" {
+            components.scheme = "ws"
+        } else if components.scheme == nil {
+            components.scheme = "wss"
+        }
+        return (components.string ?? trimmed).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
     
     // Backward compatibility method

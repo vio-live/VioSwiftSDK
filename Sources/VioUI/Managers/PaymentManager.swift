@@ -11,6 +11,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {
@@ -61,6 +62,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {
@@ -118,6 +120,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {
@@ -205,6 +208,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {
@@ -255,6 +259,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {
@@ -305,6 +310,7 @@ extension CartManager {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
+        guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
         let id: String?
         if let passed = checkoutId, !passed.isEmpty {

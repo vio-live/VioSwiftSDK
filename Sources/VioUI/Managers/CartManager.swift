@@ -58,12 +58,20 @@ public class CartManager: ObservableObject {
         if let provided = sdk {
             self.sdk = provided
         } else {
-            let baseURL = URL(string: configuration.resolvedCommerceGraphQLURL)!
-            let apiKey = configuration.resolvedCommerceApiKey
-
-            VioLogger.debug("Initializing SDK Client - Base URL: \(baseURL), API Key: \(apiKey.prefix(8))...", component: "CartManager")
-
-            self.sdk = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+            do {
+                let sharedClient = try CommerceSdkClientProvider.shared.client(configuration: configuration)
+                VioLogger.debug(
+                    "Initializing shared SDK Client - Base URL: \(sharedClient.baseUrl), API Key: \(sharedClient.apiKey.prefix(8))...",
+                    component: "CartManager")
+                self.sdk = sharedClient
+            } catch {
+                let baseURL = URL(string: configuration.environment.graphQLURL) ?? URL(string: "https://graph-ql-dev.vio.live/graphql")!
+                let apiKey = configuration.apiKey.isEmpty ? "DEMO_KEY" : configuration.apiKey
+                VioLogger.warning(
+                    "Falling back to direct SDK client init due to provider error: \(error.localizedDescription)",
+                    component: "CartManager")
+                self.sdk = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+            }
         }
 
         let fallback = configuration.marketConfiguration
@@ -123,12 +131,26 @@ public class CartManager: ObservableObject {
     public func syncSdkCredentials() {
         guard let concreteSdk = sdk as? SdkClient else { return }
         let config = VioConfiguration.shared
-        let currentUrl = URL(string: config.resolvedCommerceGraphQLURL)!
-        let currentKey = config.resolvedCommerceApiKey
-        
-        if concreteSdk.baseUrl != currentUrl || concreteSdk.apiKey != currentKey {
-            VioLogger.debug("Syncing SDK credentials to resolved values...", component: "CartManager")
-            concreteSdk.updateCredentials(baseUrl: currentUrl, apiKey: currentKey)
+        do {
+            let sharedClient = try CommerceSdkClientProvider.shared.client(configuration: config)
+            if concreteSdk !== sharedClient {
+                let currentUrl = sharedClient.baseUrl
+                let currentKey = sharedClient.apiKey
+                if concreteSdk.baseUrl != currentUrl || concreteSdk.apiKey != currentKey {
+                    VioLogger.debug("Syncing SDK credentials to resolved values...", component: "CartManager")
+                    concreteSdk.updateCredentials(baseUrl: currentUrl, apiKey: currentKey)
+                }
+            }
+        } catch {
+            guard let currentUrl = URL(string: config.resolvedCommerceGraphQLURL) else {
+                VioLogger.error("Invalid resolved commerce URL while syncing credentials", component: "CartManager")
+                return
+            }
+            let currentKey = config.resolvedCommerceApiKey
+            if concreteSdk.baseUrl != currentUrl || concreteSdk.apiKey != currentKey {
+                VioLogger.debug("Syncing SDK credentials to resolved values...", component: "CartManager")
+                concreteSdk.updateCredentials(baseUrl: currentUrl, apiKey: currentKey)
+            }
         }
     }
 
