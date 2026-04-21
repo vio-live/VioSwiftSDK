@@ -13,6 +13,7 @@ import StripePayments
 public final class ApplePayManager: NSObject, ObservableObject {
 
     public static let shared = ApplePayManager()
+    private let logComponent = "ApplePayManager"
 
     // Default merchant id used by PassKit. Backend may override it via applePayInit
     // only when it returns a valid Apple merchant identifier (`merchant.*`).
@@ -85,28 +86,32 @@ public final class ApplePayManager: NSObject, ObservableObject {
     
     /// Diagnoses Apple Pay certificate and Stripe configuration
     public func diagnoseApplePaySetup() {
-        print("🔍 [ApplePayManager] Apple Pay Configuration Diagnosis:")
-        print("📱 Device Capabilities:")
-        print("   - Apple Pay available: \(PKPaymentAuthorizationController.canMakePayments())")
-        print("   - Supported networks available: \(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))")
-        
-        print("🏪 Merchant Configuration:")
-        print("   - Merchant ID: \(merchantIdentifier)")
-        print("   - Build configuration: \(isDebugBuild ? "DEBUG" : "RELEASE")")
-        
-        print("🔑 Stripe Configuration:")
-        if let key = STPAPIClient.shared.publishableKey {
-            print("   - Publishable key: \(key.prefix(20))... (\(key.count) chars)")
-            print("   - Key type: \(key.hasPrefix("pk_test_") ? "TEST" : key.hasPrefix("pk_live_") ? "LIVE" : "UNKNOWN")")
-        } else {
-            print("   - Publishable key: NOT SET")
+        guard isDebugBuild else {
+            VioLogger.info("Apple Pay diagnosis skipped in non-DEBUG build", component: logComponent)
+            return
         }
-        
-        print("📋 Required Actions:")
-        print("   1. Verify merchant ID '\(merchantIdentifier)' exists in Apple Developer Console")
-        print("   2. Generate Apple Pay Certificate for this merchant ID")
-        print("   3. Upload certificate to Stripe Dashboard: https://dashboard.stripe.com/settings/payments/apple_pay")
-        print("   4. Ensure certificate matches the publishable key environment (test/live)")
+        VioLogger.debug("Apple Pay diagnosis started", component: logComponent)
+        VioLogger.debug(
+            "Device capabilities: canPay=\(PKPaymentAuthorizationController.canMakePayments()) canPayNetworks=\(PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks))",
+            component: logComponent
+        )
+        VioLogger.debug(
+            "Merchant configuration: merchantId=\(merchantIdentifier) build=\(isDebugBuild ? "DEBUG" : "RELEASE")",
+            component: logComponent
+        )
+
+        if let key = STPAPIClient.shared.publishableKey {
+            VioLogger.debug(
+                "Stripe key configured: \(maskedStripeKey(key)) type=\(key.hasPrefix("pk_test_") ? "TEST" : key.hasPrefix("pk_live_") ? "LIVE" : "UNKNOWN")",
+                component: logComponent
+            )
+        } else {
+            VioLogger.warning("Stripe publishable key is not set", component: logComponent)
+        }
+        VioLogger.debug(
+            "Required actions: verify merchant, generate cert, upload cert to Stripe, align test/live environments",
+            component: logComponent
+        )
     }
     
     private var isDebugBuild: Bool {
@@ -211,16 +216,11 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
         controller.delegate = self
-        print("🌐 [ApplePayManager] Presenting Apple Pay sheet...")
+        VioLogger.info("Presenting Apple Pay sheet", component: logComponent)
         let presented = await controller.present()
         if !presented {
-            // Check for common presentation failures
-            print("❌ [ApplePayManager] Failed to present Apple Pay sheet")
-            
-            // Run specific diagnostics for merchant identifier issues
+            VioLogger.error("Failed to present PKPaymentAuthorizationController", component: logComponent)
             await diagnoseMerchantIdentifierIssues()
-            
-            VioLogger.error("Failed to present PKPaymentAuthorizationController", component: "ApplePayManager")
             self.paymentResult = .failure("Apple Pay is not properly configured for this app. Please contact support.")
             self.isProcessing = false
         }
@@ -243,18 +243,19 @@ public final class ApplePayManager: NSObject, ObservableObject {
 
         // Validate Stripe configuration before attempting tokenization
         guard let publishableKey = STPAPIClient.shared.publishableKey, !publishableKey.isEmpty else {
-            print("❌ [ApplePayManager] stripe key missing at tokenization stage")
+            VioLogger.error("Stripe key missing at tokenization stage", component: logComponent)
             paymentResult = .failure("Missing backend Stripe credentials")
             return false
         }
 
-        print(
-            "🔍 [ApplePayManager] tokenize start merchant=\(merchantIdentifier) publishableKey=\(maskedStripeKey(publishableKey)) network=\(payment.token.paymentMethod.network?.rawValue ?? "unknown") paymentDataBytes=\(payment.token.paymentData.count)"
+        VioLogger.debug(
+            "Tokenize start merchant=\(merchantIdentifier) publishableKey=\(maskedStripeKey(publishableKey)) network=\(payment.token.paymentMethod.network?.rawValue ?? "unknown") paymentDataBytes=\(payment.token.paymentData.count)",
+            component: logComponent
         )
         if payment.token.paymentData.isEmpty {
             // In some Apple Pay test/simulator flows, `paymentData` can be empty while
             // Stripe still produces a valid test token (`tok_*`). Do not hard-fail here.
-            print("⚠️ [ApplePayManager] Payment token data is empty; continuing with Stripe tokenization...")
+            VioLogger.warning("Payment token data is empty; continuing with Stripe tokenization", component: logComponent)
         }
 
         // 1. Tokenize with Stripe
@@ -272,13 +273,13 @@ public final class ApplePayManager: NSObject, ObservableObject {
                 }
             }
             stripeToken = token.tokenId
-            print("✅ [ApplePayManager] tokenize ok token=\(maskedToken(stripeToken))")
+            VioLogger.info("Tokenize success token=\(maskedToken(stripeToken))", component: logComponent)
         } catch {
             let nsError = error as NSError
-            print(
-                "❌ [ApplePayManager] tokenize fail domain=\(nsError.domain) code=\(nsError.code) requestId=\((nsError.userInfo["com.stripe.lib:StripeRequestIDKey"] as? String) ?? "-") message=\(error.localizedDescription)"
+            VioLogger.error(
+                "Tokenize failure domain=\(nsError.domain) code=\(nsError.code) requestId=\((nsError.userInfo["com.stripe.lib:StripeRequestIDKey"] as? String) ?? "-") message=\(error.localizedDescription)",
+                component: logComponent
             )
-            VioLogger.error("Stripe Tokenization Error: \(error.localizedDescription)", component: "ApplePayManager")
             let errorMessage: String
             if nsError.domain == "com.stripe.lib" && nsError.code == 50 {
                 errorMessage = "Apple Pay is not properly configured. Please contact support."
@@ -312,8 +313,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // 3. Confirm with backend
         do {
             cartManager.syncSdkCredentials()
-            print(
-                "🌐 [ApplePayManager] applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil)"
+            VioLogger.debug(
+                "applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil)",
+                component: logComponent
             )
             let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
                 checkoutId: finalId,
@@ -321,26 +323,25 @@ public final class ApplePayManager: NSObject, ObservableObject {
                 email: capturedContact?.emailAddress,
                 shippingAddress: shippingAddressInput
             )
-            print("🌐 [ApplePayManager] applePayConfirm response status=\(confirmDto.status ?? "nil")")
+            VioLogger.debug("applePayConfirm response status=\(confirmDto.status ?? "nil")", component: logComponent)
 
             let normalizedStatus = normalizedPaymentStatus(confirmDto.status)
             if normalizedStatus == "success" {
-                print("✅ [ApplePayManager] applePayConfirm SUCCESS (orderId: \(confirmDto.orderId ?? "—"))")
+                VioLogger.success("applePayConfirm success orderId=\(confirmDto.orderId ?? "—")", component: logComponent)
                 paymentResult = .success
                 await cartManager.resetCartAndCreateNew()
                 return true
             } else if normalizedStatus == "processing" || normalizedStatus == "pending" {
-                print("⚠️ [ApplePayManager] applePayConfirm pending status=\(confirmDto.status ?? "UNKNOWN")")
+                VioLogger.warning("applePayConfirm pending status=\(confirmDto.status ?? "UNKNOWN")", component: logComponent)
                 paymentResult = .failure("Payment is still processing. Please verify the order status.")
                 return false
             } else {
-                print("⚠️ [ApplePayManager] applePayConfirm status: \(confirmDto.status ?? "UNKNOWN")")
+                VioLogger.warning("applePayConfirm non-success status=\(confirmDto.status ?? "UNKNOWN")", component: logComponent)
                 paymentResult = .failure("Payment failed: \(confirmDto.status ?? "unknown error")")
                 return false
             }
         } catch {
-            print("🛑 [ApplePayManager] applePayConfirm GraphQL error: \(error.localizedDescription)")
-            VioLogger.error("Confirm Mutation Error: \(error.localizedDescription)", component: "ApplePayManager")
+            VioLogger.error("applePayConfirm GraphQL error: \(error.localizedDescription)", component: logComponent)
             paymentResult = .failure(error.localizedDescription)
             return false
         }
@@ -348,12 +349,14 @@ public final class ApplePayManager: NSObject, ObservableObject {
     
     /// Diagnoses merchant identifier configuration issues
     private func diagnoseMerchantIdentifierIssues() async {
-        print("🚨 [ApplePayManager] Merchant Identifier Configuration Issues:")
-        print("📋 Current Configuration:")
-        print("   - Merchant ID: \(merchantIdentifier)")
-        print("   - Build: \(isDebugBuild ? "DEBUG" : "RELEASE")")
+        guard isDebugBuild else { return }
+        VioLogger.warning("Merchant identifier diagnostics started", component: logComponent)
+        VioLogger.debug(
+            "Current merchant configuration: merchantId=\(merchantIdentifier) build=\(isDebugBuild ? "DEBUG" : "RELEASE")",
+            component: logComponent
+        )
         
-        print("🔍 Entitlement Check:")
+        VioLogger.debug("Running entitlement check", component: logComponent)
         // Check if we can create a payment request (this will validate entitlements)
         let testRequest = PKPaymentRequest()
         testRequest.merchantIdentifier = merchantIdentifier
@@ -364,35 +367,16 @@ public final class ApplePayManager: NSObject, ObservableObject {
         testRequest.paymentSummaryItems = [PKPaymentSummaryItem(label: "Test", amount: NSDecimalNumber(value: 1.0))]
         
         let canAuthorize = PKPaymentAuthorizationController.canMakePayments(usingNetworks: [.visa])
-        print("   - Can make payments: \(canAuthorize)")
-        
-        print("🛠️ Required Fix:")
-        print("   ❌ PROBLEM: Your app doesn't have entitlement for '\(merchantIdentifier)'")
-        print("")
-        print("   ✅ SOLUTION: Follow these steps:")
-        print("   1. Open your project in Xcode")
-        print("   2. Select your app target")
-        print("   3. Go to 'Signing & Capabilities' tab")
-        print("   4. Add 'Apple Pay' capability if not present")
-        print("   5. Configure the merchant identifier:")
-        print("      - Click '+' to add merchant ID")
-        print("      - Enter: \(merchantIdentifier)")
-        print("      - Or use an existing one from your Apple Developer account")
-        print("")
-        print("   📝 Alternative: Update the merchant ID to match your entitlements")
-        print("      - Check what merchant IDs are configured in your app")
-        print("      - Update the code to use a valid merchant ID")
-        print("")
-        print("   🌐 Apple Developer Console:")
-        print("      - Verify '\(merchantIdentifier)' exists at:")
-        print("      - https://developer.apple.com/account/resources/identifiers/list/merchant")
-        print("      - Create it if it doesn't exist")
+        VioLogger.debug("Entitlement check canAuthorize=\(canAuthorize)", component: logComponent)
+        VioLogger.warning(
+            "Likely missing Apple Pay entitlement for merchantId=\(merchantIdentifier). Verify Signing & Capabilities and Apple Developer merchant setup.",
+            component: logComponent
+        )
         
         // Try to suggest alternative merchant IDs based on bundle identifier
         if let bundleId = Bundle.main.bundleIdentifier {
             let suggestedMerchant = "merchant.\(bundleId)"
-            print("")
-            print("   💡 Suggested merchant ID based on bundle: \(suggestedMerchant)")
+            VioLogger.debug("Suggested merchant identifier based on bundle: \(suggestedMerchant)", component: logComponent)
         }
     }
 
@@ -535,7 +519,7 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
             
             // 1. Update cart country to get regional shipping options
             if let countryCode = contact.postalAddress?.isoCountryCode {
-                print("🌐 [ApplePayManager] Shipping address changed to \(countryCode). Updating cart...")
+                VioLogger.debug("Shipping address changed to \(countryCode); updating cart", component: "ApplePayManager")
                 _ = try? await cartManager.sdk.cart.update(cart_id: cartManager.cartId ?? "", shipping_country: countryCode)
                 _ = await cartManager.refreshShippingOptions()
             }
@@ -571,7 +555,7 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
                 return
             }
             
-            print("🌐 [ApplePayManager] Shipping method selected: \(shippingMethod.label) (\(optionId))")
+            VioLogger.debug("Shipping method selected: \(shippingMethod.label) (\(optionId))", component: "ApplePayManager")
             
             // Apply this shipping option to all items in the cart (Standard Apple Pay behavior)
             for item in cartManager.items {
