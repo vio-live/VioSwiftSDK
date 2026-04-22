@@ -453,16 +453,42 @@ public class CampaignManager: ObservableObject {
             notificationBody: notifBody,
             vioUserId: base.vioUserId,
             source: base.source,
-            deeplink: base.deeplink
+            deeplink: base.deeplink,
+            activationId: base.activationId,
+            sponsorId: base.sponsorId
         )
-        activeCartIntentEvent = merged
+        publishCartIntentIfChanged(merged, channel: "push/local")
         if let envUid = merged.vioUserId?.trimmingCharacters(in: .whitespacesAndNewlines), !envUid.isEmpty,
            let appUid = userId?.trimmingCharacters(in: .whitespacesAndNewlines), !appUid.isEmpty,
            envUid != appUid {
             print("🎯 [CampaignManager] cart_intent ⚠️ vio_user_id=\(envUid) distinto de CampaignManager.userId=\(appUid) (demo: revisar routing)")
         }
-        let pid = merged.productId ?? ""
-        print("🎯 [CampaignManager] cart_intent aplicado [push/local] productId=\(pid) campaignId=\(merged.campaignId.map(String.init) ?? "nil") name=\(merged.productName ?? "nil") title=\(notifTitle ?? "nil") → activeCartIntentEvent (overlay + commerce GraphQL)")
+    }
+
+    /// Publishes a `cart_intent` onto ``activeCartIntentEvent`` unless it's a duplicate
+    /// of the event already in flight (same `activationId`, or same `(productId, campaignId)`
+    /// when the envelope has no `activationId`). Solves the dual-delivery race where the
+    /// backend both pushes over WebSocket **and** calls the partner webhook / APNs as
+    /// redundancy — both deliveries land and without this gate the product overlay would
+    /// open twice.
+    private func publishCartIntentIfChanged(_ event: CartIntentEvent, channel: String) {
+        if let incoming = event.activationId, let current = activeCartIntentEvent?.activationId, incoming == current {
+            print("🎯 [CampaignManager] cart_intent [\(channel)] dedup: activationId=\(incoming) ya publicado — ignorando duplicado")
+            return
+        }
+        if event.activationId == nil,
+           let prev = activeCartIntentEvent,
+           prev.activationId == nil,
+           prev.productId == event.productId,
+           prev.campaignId == event.campaignId {
+            print("🎯 [CampaignManager] cart_intent [\(channel)] dedup: mismo (productId,campaignId) sin activationId — ignorando duplicado")
+            return
+        }
+        activeCartIntentEvent = event
+        let pid = event.productId ?? ""
+        let aid = event.activationId.map(String.init) ?? "nil"
+        let spid = event.sponsorId.map(String.init) ?? "nil"
+        print("🎯 [CampaignManager] cart_intent aplicado [\(channel)] productId=\(pid) campaignId=\(event.campaignId.map(String.init) ?? "nil") activationId=\(aid) sponsorId=\(spid) name=\(event.productName ?? "nil") → activeCartIntentEvent (overlay + commerce GraphQL)")
     }
     
     private static func apsAlertTitleFromUserInfo(_ userInfo: [AnyHashable: Any]) -> String? {
@@ -683,7 +709,7 @@ public class CampaignManager: ObservableObject {
             return
         }
         let restBase = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        var urlComponents = URLComponents(string: "\(restBase)/v1/sdk/config")
+        var urlComponents = URLComponents(string: "\(restBase)/v2/sdk/config")
         urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
         guard let url = urlComponents?.url else {
             VioLogger.warning("Invalid SDK bootstrap URL", component: "CampaignManager")
@@ -724,20 +750,26 @@ public class CampaignManager: ObservableObject {
                 VioLogger.warning("SDK bootstrap JSON decode failed: \(error.localizedDescription)", component: "CampaignManager")
                 return
             }
-            let key = bootstrap.commerce?.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+            // v2: commerce auth lives on `primarySponsor.commerce`. The `commerce` convenience
+            // alias on SdkBootstrapResponse maps to `primarySponsor.commerce` for compatibility.
+            let primarySponsor = VioSponsor(bootstrap: bootstrap.primarySponsor)
+            let secondarySponsors = (bootstrap.secondarySponsors ?? []).compactMap { VioSponsor(bootstrap: $0) }
+            VioConfiguration.shared.applySdkBootstrapSponsors(primary: primarySponsor, secondaries: secondarySponsors)
+
+            let key = primarySponsor?.commerce?.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
             let keyNonEmpty = (key?.isEmpty == false) ? key : nil
             // Solo aplicar URL del bootstrap cuando hay clave de commerce; si no, evita fijar URLs internas del servidor (p. ej. k8s) sin Authorization válida.
             let gqlForApply: String? = {
                 guard keyNonEmpty != nil else { return nil }
-                let g = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
-                let t = g?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let t = bootstrap.endpoints?.commerceGraphQL?.trimmingCharacters(in: .whitespacesAndNewlines)
                 return (t?.isEmpty == false) ? t : nil
             }()
-            let featCommerce = bootstrap.features?.commerce
-            if featCommerce == true, keyNonEmpty == nil {
-                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ features.commerce=true pero sin commerce.apiKey usará campaigns.commerceApiKey en vio-config si está definida")
+            let featShoppable = bootstrap.features?.shoppable ?? bootstrap.features?.commerce
+            if featShoppable == true, keyNonEmpty == nil {
+                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ features.shoppable=true pero primarySponsor.commerce.apiKey vacío; fallback a campaigns.commerceApiKey en vio-config si está definida")
             }
             VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: keyNonEmpty, graphQLURL: gqlForApply)
+            print("🎯 [CampaignManager] sdk/bootstrap    primarySponsor=\(primarySponsor?.name ?? "-"), secondary count=\(secondarySponsors.count)")
             if let k = keyNonEmpty {
                 VioLogger.debug(
                     "SDK bootstrap: commerce GraphQL Authorization from backend (key len \(k.count))",
@@ -1548,8 +1580,7 @@ public class CampaignManager: ObservableObject {
         
         webSocketManager?.onCartIntent = { [weak self] event in
             Task { @MainActor in
-                print("🎯 [CampaignManager] cart_intent [WebSocket] productId=\(event.productId ?? "nil") campaignId=\(event.campaignId.map(String.init) ?? "nil") name=\(event.productName ?? "nil") → activeCartIntentEvent")
-                self?.activeCartIntentEvent = event
+                self?.publishCartIntentIfChanged(event, channel: "WebSocket")
             }
         }
         

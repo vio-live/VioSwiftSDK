@@ -346,16 +346,47 @@ internal struct SDKConfigResponse: Codable {
 }
 
 /// Minimal decode for GET /v1/sdk/config zero-config bootstrap (`commerce` + `endpoints`).
+/// v2 SDK bootstrap (`GET /v2/sdk/config`) — multi-sponsor model.
+/// Replaces the legacy v1 single-`commerce` block with a per-sponsor layout:
+/// one mandatory primary sponsor + zero or more secondaries, each carrying
+/// its own optional `commerce` block (null for visual-only sponsors).
 internal struct SdkBootstrapResponse: Codable {
+    struct EndpointsBlock: Codable {
+        let webSocketBase: String?
+        let commerceGraphQL: String?
+    }
+
+    struct CampaignBlock: Codable {
+        let id: Int
+        let name: String?
+        let logo: String?
+        let isActive: Bool?
+        let isPaused: Bool?
+        let startDate: String?
+        let endDate: String?
+    }
+
+    /// A single sponsor with optional commerce credentials.
+    /// `commerce == nil` means the sponsor is present for branding only (no purchase flow).
+    struct SponsorBlock: Codable {
+        let id: Int
+        let name: String
+        let logoUrl: String?
+        let primaryColor: String?
+        let secondaryColor: String?
+        let commerce: CommerceBlock?
+    }
+
+    /// Per-sponsor commerce credentials used by the SDK to call Commerce GraphQL directly.
     struct CommerceBlock: Codable {
-        /// Omitting or null `apiKey` in JSON must not fail the whole decode.
         let apiKey: String?
-        let endpoint: String?
+        let channelId: String?
+        let paymentMethods: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case apiKey
-            case api_key
-            case endpoint
+            case apiKey, api_key
+            case channelId
+            case paymentMethods
         }
 
         init(from decoder: Decoder) throws {
@@ -364,24 +395,36 @@ internal struct SdkBootstrapResponse: Codable {
             let snake = try c.decodeIfPresent(String.self, forKey: .api_key)
             let merged = [camel, snake].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             apiKey = merged
-            endpoint = try c.decodeIfPresent(String.self, forKey: .endpoint)
+            channelId = try c.decodeIfPresent(String.self, forKey: .channelId)
+            paymentMethods = try c.decodeIfPresent([String].self, forKey: .paymentMethods)
         }
 
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encodeIfPresent(apiKey, forKey: .apiKey)
-            try c.encodeIfPresent(endpoint, forKey: .endpoint)
+            try c.encodeIfPresent(channelId, forKey: .channelId)
+            try c.encodeIfPresent(paymentMethods, forKey: .paymentMethods)
         }
     }
-    struct EndpointsBlock: Codable {
-        let commerceGraphQL: String?
-    }
+
     struct FeaturesBlock: Codable {
+        let shoppable: Bool?
+        let lineup: Bool?
+        /// Backwards-compat: the v1 shape used `commerce`; still accepted for graceful decode.
         let commerce: Bool?
     }
-    let commerce: CommerceBlock?
+
     let endpoints: EndpointsBlock?
+    let campaign: CampaignBlock?
+    let primarySponsor: SponsorBlock?
+    let secondarySponsors: [SponsorBlock]?
     let features: FeaturesBlock?
+
+    // MARK: - Legacy v1 compatibility shims (kept so existing readers still work).
+    /// Convenience alias: the primary sponsor's commerce block.
+    /// Used by the bootstrap applier until every caller is updated to address
+    /// `primarySponsor.commerce` / `secondarySponsors` explicitly.
+    var commerce: CommerceBlock? { primarySponsor?.commerce }
 }
 
 /// Campaigns Discovery Response from GET /v1/sdk/campaigns
@@ -1009,6 +1052,14 @@ public struct CartIntentEvent: Equatable {
     public let vioUserId: String?
     public let source: String?
     public let deeplink: String?
+    /// `shoppable_ad_activations.id` stamped on the originating TV dispatch. Closes the
+    /// attribution chain (shoppable_ad → cart_intent) when the event is forwarded from
+    /// the Apple TV SDK. Nil for mobile-originated or legacy cart-intents.
+    public let activationId: Int?
+    /// Sponsor that owned the shoppable_ad that generated this cart-intent. Used by the
+    /// mobile SDK to route ``ProductService`` to the right sponsor's Commerce GraphQL key
+    /// via ``VioConfiguration/commerce(forSponsorId:)``.
+    public let sponsorId: Int?
 
     public init(
         type: String,
@@ -1019,7 +1070,9 @@ public struct CartIntentEvent: Equatable {
         notificationBody: String? = nil,
         vioUserId: String? = nil,
         source: String? = nil,
-        deeplink: String? = nil
+        deeplink: String? = nil,
+        activationId: Int? = nil,
+        sponsorId: Int? = nil
     ) {
         self.type = type
         self.productName = productName
@@ -1030,6 +1083,8 @@ public struct CartIntentEvent: Equatable {
         self.vioUserId = vioUserId
         self.source = source
         self.deeplink = deeplink
+        self.activationId = activationId
+        self.sponsorId = sponsorId
     }
 
     /// WebSocket JSON body: canonical envelope, legacy flat, or legacy `type` + fields.
@@ -1067,6 +1122,8 @@ public struct CartIntentEvent: Equatable {
             let source = stringFromAny(payload["source"])
             let deeplink = deeplinkFromPayload
             let campaignId = intFromAny(payload["campaign_id"] ?? payload["campaignId"])
+            let activationId = intFromAny(payload["activation_id"] ?? payload["activationId"])
+            let sponsorId = intFromAny(payload["sponsor_id"] ?? payload["sponsorId"])
             let evt = (stringFromAny(top["vio_event_type"]) ?? stringFromAny(top["type"]) ?? VioPushEventType.cartIntent.rawValue)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
@@ -1081,7 +1138,9 @@ public struct CartIntentEvent: Equatable {
                 notificationBody: notifBody,
                 vioUserId: vioUserId,
                 source: source,
-                deeplink: deeplink
+                deeplink: deeplink,
+                activationId: activationId,
+                sponsorId: sponsorId
             )
         }
 
@@ -1095,6 +1154,8 @@ public struct CartIntentEvent: Equatable {
         let typeRaw = stringFromAny(top["type"]) ?? stringFromAny(top["vio_event_type"]) ?? VioPushEventType.cartIntent.rawValue
         let name = stringFromAny(top[CartIntentNotificationKeys.productName] ?? top["productName"])
         let campaignId = intFromAny(top[CartIntentNotificationKeys.campaignId] ?? top["campaignId"])
+        let activationId = intFromAny(top[CartIntentNotificationKeys.activationId] ?? top["activationId"] ?? top["activation_id"])
+        let sponsorId = intFromAny(top[CartIntentNotificationKeys.sponsorId] ?? top["sponsorId"] ?? top["sponsor_id"])
         let notifTitle = stringFromAny(top["notificationTitle"] ?? top[CartIntentNotificationKeys.notificationTitle])
         let notifBody = stringFromAny(top["notificationBody"] ?? top[CartIntentNotificationKeys.notificationBody])
         let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
@@ -1107,7 +1168,9 @@ public struct CartIntentEvent: Equatable {
             notificationBody: notifBody,
             vioUserId: vioUserId,
             source: stringFromAny(top["source"]),
-            deeplink: stringFromAny(top["deeplink"])
+            deeplink: stringFromAny(top["deeplink"]),
+            activationId: activationId,
+            sponsorId: sponsorId
         )
     }
 
@@ -1186,5 +1249,11 @@ public enum CartIntentNotificationKeys {
     /// Optional; aligns WebSocket → local notification with partner `aps.alert` copy.
     public static let notificationTitle = "vio_cartIntent_notificationTitle"
     public static let notificationBody = "vio_cartIntent_notificationBody"
+    /// `shoppable_ad_activations.id` of the originating TV dispatch — closes the attribution
+    /// chain when the local notification is rebuilt from a forwarded envelope.
+    public static let activationId = "vio_cartIntent_activationId"
+    /// Sponsor that owned the originating shoppable_ad — drives per-sponsor commerce routing
+    /// when the app opens the product overlay in response to the notification tap.
+    public static let sponsorId = "vio_cartIntent_sponsorId"
     public static let kindValueCartIntent = "cart_intent"
 }

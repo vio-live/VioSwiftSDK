@@ -2,7 +2,7 @@
   "name": "TV2 Demo Configuration",
   "version": "1.0.0",
   "apiKey": "tv2_api_key_91b4fbf634af4bc5",
-  "environment": "testing",
+  "environment": "development",
   "theme": {
     "name": "TV2 Dark Theme",
     "mode": "dark",
@@ -211,10 +211,10 @@
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "ws://100.84.32.36:5001",
-    "devRestAPIBaseURL": "http://100.84.32.36:5001",
+    "devWebSocketBaseURL": "wss://api-local-angelo.vio.live",
+    "devRestAPIBaseURL": "https://api-local-angelo.vio.live",
     "autoDiscover": true,
     "wsBaseURL": "wss://api-dev.vio.live",
-    "devWsBaseURL": "ws://100.84.32.36:5001"
+    "devWsBaseURL": "wss://api-local-angelo.vio.live"
   }
 }

@@ -32,6 +32,8 @@ Definidos en [`Package.swift`](../Package.swift):
 | Componentes / offer banner WS (Replit hardcode) | `Sources/VioCore/Models/OfferBannerModels.swift` (`ComponentManager`) |
 | Sesión por broadcast | `Sources/VioCore/Managers/VioSessionContext.swift` |
 | Productos GraphQL | `Sources/VioUI/Services/ProductService.swift` |
+| Commerce client por sponsor (cart-intent attribution) | `Sources/VioCore/Sdk/Core/GraphQL/CommerceSdkClientProvider.swift` → `client(forSponsorId:)` |
+| Cart-intent envelope + dedup | `Sources/VioCore/Models/CampaignModels.swift` (`CartIntentEvent`), `Sources/VioCore/Managers/CampaignManager.swift` (`publishCartIntentIfChanged`) — flujo completo en `Documentation/CART_INTENT_FLOW.md` |
 | Casting + validación en player | `Sources/VioCastingUI/Components/Video/VCastingVideoPlayer.swift` |
 | Demos | `Demo/` (cada app con su `vio-config.json`) |
 

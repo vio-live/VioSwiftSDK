@@ -52,6 +52,7 @@ struct ContentView: View {
                let productId = event.productId, !productId.isEmpty {
                 CartIntentProductDetailHost(
                     productId: productId,
+                    sponsorId: event.sponsorId,
                     onDismissIntent: { campaignManager.dismissCartIntent() }
                 )
                 .zIndex(1000)
@@ -75,6 +76,11 @@ struct ContentView: View {
 
 private struct CartIntentProductDetailHost: View {
     let productId: String
+    /// Sponsor id carried on the cart_intent envelope. Used to route the
+    /// Commerce GraphQL call to the right sponsor's apiKey so overlays rendered
+    /// from a secondary sponsor's shoppable_ad (e.g. XXL) don't hit the primary
+    /// sponsor's channel (e.g. Elkjøp). Nil falls back to primary.
+    let sponsorId: Int?
     let onDismissIntent: () -> Void
 
     @EnvironmentObject private var cartManager: CartManager
@@ -120,13 +126,14 @@ private struct CartIntentProductDetailHost: View {
         defer { isLoading = false }
 
         await CampaignManager.shared.ensureCommerceBootstrapApplied()
-        print("🎯 [cart_intent] CartIntentProductDetailHost — bootstrap aplicado, lanzando loadProduct id=\(productId)")
+        print("🎯 [cart_intent] CartIntentProductDetailHost — bootstrap aplicado, lanzando loadProduct id=\(productId) sponsorId=\(sponsorId.map(String.init) ?? "nil")")
 
         do {
             let product = try await ProductService.shared.loadProduct(
                 productId: productId,
                 currency: cartManager.currency,
-                country: cartManager.country
+                country: cartManager.country,
+                sponsorId: sponsorId
             )
             loadedProduct = product
         } catch is CancellationError {
