@@ -35,25 +35,30 @@ public class ProductService {
     
     // MARK: - SDK Client Management
     
-    /// Get or create SDK client.
-    /// Uses `VioConfiguration.resolvedCommerceApiKey` (SDK bootstrap → `apiKey`).
-    /// Recreates the client if the resolved key or GraphQL URL changes.
-    private func getSdkClient() throws -> SdkClient {
+    /// Get or create SDK client for a specific sponsor (cart-intent flow) or the
+    /// primary sponsor when `sponsorId` is nil (default rendering path).
+    /// - `sponsorId == nil` → uses `VioConfiguration.resolvedCommerceApiKey`
+    ///   (primary sponsor from `GET /v2/sdk/config`, or bootstrap fallback).
+    /// - `sponsorId != nil` → resolves via `VioConfiguration.commerce(forSponsorId:)`;
+    ///   falls back to primary if that sponsor has no commerce block.
+    private func getSdkClient(forSponsorId sponsorId: Int? = nil) throws -> SdkClient {
         let config = VioConfiguration.shared
-        let client = try CommerceSdkClientProvider.shared.client(configuration: config)
-        cachedSdkClient = client
-        
+        let client = try CommerceSdkClientProvider.shared.client(forSponsorId: sponsorId, configuration: config)
+        if sponsorId == nil { cachedSdkClient = client }
+
         let commerceSource: String
-        if config.sdkBootstrapCommerceApiKey != nil {
-            commerceSource = "GET /v1/sdk/config (bootstrap)"
+        if let sponsorId, config.commerce(forSponsorId: sponsorId) != nil {
+            commerceSource = "per-sponsor (id=\(sponsorId))"
+        } else if config.sdkBootstrapCommerceApiKey != nil {
+            commerceSource = "GET /v2/sdk/config (bootstrap primary)"
         } else if !config.campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             commerceSource = "vio-config campaigns.commerceApiKey"
         } else {
             commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
         }
         print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(client.apiKey.count) (valor no logueado)")
-        VioLogger.debug("Created SDK client (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
-        
+        VioLogger.debug("Created SDK client sponsorId=\(sponsorId.map(String.init) ?? "nil") (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
+
         return client
     }
     
@@ -82,17 +87,18 @@ public class ProductService {
 
     private func runWithCommerceAuthRetry<T>(
         operationName: String,
+        sponsorId: Int? = nil,
         operation: (SdkClient) async throws -> T
     ) async throws -> T {
         do {
-            let sdk = try getSdkClient()
+            let sdk = try getSdkClient(forSponsorId: sponsorId)
             return try await operation(sdk)
         } catch {
             guard isCommerceAuthFailure(error) else { throw error }
             VioLogger.warning("\(operationName) auth failed — refreshing commerce bootstrap and retrying once", component: "ProductService")
             await CampaignManager.shared.ensureCommerceBootstrapApplied()
             clearCache()
-            let sdk = try getSdkClient()
+            let sdk = try getSdkClient(forSponsorId: sponsorId)
             return try await operation(sdk)
         }
     }
@@ -104,39 +110,48 @@ public class ProductService {
     ///   - productId: Product ID (as String, will be converted to Int)
     ///   - currency: Currency code (e.g., "USD", "EUR")
     ///   - country: Country code (e.g., "US", "DE")
+    ///   - sponsorId: Optional sponsor id (e.g. from a `cart_intent` event). When set,
+    ///     Commerce GraphQL uses that sponsor's apiKey; otherwise the primary key.
     /// - Returns: Product if found, nil otherwise
     /// - Throws: ProductServiceError for various error conditions
     public func loadProduct(
         productId: String,
         currency: String,
-        country: String
+        country: String,
+        sponsorId: Int? = nil
     ) async throws -> Product {
         guard let productIdInt = Int(productId) else {
             throw ProductServiceError.invalidProductId(productId)
         }
-        
-        return try await loadProduct(productId: productIdInt, currency: currency, country: country)
+
+        return try await loadProduct(productId: productIdInt, currency: currency, country: country, sponsorId: sponsorId)
     }
-    
+
     /// Load a single product by ID
     /// - Parameters:
     ///   - productId: Product ID (as Int)
     ///   - currency: Currency code (e.g., "USD", "EUR")
     ///   - country: Country code (e.g., "US", "DE")
+    ///   - sponsorId: Optional sponsor id (e.g. from a `cart_intent` event). When set,
+    ///     Commerce GraphQL uses that sponsor's apiKey; otherwise the primary key.
     /// - Returns: Product if found
     /// - Throws: ProductServiceError for various error conditions
     public func loadProduct(
         productId: Int,
         currency: String,
-        country: String
+        country: String,
+        sponsorId: Int? = nil
     ) async throws -> Product {
         VioLogger.debug("Loading product with ID: \(productId)", component: "ProductService")
-        VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
-        
+        VioLogger.debug("Currency: \(currency), Country: \(country), sponsorId: \(sponsorId.map(String.init) ?? "nil")", component: "ProductService")
+
         let gqlURL = VioConfiguration.shared.resolvedCommerceGraphQLURL
-        let keySrc = VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
+        let keySrc: String = {
+            if let sponsorId, VioConfiguration.shared.commerce(forSponsorId: sponsorId) != nil { return "sponsor:\(sponsorId)" }
+            return VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
+        }()
         print("🎯 [ProductService] loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)")
-        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProduct") { sdk in
+        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProduct", sponsorId: sponsorId) { sdk in
             try await sdk.channel.product.get(
                 currency: currency,
                 imageSize: "medium",

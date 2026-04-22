@@ -47,10 +47,12 @@ struct tv2demoApp: App {
         print("    → WS   \(ws)/ws/<campaignId>?userId=<uid>  esperado: handshake OK; luego mensaje identify")
         print("    → POST \(rest)/api/campaigns/<id>/register-device  esperado: HTTP 200, { \"success\": true }")
         
-        // Set demo userId for WS identify — backend uses this to route cart_intent events
-        // In production replace with real user identity (e.g. JWT sub claim)
-        CampaignManager.shared.userId = "tv2_demo_user"
-        print("👤 [TV2Demo] userId set: tv2_demo_user")
+        // Set demo userId for WS identify — backend uses this to route cart_intent events.
+        // Must match the Apple TV demo (InteractiveAds-vio) so the backend forwards the
+        // envelope from TV dispatch into the mobile companion over the same userId.
+        // In production replace with real user identity (e.g. JWT sub claim).
+        CampaignManager.shared.userId = "demo_user_001"
+        print("👤 [TV2Demo] userId set: demo_user_001")
 
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
     }

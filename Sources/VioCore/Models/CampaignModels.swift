@@ -1052,6 +1052,14 @@ public struct CartIntentEvent: Equatable {
     public let vioUserId: String?
     public let source: String?
     public let deeplink: String?
+    /// `shoppable_ad_activations.id` stamped on the originating TV dispatch. Closes the
+    /// attribution chain (shoppable_ad → cart_intent) when the event is forwarded from
+    /// the Apple TV SDK. Nil for mobile-originated or legacy cart-intents.
+    public let activationId: Int?
+    /// Sponsor that owned the shoppable_ad that generated this cart-intent. Used by the
+    /// mobile SDK to route ``ProductService`` to the right sponsor's Commerce GraphQL key
+    /// via ``VioConfiguration/commerce(forSponsorId:)``.
+    public let sponsorId: Int?
 
     public init(
         type: String,
@@ -1062,7 +1070,9 @@ public struct CartIntentEvent: Equatable {
         notificationBody: String? = nil,
         vioUserId: String? = nil,
         source: String? = nil,
-        deeplink: String? = nil
+        deeplink: String? = nil,
+        activationId: Int? = nil,
+        sponsorId: Int? = nil
     ) {
         self.type = type
         self.productName = productName
@@ -1073,6 +1083,8 @@ public struct CartIntentEvent: Equatable {
         self.vioUserId = vioUserId
         self.source = source
         self.deeplink = deeplink
+        self.activationId = activationId
+        self.sponsorId = sponsorId
     }
 
     /// WebSocket JSON body: canonical envelope, legacy flat, or legacy `type` + fields.
@@ -1110,6 +1122,8 @@ public struct CartIntentEvent: Equatable {
             let source = stringFromAny(payload["source"])
             let deeplink = deeplinkFromPayload
             let campaignId = intFromAny(payload["campaign_id"] ?? payload["campaignId"])
+            let activationId = intFromAny(payload["activation_id"] ?? payload["activationId"])
+            let sponsorId = intFromAny(payload["sponsor_id"] ?? payload["sponsorId"])
             let evt = (stringFromAny(top["vio_event_type"]) ?? stringFromAny(top["type"]) ?? VioPushEventType.cartIntent.rawValue)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
@@ -1124,7 +1138,9 @@ public struct CartIntentEvent: Equatable {
                 notificationBody: notifBody,
                 vioUserId: vioUserId,
                 source: source,
-                deeplink: deeplink
+                deeplink: deeplink,
+                activationId: activationId,
+                sponsorId: sponsorId
             )
         }
 
@@ -1138,6 +1154,8 @@ public struct CartIntentEvent: Equatable {
         let typeRaw = stringFromAny(top["type"]) ?? stringFromAny(top["vio_event_type"]) ?? VioPushEventType.cartIntent.rawValue
         let name = stringFromAny(top[CartIntentNotificationKeys.productName] ?? top["productName"])
         let campaignId = intFromAny(top[CartIntentNotificationKeys.campaignId] ?? top["campaignId"])
+        let activationId = intFromAny(top[CartIntentNotificationKeys.activationId] ?? top["activationId"] ?? top["activation_id"])
+        let sponsorId = intFromAny(top[CartIntentNotificationKeys.sponsorId] ?? top["sponsorId"] ?? top["sponsor_id"])
         let notifTitle = stringFromAny(top["notificationTitle"] ?? top[CartIntentNotificationKeys.notificationTitle])
         let notifBody = stringFromAny(top["notificationBody"] ?? top[CartIntentNotificationKeys.notificationBody])
         let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
@@ -1150,7 +1168,9 @@ public struct CartIntentEvent: Equatable {
             notificationBody: notifBody,
             vioUserId: vioUserId,
             source: stringFromAny(top["source"]),
-            deeplink: stringFromAny(top["deeplink"])
+            deeplink: stringFromAny(top["deeplink"]),
+            activationId: activationId,
+            sponsorId: sponsorId
         )
     }
 
@@ -1229,5 +1249,11 @@ public enum CartIntentNotificationKeys {
     /// Optional; aligns WebSocket → local notification with partner `aps.alert` copy.
     public static let notificationTitle = "vio_cartIntent_notificationTitle"
     public static let notificationBody = "vio_cartIntent_notificationBody"
+    /// `shoppable_ad_activations.id` of the originating TV dispatch — closes the attribution
+    /// chain when the local notification is rebuilt from a forwarded envelope.
+    public static let activationId = "vio_cartIntent_activationId"
+    /// Sponsor that owned the originating shoppable_ad — drives per-sponsor commerce routing
+    /// when the app opens the product overlay in response to the notification tap.
+    public static let sponsorId = "vio_cartIntent_sponsorId"
     public static let kindValueCartIntent = "cart_intent"
 }

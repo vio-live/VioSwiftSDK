@@ -453,16 +453,42 @@ public class CampaignManager: ObservableObject {
             notificationBody: notifBody,
             vioUserId: base.vioUserId,
             source: base.source,
-            deeplink: base.deeplink
+            deeplink: base.deeplink,
+            activationId: base.activationId,
+            sponsorId: base.sponsorId
         )
-        activeCartIntentEvent = merged
+        publishCartIntentIfChanged(merged, channel: "push/local")
         if let envUid = merged.vioUserId?.trimmingCharacters(in: .whitespacesAndNewlines), !envUid.isEmpty,
            let appUid = userId?.trimmingCharacters(in: .whitespacesAndNewlines), !appUid.isEmpty,
            envUid != appUid {
             print("🎯 [CampaignManager] cart_intent ⚠️ vio_user_id=\(envUid) distinto de CampaignManager.userId=\(appUid) (demo: revisar routing)")
         }
-        let pid = merged.productId ?? ""
-        print("🎯 [CampaignManager] cart_intent aplicado [push/local] productId=\(pid) campaignId=\(merged.campaignId.map(String.init) ?? "nil") name=\(merged.productName ?? "nil") title=\(notifTitle ?? "nil") → activeCartIntentEvent (overlay + commerce GraphQL)")
+    }
+
+    /// Publishes a `cart_intent` onto ``activeCartIntentEvent`` unless it's a duplicate
+    /// of the event already in flight (same `activationId`, or same `(productId, campaignId)`
+    /// when the envelope has no `activationId`). Solves the dual-delivery race where the
+    /// backend both pushes over WebSocket **and** calls the partner webhook / APNs as
+    /// redundancy — both deliveries land and without this gate the product overlay would
+    /// open twice.
+    private func publishCartIntentIfChanged(_ event: CartIntentEvent, channel: String) {
+        if let incoming = event.activationId, let current = activeCartIntentEvent?.activationId, incoming == current {
+            print("🎯 [CampaignManager] cart_intent [\(channel)] dedup: activationId=\(incoming) ya publicado — ignorando duplicado")
+            return
+        }
+        if event.activationId == nil,
+           let prev = activeCartIntentEvent,
+           prev.activationId == nil,
+           prev.productId == event.productId,
+           prev.campaignId == event.campaignId {
+            print("🎯 [CampaignManager] cart_intent [\(channel)] dedup: mismo (productId,campaignId) sin activationId — ignorando duplicado")
+            return
+        }
+        activeCartIntentEvent = event
+        let pid = event.productId ?? ""
+        let aid = event.activationId.map(String.init) ?? "nil"
+        let spid = event.sponsorId.map(String.init) ?? "nil"
+        print("🎯 [CampaignManager] cart_intent aplicado [\(channel)] productId=\(pid) campaignId=\(event.campaignId.map(String.init) ?? "nil") activationId=\(aid) sponsorId=\(spid) name=\(event.productName ?? "nil") → activeCartIntentEvent (overlay + commerce GraphQL)")
     }
     
     private static func apsAlertTitleFromUserInfo(_ userInfo: [AnyHashable: Any]) -> String? {
@@ -1554,8 +1580,7 @@ public class CampaignManager: ObservableObject {
         
         webSocketManager?.onCartIntent = { [weak self] event in
             Task { @MainActor in
-                print("🎯 [CampaignManager] cart_intent [WebSocket] productId=\(event.productId ?? "nil") campaignId=\(event.campaignId.map(String.init) ?? "nil") name=\(event.productName ?? "nil") → activeCartIntentEvent")
-                self?.activeCartIntentEvent = event
+                self?.publishCartIntentIfChanged(event, channel: "WebSocket")
             }
         }
         
