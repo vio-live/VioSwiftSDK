@@ -346,16 +346,47 @@ internal struct SDKConfigResponse: Codable {
 }
 
 /// Minimal decode for GET /v1/sdk/config zero-config bootstrap (`commerce` + `endpoints`).
+/// v2 SDK bootstrap (`GET /v2/sdk/config`) — multi-sponsor model.
+/// Replaces the legacy v1 single-`commerce` block with a per-sponsor layout:
+/// one mandatory primary sponsor + zero or more secondaries, each carrying
+/// its own optional `commerce` block (null for visual-only sponsors).
 internal struct SdkBootstrapResponse: Codable {
+    struct EndpointsBlock: Codable {
+        let webSocketBase: String?
+        let commerceGraphQL: String?
+    }
+
+    struct CampaignBlock: Codable {
+        let id: Int
+        let name: String?
+        let logo: String?
+        let isActive: Bool?
+        let isPaused: Bool?
+        let startDate: String?
+        let endDate: String?
+    }
+
+    /// A single sponsor with optional commerce credentials.
+    /// `commerce == nil` means the sponsor is present for branding only (no purchase flow).
+    struct SponsorBlock: Codable {
+        let id: Int
+        let name: String
+        let logoUrl: String?
+        let primaryColor: String?
+        let secondaryColor: String?
+        let commerce: CommerceBlock?
+    }
+
+    /// Per-sponsor commerce credentials used by the SDK to call Commerce GraphQL directly.
     struct CommerceBlock: Codable {
-        /// Omitting or null `apiKey` in JSON must not fail the whole decode.
         let apiKey: String?
-        let endpoint: String?
+        let channelId: String?
+        let paymentMethods: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case apiKey
-            case api_key
-            case endpoint
+            case apiKey, api_key
+            case channelId
+            case paymentMethods
         }
 
         init(from decoder: Decoder) throws {
@@ -364,24 +395,36 @@ internal struct SdkBootstrapResponse: Codable {
             let snake = try c.decodeIfPresent(String.self, forKey: .api_key)
             let merged = [camel, snake].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             apiKey = merged
-            endpoint = try c.decodeIfPresent(String.self, forKey: .endpoint)
+            channelId = try c.decodeIfPresent(String.self, forKey: .channelId)
+            paymentMethods = try c.decodeIfPresent([String].self, forKey: .paymentMethods)
         }
 
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encodeIfPresent(apiKey, forKey: .apiKey)
-            try c.encodeIfPresent(endpoint, forKey: .endpoint)
+            try c.encodeIfPresent(channelId, forKey: .channelId)
+            try c.encodeIfPresent(paymentMethods, forKey: .paymentMethods)
         }
     }
-    struct EndpointsBlock: Codable {
-        let commerceGraphQL: String?
-    }
+
     struct FeaturesBlock: Codable {
+        let shoppable: Bool?
+        let lineup: Bool?
+        /// Backwards-compat: the v1 shape used `commerce`; still accepted for graceful decode.
         let commerce: Bool?
     }
-    let commerce: CommerceBlock?
+
     let endpoints: EndpointsBlock?
+    let campaign: CampaignBlock?
+    let primarySponsor: SponsorBlock?
+    let secondarySponsors: [SponsorBlock]?
     let features: FeaturesBlock?
+
+    // MARK: - Legacy v1 compatibility shims (kept so existing readers still work).
+    /// Convenience alias: the primary sponsor's commerce block.
+    /// Used by the bootstrap applier until every caller is updated to address
+    /// `primarySponsor.commerce` / `secondarySponsors` explicitly.
+    var commerce: CommerceBlock? { primarySponsor?.commerce }
 }
 
 /// Campaigns Discovery Response from GET /v1/sdk/campaigns

@@ -683,7 +683,7 @@ public class CampaignManager: ObservableObject {
             return
         }
         let restBase = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        var urlComponents = URLComponents(string: "\(restBase)/v1/sdk/config")
+        var urlComponents = URLComponents(string: "\(restBase)/v2/sdk/config")
         urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
         guard let url = urlComponents?.url else {
             VioLogger.warning("Invalid SDK bootstrap URL", component: "CampaignManager")
@@ -724,20 +724,26 @@ public class CampaignManager: ObservableObject {
                 VioLogger.warning("SDK bootstrap JSON decode failed: \(error.localizedDescription)", component: "CampaignManager")
                 return
             }
-            let key = bootstrap.commerce?.apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+            // v2: commerce auth lives on `primarySponsor.commerce`. The `commerce` convenience
+            // alias on SdkBootstrapResponse maps to `primarySponsor.commerce` for compatibility.
+            let primarySponsor = VioSponsor(bootstrap: bootstrap.primarySponsor)
+            let secondarySponsors = (bootstrap.secondarySponsors ?? []).compactMap { VioSponsor(bootstrap: $0) }
+            VioConfiguration.shared.applySdkBootstrapSponsors(primary: primarySponsor, secondaries: secondarySponsors)
+
+            let key = primarySponsor?.commerce?.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
             let keyNonEmpty = (key?.isEmpty == false) ? key : nil
             // Solo aplicar URL del bootstrap cuando hay clave de commerce; si no, evita fijar URLs internas del servidor (p. ej. k8s) sin Authorization válida.
             let gqlForApply: String? = {
                 guard keyNonEmpty != nil else { return nil }
-                let g = bootstrap.commerce?.endpoint ?? bootstrap.endpoints?.commerceGraphQL
-                let t = g?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let t = bootstrap.endpoints?.commerceGraphQL?.trimmingCharacters(in: .whitespacesAndNewlines)
                 return (t?.isEmpty == false) ? t : nil
             }()
-            let featCommerce = bootstrap.features?.commerce
-            if featCommerce == true, keyNonEmpty == nil {
-                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ features.commerce=true pero sin commerce.apiKey usará campaigns.commerceApiKey en vio-config si está definida")
+            let featShoppable = bootstrap.features?.shoppable ?? bootstrap.features?.commerce
+            if featShoppable == true, keyNonEmpty == nil {
+                print("🎯 [CampaignManager] sdk/bootstrap    ⚠️ features.shoppable=true pero primarySponsor.commerce.apiKey vacío; fallback a campaigns.commerceApiKey en vio-config si está definida")
             }
             VioConfiguration.shared.applySdkBootstrapCommerce(apiKey: keyNonEmpty, graphQLURL: gqlForApply)
+            print("🎯 [CampaignManager] sdk/bootstrap    primarySponsor=\(primarySponsor?.name ?? "-"), secondary count=\(secondarySponsors.count)")
             if let k = keyNonEmpty {
                 VioLogger.debug(
                     "SDK bootstrap: commerce GraphQL Authorization from backend (key len \(k.count))",
