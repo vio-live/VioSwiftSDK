@@ -50,6 +50,7 @@ Documentation/*.md
 !Documentation/CONTEXT_IOS.md
 !Documentation/CODEBASE_INDEX.md
 !Documentation/VIO_PLATFORM_CURSOR_CONTEXT.md
+!Documentation/CART_INTENT_FLOW.md
 Demo/Viaplay/**/*.md
 !Demo/Viaplay/README.md
 Demo/tv2demo/**/Configuration/README.md
