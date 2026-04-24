@@ -821,7 +821,7 @@ public class CampaignManager: ObservableObject {
                 print("🎯 [CampaignManager] sdk/bootstrap    commerce.apiKey ausente — GraphQL usará fallback resolvedCommerceApiKey")
             }
             let cfg = VioConfiguration.shared
-            let src = cfg.sdkBootstrapCommerceApiKey != nil ? "bootstrap(/v1/sdk/config)" : "fallback(apiKey campaña)"
+            let src = cfg.sdkBootstrapCommerceApiKey != nil ? "bootstrap(/v2/mobile/config)" : "vio-config(apiKey campaña)"
             print("🎯 [CampaignManager] sdk/bootstrap    → commerce listo: fuente=\(src) GraphQL=\(cfg.resolvedCommerceGraphQLURL) authKey len=\(cfg.resolvedCommerceApiKey.count) (sin imprimir)")
         } catch {
             if allowRestFallback,
@@ -906,11 +906,9 @@ public class CampaignManager: ObservableObject {
     /// `GET /v2/mobile/broadcasts/:id/components` when a broadcast is opened.
     private func discoverCampaignsNow(
         broadcastId: String? = nil,
-        apiKey: String,
-        allowRestFallback: Bool = true
+        apiKey: String
     ) async {
-        let restBase = campaignRestAPIBaseURL
-        print("🎯 [CampaignManager] discoverCampaigns → v2 bootstrap only (was /v1/sdk/campaigns)")
+        print("🎯 [CampaignManager] discoverCampaigns → v2 bootstrap only")
 
         // Bootstrap: sponsors + commerce keys + currentCampaign all populated here.
         await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
@@ -946,12 +944,6 @@ public class CampaignManager: ObservableObject {
         await flushPendingApnsDeviceTokenRegistrationWithVio()
         lastSuccessfulDiscoveryApiKey = apiKey
         lastSuccessfulDiscoveryBroadcastId = broadcastId
-
-        // Note: REST fallback still handled at the bootstrap layer. `allowRestFallback`
-        // and `restBase` retained in signature for callers; no /v1/sdk/campaigns error
-        // path to fall back from anymore.
-        _ = allowRestFallback
-        _ = restBase
     }
 
     private func activateRestBaseFallbackIfNeeded(
