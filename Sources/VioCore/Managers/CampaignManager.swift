@@ -200,12 +200,16 @@ public class CampaignManager: ObservableObject {
         
         // 0.5. Load from cache first for instant UI update
         loadFromCache()
-        
-        // 1. Fetch campaign info and determine initial state
-        print("🎯 [CampaignManager] initializeCampaign - Calling fetchCampaignInfo...")
-        await fetchCampaignInfo(campaignId: campaignId)
-        print("🎯 [CampaignManager] initializeCampaign - fetchCampaignInfo completed")
-        
+
+        // 1. Campaign info (primary sponsor + secondaries + commerce keys) now comes
+        //    exclusively from `GET /v2/mobile/config` via bootstrapCommerceFromSdkConfig.
+        //    The legacy /v1/sdk/config fallback was removed as part of the v2
+        //    multi-sponsor hygiene pass — shape collision (single commerce vs per-sponsor).
+        //    isCampaignActive + campaignState default to active here; WS events
+        //    (`campaign_ended`, `campaign_paused`, `campaign_resumed`) correct the state.
+        self.isCampaignActive = true
+        self.campaignState = .active
+
         // 2. Connect WebSocket for real-time updates
         // According to backend behavior:
         // - If Ended: Backend sends campaign_ended immediately
@@ -213,11 +217,10 @@ public class CampaignManager: ObservableObject {
         // - If Active: No event sent, can fetch components
         await connectWebSocket(campaignId: campaignId)
         
-        // 3. Fetch active components ONLY if campaign is active AND not paused
-        // Don't fetch if Upcoming (wait for campaign_started), Ended (already handled), or Paused
-        if campaignState == .active && isCampaignActive && currentCampaign?.isPaused != true {
-            await fetchActiveComponents(campaignId: campaignId)
-        }
+        // 3. Components now arrive over WebSocket (`component_status_changed` events)
+        //    + the per-broadcast `GET /v2/mobile/broadcasts/:id/components` call when a
+        //    broadcast is opened. The legacy `/v1/offers` polling fallback was removed
+        //    as part of the v2 multi-sponsor hygiene pass.
     }
     
     /// Set the current broadcast context for filtering campaigns and components
@@ -756,6 +759,40 @@ public class CampaignManager: ObservableObject {
             let secondarySponsors = (bootstrap.secondarySponsors ?? []).compactMap { VioSponsor(bootstrap: $0) }
             VioConfiguration.shared.applySdkBootstrapSponsors(primary: primarySponsor, secondaries: secondarySponsors)
 
+            // Populate currentCampaign directly from the v2 bootstrap response.
+            // Previously a separate /v1/sdk/campaigns call did this; removed in the
+            // v2 multi-sponsor hygiene pass. `/v2/mobile/config` is now the single
+            // source of truth for the active campaign + sponsors + commerce.
+            if let cb = bootstrap.campaign {
+                let campaign = Campaign(
+                    id: cb.id,
+                    startDate: cb.startDate,
+                    endDate: cb.endDate,
+                    isPaused: cb.isPaused,
+                    campaignLogo: cb.logo,
+                    broadcastContext: nil
+                )
+                await MainActor.run {
+                    self.currentCampaign = campaign
+                    self.activeCampaigns = [campaign]
+                    let paused = (cb.isPaused == true)
+                    let active = (cb.isActive ?? true) && !paused
+                    self.isCampaignActive = active
+                    // CampaignState enum = {upcoming, active, ended}. Paused is orthogonal
+                    // (tracked via campaign.isPaused). Derive phase from dates if present.
+                    self.campaignState = Campaign(
+                        id: cb.id,
+                        startDate: cb.startDate,
+                        endDate: cb.endDate,
+                        isPaused: cb.isPaused,
+                        campaignLogo: cb.logo,
+                        broadcastContext: nil
+                    ).currentState
+                }
+                CacheManager.shared.saveCampaign(campaign)
+                print("🎯 [CampaignManager] sdk/bootstrap    currentCampaign=#\(cb.id) paused=\(cb.isPaused == true) active=\(cb.isActive ?? true)")
+            }
+
             let key = primarySponsor?.commerce?.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
             let keyNonEmpty = (key?.isEmpty == false) ? key : nil
             // Solo aplicar URL del bootstrap cuando hay clave de commerce; si no, evita fijar URLs internas del servidor (p. ej. k8s) sin Authorization válida.
@@ -798,221 +835,6 @@ public class CampaignManager: ObservableObject {
     
     /// Fetch campaign information from API using new v1 endpoint
     /// Uses campaign id from discovery (`discoverCampaigns` / `initializeCampaign`).
-    private func fetchCampaignInfo(campaignId: Int) async {
-        let config = VioConfiguration.shared
-        
-        // Use campaign admin API key (different from SDK API key)
-        let campaignAdminApiKey = config.campaignConfiguration.campaignAdminApiKey.isEmpty 
-            ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)  // Fallback to SDK API key if not configured
-            : config.campaignConfiguration.campaignAdminApiKey
-        
-        print("🎯 [CampaignManager] fetchCampaignInfo - Using campaignId: \(campaignId)")
-        print("🎯 [CampaignManager] fetchCampaignInfo - campaignAdminApiKey len=\(campaignAdminApiKey.count) (valor no logueado)")
-        guard campaignId > 0 else {
-            VioLogger.warning("No campaignId — skipping campaign info fetch", component: "CampaignManager")
-            return
-        }
-        
-        let urlString = "\(campaignRestAPIBaseURL)/v1/sdk/config?apiKey=\(campaignAdminApiKey)&campaignId=\(campaignId)"
-        print("🎯 [CampaignManager] fetchCampaignInfo - Request URL: \(Self.redactApiKeyQuery(in: urlString))")
-        
-        guard let url = URL(string: urlString) else {
-            VioLogger.error("Invalid campaign API URL: \(Self.redactApiKeyQuery(in: urlString))", component: "CampaignManager")
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10.0  // 10 second timeout
-        
-        var responseData: Data?
-        
-        do {
-            print("🎯 [CampaignManager] fetchCampaignInfo - Starting URLSession request...")
-            print("🎯 [CampaignManager] fetchCampaignInfo - URL: \(Self.redactApiKeyQuery(in: url.absoluteString))")
-            
-            let (data, response) = try await URLSession.shared.data(for: request)
-            responseData = data
-            print("🎯 [CampaignManager] fetchCampaignInfo - Request completed, data size: \(data.count) bytes")
-            
-            if let httpResponse = response as? HTTPURLResponse {
-                print("🎯 [CampaignManager] fetchCampaignInfo - HTTP Status Code: \(httpResponse.statusCode)")
-                
-                if httpResponse.statusCode == 404 {
-                    print("🎯 [CampaignManager] ❌ Campaign \(campaignId) not found (404)")
-                    VioLogger.warning("Campaign \(campaignId) not found - SDK works normally", component: "CampaignManager")
-                    // Campaign not found - allow normal SDK behavior
-                    self.isCampaignActive = true
-                    self.campaignState = .active
-                    return
-                }
-                
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
-                    print("🎯 [CampaignManager] ❌ HTTP Error \(httpResponse.statusCode): \(responseString)")
-                    VioLogger.error("Campaign info request failed with status \(httpResponse.statusCode): \(responseString)", component: "CampaignManager")
-                    // On error, allow normal SDK behavior
-                    self.isCampaignActive = true
-                    self.campaignState = .active
-                    return
-                }
-            } else {
-                print("🎯 [CampaignManager] ⚠️ Response is not HTTPURLResponse")
-            }
-            
-            // Validate that we received JSON, not HTML
-            if let responseString = String(data: data, encoding: .utf8), responseString.trimmingCharacters(in: .whitespaces).hasPrefix("<") {
-                print("🎯 [CampaignManager] ❌ Received HTML instead of JSON")
-                VioLogger.error("Received HTML instead of JSON from campaign endpoint", component: "CampaignManager")
-                // On error, allow normal SDK behavior
-                self.isCampaignActive = true
-                self.campaignState = .active
-                return
-            }
-            
-            // Log raw JSON response for debugging
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("🎯 [CampaignManager] Raw SDK Config JSON response: \(responseString)")
-            }
-            
-            // Decode new SDK config response
-            let sdkConfig = try JSONDecoder().decode(SDKConfigResponse.self, from: data)
-            print("🎯 [CampaignManager] SDK Config decoded - Campaign ID: \(sdkConfig.campaignId)")
-            print("🎯 [CampaignManager] SDK Config - campaignLogo from response: \(sdkConfig.campaignLogo ?? "nil")")
-            print("🎯 [CampaignManager] SDK Config - campaignLogo isEmpty: \(sdkConfig.campaignLogo?.isEmpty ?? true)")
-            
-            // Create Campaign model from SDK config response
-            // Note: The new endpoint doesn't return startDate/endDate/isPaused, so we preserve existing values
-            let existingCampaign = self.currentCampaign
-            print("🎯 [CampaignManager] Existing campaign before update: ID=\(existingCampaign?.id ?? -1), logo=\(existingCampaign?.campaignLogo ?? "nil")")
-            
-            let resolvedCampaignId = sdkConfig.campaignId ?? existingCampaign?.id ?? campaignId
-            let resolvedLogo = sdkConfig.campaignLogo ?? pendingSponsorLogoUrl
-            let campaign = Campaign(
-                id: resolvedCampaignId,
-                startDate: existingCampaign?.startDate,
-                endDate: existingCampaign?.endDate,
-                isPaused: existingCampaign?.isPaused,
-                campaignLogo: resolvedLogo,
-                broadcastContext: sdkConfig.broadcastContext ?? existingCampaign?.broadcastContext
-            )
-            
-            print("🎯 [CampaignManager] New Campaign created - ID: \(campaign.id), campaignLogo: \(campaign.campaignLogo ?? "nil")")
-            
-            // Detect changes in campaign configuration
-            let oldLogoUrl = existingCampaign?.campaignLogo
-            let newLogoUrl = campaign.campaignLogo
-            
-            // Check if campaign configuration changed
-            let campaignChanged = existingCampaign != campaign
-            
-            self.currentCampaign = campaign
-            print("🎯 [CampaignManager] currentCampaign updated - ID: \(self.currentCampaign?.id ?? -1), campaignLogo: \(self.currentCampaign?.campaignLogo ?? "nil")")
-            
-            self.campaignState = campaign.currentState
-            self.isCampaignActive = true  // Restore after cache clear — campaign fetched successfully
-            
-            // If campaign configuration changed, invalidate cache appropriately
-            if campaignChanged {
-                // Check if logo specifically changed
-                let logoChanged = oldLogoUrl != newLogoUrl
-                
-                if logoChanged, let oldLogo = oldLogoUrl {
-                    // Logo changed - invalidate old logo
-                    print("🎯 [CampaignManager] Logo changed - invalidating old logo: \(oldLogo)")
-                    NotificationCenter.default.post(
-                        name: .campaignLogoChanged,
-                        object: nil,
-                        userInfo: [
-                            "oldLogoUrl": oldLogo,
-                            "newLogoUrl": newLogoUrl ?? ""
-                        ]
-                    )
-                } else if !logoChanged, let currentLogo = newLogoUrl {
-                    // Other configuration changed (dates, state, matchContext) but logo is same
-                    // Invalidate current logo to ensure branding changes are reflected
-                    print("🎯 [CampaignManager] Campaign configuration changed (logo unchanged) - invalidating current logo: \(currentLogo)")
-                    NotificationCenter.default.post(
-                        name: .campaignLogoChanged,
-                        object: nil,
-                        userInfo: [
-                            "oldLogoUrl": currentLogo,
-                            "newLogoUrl": newLogoUrl ?? ""
-                        ]
-                    )
-                }
-                
-                // Pre-load new logo if it changed (will be cached by ImageLoader)
-                if let logoUrl = newLogoUrl, logoUrl != oldLogoUrl, let url = URL(string: logoUrl) {
-                    // Pre-load logo in background to cache it
-                    Task {
-                        _ = try? await URLSession.shared.data(from: url)
-                    }
-                }
-            }
-            
-            // Check if campaign is paused first (takes priority over date-based state)
-            if campaign.isPaused == true {
-                self.isCampaignActive = false
-                self.activeComponents.removeAll()
-                // Save to cache
-                CacheManager.shared.saveCampaign(campaign)
-                CacheManager.shared.saveCampaignState(campaignState, isActive: isCampaignActive)
-                CacheManager.shared.saveComponents([])
-                return
-            }
-            
-            // Update active state based on campaign state
-            switch campaignState {
-            case .upcoming:
-                self.isCampaignActive = false
-            case .active:
-                self.isCampaignActive = true
-                // Campaign is active
-            case .ended:
-                self.isCampaignActive = false
-                self.activeComponents.removeAll()
-                VioLogger.warning("Campaign \(campaignId) has ended - hiding all components", component: "CampaignManager")
-            }
-            
-            // Save to cache
-            CacheManager.shared.saveCampaign(campaign)
-            CacheManager.shared.saveCampaignState(campaignState, isActive: isCampaignActive)
-            
-            // Save configuration hash for future validation
-            let config = VioConfiguration.shared
-            let apiKey = config.campaignConfiguration.campaignAdminApiKey.isEmpty 
-                ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)
-                : config.campaignConfiguration.campaignAdminApiKey
-            CacheManager.shared.saveCacheConfiguration(
-                campaignId: campaign.id,
-                campaignAdminApiKey: apiKey,
-                baseURL: self.baseURL
-            )
-            
-        } catch let decodingError as DecodingError {
-            print("🎯 [CampaignManager] ❌ Decoding Error: \(decodingError)")
-            if case .dataCorrupted(let context) = decodingError {
-                print("🎯 [CampaignManager] Data corrupted at: \(context.debugDescription)")
-                if let data = responseData, let dataString = String(data: data, encoding: .utf8) {
-                    print("🎯 [CampaignManager] Raw data: \(dataString)")
-                }
-            }
-            VioLogger.error("Failed to decode campaign info: \(decodingError)", component: "CampaignManager")
-            // On error, allow normal SDK behavior
-            self.isCampaignActive = true
-            self.campaignState = .active
-        } catch {
-            print("🎯 [CampaignManager] ❌ Network/Other Error: \(error.localizedDescription)")
-            print("🎯 [CampaignManager] ❌ Error details: \(error)")
-            VioLogger.warning("Failed to fetch campaign info: \(error)", component: "CampaignManager")
-            // On error, allow normal SDK behavior
-            self.isCampaignActive = true
-            self.campaignState = .active
-        }
-    }
     
     /// Discover campaigns using auto-discovery endpoint
     /// Uses only the Vio SDK API key (no campaignAdminApiKey needed)
@@ -1072,229 +894,64 @@ public class CampaignManager: ObservableObject {
         }
     }
 
+    /// v2 multi-sponsor discovery — single source of truth is `GET /v2/mobile/config`.
+    ///
+    /// The legacy `/v1/sdk/campaigns` call was removed (passed apiKey in query, returned
+    /// v1 single-sponsor shape that contaminated multi-sponsor state, and duplicated
+    /// the campaign info already present in `/v2/mobile/config`). The bootstrap now
+    /// populates `currentCampaign` + `activeCampaigns` directly from the v2 response.
+    ///
+    /// Components are NOT fetched here anymore — they arrive via WS
+    /// `component_status_changed` events and per-broadcast
+    /// `GET /v2/mobile/broadcasts/:id/components` when a broadcast is opened.
     private func discoverCampaignsNow(
         broadcastId: String? = nil,
         apiKey: String,
         allowRestFallback: Bool = true
     ) async {
-        
         let restBase = campaignRestAPIBaseURL
-        var urlString = "\(restBase)/v1/sdk/campaigns?apiKey=\(apiKey)"
-        if let broadcastId = broadcastId {
-            urlString += "&broadcastId=\(broadcastId)"
-            // Also include matchId for backward compatibility with backend
-            urlString += "&matchId=\(broadcastId)"
-        }
-        
-        guard let url = URL(string: urlString) else {
-            VioLogger.error("Invalid campaigns discovery URL: \(urlString)", component: "CampaignManager")
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.timeoutInterval = 10.0
-        
-        do {
-            // Commerce from GET /v1/sdk/config must not depend on /v1/sdk/campaigns succeeding (GraphQL / cart_intent needs sponsor key even if discovery errors).
-            await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
-            
-            let safeUrlForLog = "\(campaignRestAPIBaseURL)/v1/sdk/campaigns?apiKey=<redacted>"
-            print("🎯 [CampaignManager] discoverCampaigns → GET \(safeUrlForLog)")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            if let httpResponse = response as? HTTPURLResponse {
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
-                    print("🎯 [CampaignManager] discoverCampaigns ← HTTP \(httpResponse.statusCode) (error). Body: \(responseString.prefix(300))")
-                    VioLogger.error("Campaigns discovery failed with status \(httpResponse.statusCode): \(responseString)", component: "CampaignManager")
-                    return
-                }
-            }
-            print("🎯 [CampaignManager] discoverCampaigns ← HTTP \(statusCode) OK")
-            
-            // Decode campaigns discovery response
-            let discoveryResponse = try JSONDecoder().decode(CampaignsDiscoveryResponse.self, from: data)
-            print("🎯 [CampaignManager] discoverCampaigns    decodificado: \(discoveryResponse.campaigns.count) fila(s) en \"campaigns\"")
-            
-            // Convert discovery items to Campaign models
-            var discoveredCampaigns: [Campaign] = []
-            var allComponents: [Component] = []
-            
-            for item in discoveryResponse.campaigns {
-                let campaign = Campaign(
-                    id: item.campaignId,
-                    startDate: item.startDate,
-                    endDate: item.endDate,
-                    isPaused: item.isPaused,
-                    campaignLogo: item.campaignLogo,
-                    broadcastContext: item.broadcastContext
-                )
-                discoveredCampaigns.append(campaign)
-                
-                // Process components from discovery response
-                if let componentItems = item.components {
-                    for componentItem in componentItems {
-                        // Convert ComponentDiscoveryItem to Component
-                        // Note: This requires decoding ComponentConfig from the config dictionary
-                        do {
-                            let configData = try JSONSerialization.data(withJSONObject: componentItem.config.mapValues { $0.value })
-                            let componentConfig = try JSONDecoder().decode(ComponentConfig.self, from: configData)
-                            
-                            let component = Component(
-                                id: componentItem.id,
-                                type: componentItem.type,
-                                name: componentItem.name,
-                                config: componentConfig,
-                                status: componentItem.status,
-                                locationId: componentItem.locationId,
-                                broadcastContext: componentItem.broadcastContext
-                            )
-                            allComponents.append(component)
-                        } catch {
-                            VioLogger.error("Failed to decode component from discovery: \(error)", component: "CampaignManager")
-                        }
-                    }
-                }
-            }
-            
-            // Update active campaigns
-            self.activeCampaigns = discoveredCampaigns
-            
-            // Filter components by currentBroadcastContext if set
-            // Components without broadcastContext are shown for all broadcasts (backward compatibility)
-            if let context = currentBroadcastContext {
-                self.activeComponents = allComponents.filter { component in
-                    // Include components without broadcastContext (backward compatibility)
-                    guard let componentBroadcastId = component.broadcastContext?.broadcastId else {
-                        return true  // Show components without broadcastContext for all broadcasts
-                    }
-                    // Include components that match the current broadcastId
-                    return componentBroadcastId == context.broadcastId
-                }
-            } else {
-                self.activeComponents = allComponents
-            }
-            
-            // Set current campaign to first active campaign if available
-            print("🎯 [Sponsor] discoveredCampaigns: \(discoveredCampaigns.map { "id:\($0.id) state:\($0.currentState) paused:\($0.isPaused ?? false)" })")
-            if var firstActiveCampaign = discoveredCampaigns.first(where: { $0.currentState == .active && $0.isPaused != true }) {
-                // If campaignLogo is null from discovery, fetch it from dynamic config (brand.logoUrl)
-                print("🎯 [Sponsor] campaignLogo from discovery: \(firstActiveCampaign.campaignLogo ?? "nil") | restAPIBase: \(campaignRestAPIBaseURL)")
-                if firstActiveCampaign.campaignLogo == nil {
-                    if let dynamicConfig = await DynamicConfigurationManager.shared.loadCampaignConfig(
-                        campaignId: firstActiveCampaign.id,
-                        broadcastId: nil
-                    ), let brandLogoUrl = dynamicConfig.brand?.logoUrl, !brandLogoUrl.isEmpty {
-                        print("🎯 [Sponsor] fetched brand.logoUrl from dynamic config: \(brandLogoUrl)")
-                        firstActiveCampaign = Campaign(
-                            id: firstActiveCampaign.id,
-                            startDate: firstActiveCampaign.startDate,
-                            endDate: firstActiveCampaign.endDate,
-                            isPaused: firstActiveCampaign.isPaused,
-                            campaignLogo: brandLogoUrl,
-                            broadcastContext: firstActiveCampaign.broadcastContext
-                        )
-                        // Also update VioConfiguration brand config
-                        if let brandConfig = dynamicConfig.brand {
-                            VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
-                        }
-                    }
-                }
+        print("🎯 [CampaignManager] discoverCampaigns → v2 bootstrap only (was /v1/sdk/campaigns)")
 
-                // Detect changes in campaign configuration
-                let existingCampaign = self.currentCampaign
-                let oldLogoUrl = existingCampaign?.campaignLogo
-                let newLogoUrl = firstActiveCampaign.campaignLogo
-                
-                // Check if campaign configuration changed
-                let campaignChanged = existingCampaign != firstActiveCampaign
-                
-                self.currentCampaign = firstActiveCampaign
-                self.campaignState = firstActiveCampaign.currentState
-                self.isCampaignActive = true
-                
-                // If campaign configuration changed, invalidate cache appropriately
-                if campaignChanged {
-                    // Check if logo specifically changed
-                    let logoChanged = oldLogoUrl != newLogoUrl
-                    
-                    if logoChanged, let oldLogo = oldLogoUrl {
-                        // Logo changed - invalidate old logo
-                        print("🎯 [CampaignManager] Logo changed in discovery - invalidating old logo: \(oldLogo)")
-                        NotificationCenter.default.post(
-                            name: .campaignLogoChanged,
-                            object: nil,
-                            userInfo: [
-                                "oldLogoUrl": oldLogo,
-                                "newLogoUrl": newLogoUrl ?? ""
-                            ]
-                        )
-                    } else if !logoChanged, let currentLogo = newLogoUrl {
-                        // Other configuration changed (dates, state, matchContext) but logo is same
-                        // Invalidate current logo to ensure branding changes are reflected
-                        print("🎯 [CampaignManager] Campaign configuration changed in discovery (logo unchanged) - invalidating current logo: \(currentLogo)")
-                        NotificationCenter.default.post(
-                            name: .campaignLogoChanged,
-                            object: nil,
-                            userInfo: [
-                                "oldLogoUrl": currentLogo,
-                                "newLogoUrl": newLogoUrl ?? ""
-                            ]
-                        )
-                    }
-                    
-                    // Pre-load new logo if it changed (will be cached by ImageLoader)
-                    if let logoUrl = newLogoUrl, logoUrl != oldLogoUrl, let url = URL(string: logoUrl) {
-                        // Pre-load logo in background to cache it
-                        Task {
-                            _ = try? await URLSession.shared.data(from: url)
-                        }
-                    }
+        // Bootstrap: sponsors + commerce keys + currentCampaign all populated here.
+        await fetchAndApplySdkBootstrap(usingSdkApiKey: apiKey)
+
+        // Enrich campaign logo from dynamic brand config if the bootstrap didn't include one.
+        if var active = self.currentCampaign, active.campaignLogo == nil {
+            if let dynamicConfig = await DynamicConfigurationManager.shared.loadCampaignConfig(
+                campaignId: active.id,
+                broadcastId: nil
+            ), let brandLogoUrl = dynamicConfig.brand?.logoUrl, !brandLogoUrl.isEmpty {
+                active = Campaign(
+                    id: active.id,
+                    startDate: active.startDate,
+                    endDate: active.endDate,
+                    isPaused: active.isPaused,
+                    campaignLogo: brandLogoUrl,
+                    broadcastContext: active.broadcastContext
+                )
+                await MainActor.run { self.currentCampaign = active }
+                if let brandConfig = dynamicConfig.brand {
+                    VioConfiguration.shared.updateDynamicBrandConfig(brandConfig)
                 }
-            } else if !discoveredCampaigns.isEmpty {
-                print("🎯 [CampaignManager] discoverCampaigns - No active campaign (requires state .active and not paused). Skipping currentCampaign update, /v1/offers fallback, and WebSocket. Got: \(discoveredCampaigns.map { "id:\($0.id) state:\($0.currentState) paused:\($0.isPaused ?? false)" }.joined(separator: ", "))")
+                print("🎯 [Sponsor] enriched campaignLogo from dynamic brand config: \(brandLogoUrl)")
             }
-            
-            // Fetch offers from /v1/offers ONLY if discovery returned 0 components.
-            // If components came from /v1/sdk/campaigns, skip /v1/offers to avoid overwriting them.
-            if let activeCampaign = self.currentCampaign,
-               self.campaignState == .active,
-               activeCampaign.isPaused != true,
-               allComponents.isEmpty {
-                print("🎯 [CampaignManager] discoverCampaigns - No components from discovery, fetching from /v1/offers for campaignId: \(activeCampaign.id)")
-                await fetchActiveComponents(campaignId: activeCampaign.id)
-            } else if !allComponents.isEmpty {
-                print("🎯 [CampaignManager] discoverCampaigns - Using \(allComponents.count) components from discovery, skipping /v1/offers")
-            }
-            
-            // Cache components
-            CacheManager.shared.saveComponents(self.activeComponents)
-            ComponentManager.shared.refreshActiveBannerFromCampaignManager()
-            
-            print("🎯 [CampaignManager] discoverCampaigns - Discovered \(discoveredCampaigns.count) campaigns, \(self.activeComponents.count) components")
-            
-            // Connect WebSocket for the active campaign (enables cart_intent, campaign events, etc.)
-            if let activeCampaign = self.currentCampaign, activeCampaign.isPaused != true {
-                print("🎯 [CampaignManager] discoverCampaigns - Connecting WebSocket for campaignId: \(activeCampaign.id)")
-                await connectWebSocket(campaignId: activeCampaign.id)
-            }
-            
-            await flushPendingApnsDeviceTokenRegistrationWithVio()
-            lastSuccessfulDiscoveryApiKey = apiKey
-            lastSuccessfulDiscoveryBroadcastId = broadcastId
-            
-        } catch {
-            if allowRestFallback,
-               activateRestBaseFallbackIfNeeded(currentBase: restBase, error: error, context: "discoverCampaigns") {
-                await discoverCampaignsNow(broadcastId: broadcastId, apiKey: apiKey, allowRestFallback: false)
-                return
-            }
-            VioLogger.error("Failed to discover campaigns: \(error)", component: "CampaignManager")
         }
+
+        // Connect WebSocket for the active campaign (cart_intent, campaign events, etc.)
+        if let activeCampaign = self.currentCampaign, activeCampaign.isPaused != true {
+            print("🎯 [CampaignManager] discoverCampaigns - Connecting WebSocket for campaignId: \(activeCampaign.id)")
+            await connectWebSocket(campaignId: activeCampaign.id)
+        }
+
+        await flushPendingApnsDeviceTokenRegistrationWithVio()
+        lastSuccessfulDiscoveryApiKey = apiKey
+        lastSuccessfulDiscoveryBroadcastId = broadcastId
+
+        // Note: REST fallback still handled at the bootstrap layer. `allowRestFallback`
+        // and `restBase` retained in signature for callers; no /v1/sdk/campaigns error
+        // path to fall back from anymore.
+        _ = allowRestFallback
+        _ = restBase
     }
 
     private func activateRestBaseFallbackIfNeeded(
@@ -1346,145 +1003,6 @@ public class CampaignManager: ObservableObject {
         await discoverCampaigns(broadcastId: matchId)
     }
     
-    /// Fetch active components from API using new v1 endpoint
-    /// Fetches active components from /v1/offers using the provided campaignId.
-    /// In autoDiscover mode, pass the discovered campaignId. In legacy mode, pass config campaignId.
-    private func fetchActiveComponents(campaignId: Int) async {
-        let config = VioConfiguration.shared
-        
-        // Use campaign admin API key (different from SDK API key)
-        let campaignAdminApiKey = config.campaignConfiguration.campaignAdminApiKey.isEmpty 
-            ? (config.apiKey.isEmpty ? "DEMO_KEY" : config.apiKey)  // Fallback to SDK API key if not configured
-            : config.campaignConfiguration.campaignAdminApiKey
-        
-        let countryCode = config.marketConfiguration.countryCode
-        
-        // Use the passed-in campaignId (from discovery or config)
-        guard campaignId > 0 else {
-            VioLogger.warning("No campaignId provided - skipping components fetch from /v1/offers", component: "CampaignManager")
-            return
-        }
-        
-        // Build URL with query parameters
-        var urlComponents = URLComponents(string: "\(campaignRestAPIBaseURL)/v1/offers")
-        urlComponents?.queryItems = [
-            URLQueryItem(name: "apiKey", value: campaignAdminApiKey),
-            URLQueryItem(name: "campaignId", value: "\(campaignId)")
-        ]
-        
-        // Add optional userCountry if available
-        if !countryCode.isEmpty {
-            urlComponents?.queryItems?.append(URLQueryItem(name: "userCountry", value: countryCode))
-        }
-        
-        guard let url = urlComponents?.url else {
-            VioLogger.error("Invalid offers API URL", component: "CampaignManager")
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            // Validate HTTP response before decoding
-            if let httpResponse = response as? HTTPURLResponse {
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode"
-                    VioLogger.error("Offers request failed with status \(httpResponse.statusCode): \(responseString)", component: "CampaignManager")
-                    
-                    // If 404, campaign might not have offers configured - this is OK
-                    if httpResponse.statusCode == 404 {
-                        self.activeComponents = []
-                        return
-                    }
-                    return
-                }
-            }
-            
-            // Validate that we received JSON, not HTML
-            if let responseString = String(data: data, encoding: .utf8), responseString.trimmingCharacters(in: .whitespaces).hasPrefix("<") {
-                VioLogger.error("Received HTML instead of JSON from offers endpoint", component: "CampaignManager")
-                return
-            }
-            
-            // Decode new offers response
-            let offersResponse = try JSONDecoder().decode(OffersResponse.self, from: data)
-            
-            // Update campaign logo if available from offers response
-            if let logo = offersResponse.campaignLogo, !logo.isEmpty {
-                let existingCampaign = self.currentCampaign
-                
-                self.currentCampaign = Campaign(
-                    id: existingCampaign?.id ?? offersResponse.campaignId,
-                    startDate: existingCampaign?.startDate,
-                    endDate: existingCampaign?.endDate,
-                    isPaused: existingCampaign?.isPaused,
-                    campaignLogo: logo
-                )
-            }
-            
-            // Convert offers to components
-            let components = try offersResponse.offers.map { offer -> Component in
-                // Convert OfferResponse config to ComponentConfig
-                let jsonData = try JSONSerialization.data(withJSONObject: offer.config.mapValues { $0.value })
-                let componentConfig = try JSONDecoder().decode(ComponentConfig.self, from: jsonData)
-                
-                return Component(
-                    id: offer.id,
-                    type: offer.type,
-                    name: offer.name,
-                    config: componentConfig,
-                    status: "active" // All offers from /v1/offers are active
-                )
-            }
-            
-            // All offers are active by default
-            // Filter components by currentMatchContext if set
-            if let context = currentMatchContext {
-                self.activeComponents = components.filter { component in
-                    guard let componentMatchId = component.matchContext?.matchId else {
-                        // Component without matchContext should not be shown when context is active (security)
-                        return false
-                    }
-                    return componentMatchId == context.matchId
-                }
-            } else {
-                // No context set - show all components (legacy mode)
-                self.activeComponents = components
-            }
-            
-            // Components loaded
-            if !self.activeComponents.isEmpty {
-                VioLogger.debug("Active component types: \(self.activeComponents.map { $0.type }.joined(separator: ", "))", component: "CampaignManager")
-            }
-            
-            // Save to cache
-            CacheManager.shared.saveComponents(self.activeComponents)
-            
-        } catch let decodingError as DecodingError {
-            VioLogger.error("Failed to decode offers: \(decodingError)", component: "CampaignManager")
-            
-            // Log detailed decoding error information
-            switch decodingError {
-            case .typeMismatch(let type, let context):
-                VioLogger.error("Type mismatch: Expected \(String(describing: type)), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))", component: "CampaignManager")
-            case .valueNotFound(let type, let context):
-                VioLogger.error("Value not found: \(String(describing: type)), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))", component: "CampaignManager")
-            case .keyNotFound(let key, let context):
-                VioLogger.error("Key not found: \(key.stringValue), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))", component: "CampaignManager")
-            case .dataCorrupted(let context):
-                VioLogger.error("Data corrupted: \(context.debugDescription), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))", component: "CampaignManager")
-            @unknown default:
-                VioLogger.error("Unknown decoding error", component: "CampaignManager")
-            }
-        } catch {
-            VioLogger.warning("Failed to fetch active components: \(error)", component: "CampaignManager")
-        }
-    }
     
     /// Connect to campaign WebSocket
     /// Uses the passed campaignId (from discovery response). Falls back to config file if 0.
@@ -1653,12 +1171,11 @@ public class CampaignManager: ObservableObject {
             CacheManager.shared.saveCampaign(campaign)
         }
         CacheManager.shared.saveCampaignState(campaignState, isActive: isCampaignActive)
-        
-        // Fetch active components now that campaign is active
-        Task {
-            await fetchActiveComponents(campaignId: event.campaignId)
-        }
-        
+
+        // Components arrive via WS `component_status_changed` events + per-broadcast
+        // `GET /v2/mobile/broadcasts/:id/components` on demand. Legacy /v1/offers
+        // polling removed (v2 multi-sponsor hygiene).
+
         // Notify observers
         NotificationCenter.default.post(
             name: .campaignStarted,
@@ -1797,12 +1314,9 @@ public class CampaignManager: ObservableObject {
             CacheManager.shared.saveCampaign(campaign)
         }
         CacheManager.shared.saveCampaignState(campaignState, isActive: isCampaignActive)
-        
-        // Fetch active components now that campaign is resumed
-        Task {
-            await fetchActiveComponents(campaignId: event.campaignId)
-        }
-        
+
+        // Components arrive via WS + per-broadcast v2 call. Legacy /v1/offers removed.
+
         // Notify observers
         NotificationCenter.default.post(
             name: .campaignResumed,

@@ -505,13 +505,15 @@ public class ComponentManager: ObservableObject {
     }
     
     
-    /// Connect to backend and fetch active components
+    /// Connect to backend. Real-time updates arrive via WebSocket
+    /// `component_status_changed` events (handled below).
+    /// Legacy polling via `/api/campaigns/:id/active-components` was removed as
+    /// part of the v2 multi-sponsor hygiene pass — that endpoint returned a
+    /// component shape without `sponsor.commerce` and would contaminate
+    /// `VioConfiguration.primarySponsor/secondarySponsors`.
     public func connect() async {
-        // 1. Fetch initial active components (legacy Replit helper API — may no-op)
-        await fetchActiveComponents()
-        
-        // 2. Real-time updates: use the same WS as CampaignManager when autoDiscover is on
-        // (single connection to `VioConfiguration.wsBaseURL`, e.g. wss://ws-dev.vio.live)
+        // Real-time updates: share the CampaignManager WebSocket when autoDiscover is on
+        // (single connection to `VioConfiguration.wsBaseURL`, e.g. wss://ws-dev.vio.live).
         if VioConfiguration.shared.campaignConfiguration.autoDiscover {
             webSocketManager?.disconnect()
             webSocketManager = nil
@@ -560,42 +562,6 @@ public class ComponentManager: ObservableObject {
         webSocketManager?.disconnect()
         webSocketManager = nil
         isConnected = false
-    }
-    
-    /// Fetch active components from API
-    private func fetchActiveComponents() async {
-        let urlString = "\(baseURL)/api/campaigns/\(campaignId)/active-components"
-        
-        guard let url = URL(string: urlString) else {
-            return
-        }
-        
-        do {
-            let (data, _) = try await URLSession.shared.data(from: url)
-            let components = try JSONDecoder().decode([ActiveComponentResponse].self, from: data)
-            
-            self.activeComponents = components
-            
-            // Extract offer_banner if present
-            if let offerBanner = components.first(where: { $0.type == "offer_banner" }) {
-                if case .offerBanner(let config) = offerBanner.config {
-                    self.activeBanner = config
-                }
-            }
-            // Extract countdown and convert to OfferBannerConfig if no offer_banner
-            else if let countdown = components.first(where: { $0.type == "countdown" }) {
-                if case .countdown(let config) = countdown.config {
-                    if let bannerConfig = config.toOfferBannerConfig() {
-                        self.activeBanner = bannerConfig
-                    }
-                }
-            } else {
-                self.activeBanner = nil
-            }
-            
-        } catch {
-            // Silently fail - component will not be shown
-        }
     }
     
     /// Handle WebSocket messages
