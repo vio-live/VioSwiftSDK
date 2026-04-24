@@ -38,7 +38,7 @@ public class ProductService {
     /// Get or create SDK client for a specific sponsor (cart-intent flow) or the
     /// primary sponsor when `sponsorId` is nil (default rendering path).
     /// - `sponsorId == nil` → uses `VioConfiguration.resolvedCommerceApiKey`
-    ///   (primary sponsor from `GET /v2/sdk/config`, or bootstrap fallback).
+    ///   (primary sponsor from `GET /v2/mobile/config`, or bootstrap fallback).
     /// - `sponsorId != nil` → resolves via `VioConfiguration.commerce(forSponsorId:)`;
     ///   falls back to primary if that sponsor has no commerce block.
     private func getSdkClient(forSponsorId sponsorId: Int? = nil) throws -> SdkClient {
@@ -50,7 +50,7 @@ public class ProductService {
         if let sponsorId, config.commerce(forSponsorId: sponsorId) != nil {
             commerceSource = "per-sponsor (id=\(sponsorId))"
         } else if config.sdkBootstrapCommerceApiKey != nil {
-            commerceSource = "GET /v2/sdk/config (bootstrap primary)"
+            commerceSource = "GET /v2/mobile/config (bootstrap primary)"
         } else if !config.campaignConfiguration.commerceApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             commerceSource = "vio-config campaigns.commerceApiKey"
         } else {

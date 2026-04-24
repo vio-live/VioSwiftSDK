@@ -58,7 +58,7 @@ public class VioConfiguration: ObservableObject {
         return override.isEmpty ? apiKey : override
     }
     
-    /// Commerce GraphQL `Authorization` from `GET /v2/sdk/config` — resolved from
+    /// Commerce GraphQL `Authorization` from `GET /v2/mobile/config` — resolved from
     /// `primarySponsor.commerce.apiKey`. Overrides the SDK `apiKey` for GraphQL calls.
     @Published public private(set) var sdkBootstrapCommerceApiKey: String?
     /// Commerce GraphQL URL from bootstrap (`endpoints.commerceGraphQL`).
@@ -66,7 +66,7 @@ public class VioConfiguration: ObservableObject {
 
     // MARK: - Multi-sponsor (v2 SDK config)
 
-    /// Primary sponsor of the active campaign, from `GET /v2/sdk/config` → `primarySponsor`.
+    /// Primary sponsor of the active campaign, from `GET /v2/mobile/config` → `primarySponsor`.
     /// Always present when a campaign is active; nil when the SDK has not bootstrapped yet.
     @Published public private(set) var primarySponsor: VioSponsor?
 
@@ -292,7 +292,7 @@ public class VioConfiguration: ObservableObject {
         return environment.graphQLURL
     }
 
-    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v1/sdk/config`, then `campaigns.commerceApiKey` in vio-config, then SDK `apiKey`.
+    /// Resolved GraphQL `Authorization`: bootstrap from `GET /v2/mobile/config`, then `campaigns.commerceApiKey` in vio-config, then SDK `apiKey`.
     public var resolvedCommerceApiKey: String {
         if let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty {
             return k
@@ -304,7 +304,7 @@ public class VioConfiguration: ObservableObject {
         return apiKey.isEmpty ? "DEMO_KEY" : apiKey
     }
     
-    /// Apply commerce credentials from `GET /v2/sdk/config`. Pass `nil` fields to clear bootstrap overrides.
+    /// Apply commerce credentials from `GET /v2/mobile/config`. Pass `nil` fields to clear bootstrap overrides.
     internal func applySdkBootstrapCommerce(apiKey: String?, graphQLURL: String?) {
         let previousKey = sdkBootstrapCommerceApiKey
         let previousURL = sdkBootstrapCommerceGraphQLURL
@@ -317,7 +317,7 @@ public class VioConfiguration: ObservableObject {
         }
     }
 
-    /// Apply full sponsor list from `GET /v2/sdk/config`. Pass `nil` / empty to clear.
+    /// Apply full sponsor list from `GET /v2/mobile/config`. Pass `nil` / empty to clear.
     /// Must be called from the same bootstrap flow that applies commerce credentials so
     /// primary/secondary state and `sdkBootstrapCommerceApiKey` stay in sync.
     internal func applySdkBootstrapSponsors(primary: VioSponsor?, secondaries: [VioSponsor]) {
@@ -325,7 +325,7 @@ public class VioConfiguration: ObservableObject {
         secondarySponsors = secondaries
     }
 
-    /// `true` cuando la autorización GraphQL de **commerce** viene de `GET /v1/sdk/config` (clave dinámica del sponsor).
+    /// `true` cuando la autorización GraphQL de **commerce** viene de `GET /v2/mobile/config` (clave dinámica del sponsor).
     /// No expone el secreto; úsalo en UI para saber si el catálogo puede usar la key remota antes de mostrar commerce.
     public var hasDynamicCommerceAuthorizationFromBootstrap: Bool {
         guard let k = sdkBootstrapCommerceApiKey?.trimmingCharacters(in: .whitespacesAndNewlines), !k.isEmpty else {
@@ -334,7 +334,7 @@ public class VioConfiguration: ObservableObject {
         return true
     }
 
-    /// `GET /v1/sdk/config` often returns `commerce.endpoint` / `endpoints.commerceGraphQL` as host only (`https://graph-ql-dev.vio.live`).
+    /// `GET /v2/mobile/config` often returns `commerce.endpoint` / `endpoints.commerceGraphQL` as host only (`https://graph-ql-dev.vio.live`).
     /// ``GraphQLHTTPClient`` POSTs to this URL; the service expects the `/graphql` path.
     private static func normalizeCommerceGraphQLHTTPURL(_ raw: String) -> String {
         let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
