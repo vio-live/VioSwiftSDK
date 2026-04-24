@@ -709,7 +709,7 @@ public class CampaignManager: ObservableObject {
             return
         }
         let restBase = campaignRestAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        var urlComponents = URLComponents(string: "\(restBase)/v2/sdk/config")
+        var urlComponents = URLComponents(string: "\(restBase)/v2/mobile/config")
         urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
         guard let url = urlComponents?.url else {
             VioLogger.warning("Invalid SDK bootstrap URL", component: "CampaignManager")

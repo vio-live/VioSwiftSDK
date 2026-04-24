@@ -24,7 +24,7 @@ public enum VioCampaignPartnerAPI {
 
         let base = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard let url = URL(string: "\(base)/api/campaigns/\(campaignId)/cart-intent") else {
+        guard let url = URL(string: "\(base)/v2/mobile/campaigns/\(campaignId)/cart-intent") else {
             throw VioCampaignPartnerAPIError.invalidURL
         }
 
@@ -67,7 +67,7 @@ public enum VioCampaignPartnerAPI {
 
         let base = VioConfiguration.shared.campaignConfiguration.restAPIBaseURL
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard let url = URL(string: "\(base)/api/campaigns/\(campaignId)/register-device") else {
+        guard let url = URL(string: "\(base)/v2/mobile/campaigns/\(campaignId)/register-device") else {
             throw VioCampaignPartnerAPIError.invalidURL
         }
 
