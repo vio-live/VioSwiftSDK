@@ -358,14 +358,67 @@ public class CampaignManager: ObservableObject {
     /// push-notification adapter (`handlePushNotificationUserInfo`) call this
     /// after parsing/validating their respective payloads.
     ///
-    /// Routing per event type lives here; per-event dedup + state mutation
-    /// lives in the corresponding `publishXxxIfChanged` private method. To add
-    /// a new event type, see the docs on `IncomingTVEvent`.
+    /// Responsibilities:
+    ///   - Staleness gate: events older than ``staleEventTTL`` are dropped,
+    ///     so a tap on an hour-old notification doesn't surface a stale
+    ///     overlay. Events with no `dispatchedAt` skip this gate (no regression
+    ///     for back-ends that haven't shipped the field yet).
+    ///   - Per-event routing: forwards to `publishXxxIfChanged`, where dedup
+    ///     and state mutation live. To add a new event type, see the docs on
+    ///     `IncomingTVEvent`.
     public func dispatch(_ event: IncomingTVEvent, source: TVEventSource) {
         switch event {
         case .cartIntent(let cartEvent):
+            if let ts = cartEvent.dispatchedAt {
+                let age = Date().timeIntervalSince(ts)
+                if age > Self.staleEventTTL {
+                    VioLogger.debug(
+                        "Dropping stale cart_intent (age=\(Int(age))s, ttl=\(Int(Self.staleEventTTL))s, source=\(source.rawValue), activationId=\(cartEvent.activationId.map(String.init) ?? "nil"))",
+                        component: "CampaignManager"
+                    )
+                    return
+                }
+            }
             publishCartIntentIfChanged(cartEvent, channel: source.rawValue)
         }
+    }
+
+    /// Maximum age of a `cart_intent` for the dispatcher to still surface it.
+    /// 5 min covers normal network/push delivery slack while killing the
+    /// "tapped a notification an hour later" stale-overlay case.
+    private static let staleEventTTL: TimeInterval = 5 * 60
+
+    /// Window during which a recently-dispatched `cart_intent` activation
+    /// suppresses redundant foreground notification banners. Set to be
+    /// comfortably longer than typical WS-vs-APNs delivery skew (~1-2 s) but
+    /// shorter than user re-engagement scenarios.
+    private static let recentlyDispatchedTTL: TimeInterval = 30
+
+    /// Activation IDs we've published in the last ``recentlyDispatchedTTL``
+    /// seconds. Read by `wasActivationRecentlyDispatched(_:)` from the host
+    /// app's `UNUserNotificationCenterDelegate.willPresent` to decide whether
+    /// the foreground APNs banner is redundant with the overlay we already
+    /// raised over WebSocket.
+    private var recentlyDispatchedActivations: [Int: Date] = [:]
+
+    /// True if `activationId` was published via the dispatcher within the
+    /// last ``recentlyDispatchedTTL`` seconds. Use from `willPresent` to
+    /// suppress the foreground banner when the overlay has already handled
+    /// the moment.
+    public func wasActivationRecentlyDispatched(_ activationId: Int) -> Bool {
+        purgeRecentlyDispatched()
+        return recentlyDispatchedActivations[activationId] != nil
+    }
+
+    private func recordRecentlyDispatched(_ activationId: Int?) {
+        guard let id = activationId else { return }
+        recentlyDispatchedActivations[id] = Date()
+        purgeRecentlyDispatched()
+    }
+
+    private func purgeRecentlyDispatched() {
+        let cutoff = Date().addingTimeInterval(-Self.recentlyDispatchedTTL)
+        recentlyDispatchedActivations = recentlyDispatchedActivations.filter { $0.value >= cutoff }
     }
 
     /// Preferred entry point for **remote or local** notification taps: reads `vio_notification_version` / `vio_event_type`, then dispatches.
@@ -493,6 +546,10 @@ public class CampaignManager: ObservableObject {
     /// open twice.
     private func publishCartIntentIfChanged(_ event: CartIntentEvent, channel: String) {
         if let incoming = event.activationId, let current = activeCartIntentEvent?.activationId, incoming == current {
+            // Same activation already on screen — record again so the recent
+            // cache stays warm for any later APNs banner suppression even
+            // though we don't re-publish.
+            recordRecentlyDispatched(incoming)
             print("🎯 [CampaignManager] cart_intent [\(channel)] dedup: activationId=\(incoming) ya publicado — ignorando duplicado")
             return
         }
@@ -505,6 +562,7 @@ public class CampaignManager: ObservableObject {
             return
         }
         activeCartIntentEvent = event
+        recordRecentlyDispatched(event.activationId)
         let pid = event.productId ?? ""
         let aid = event.activationId.map(String.init) ?? "nil"
         let spid = event.sponsorId.map(String.init) ?? "nil"

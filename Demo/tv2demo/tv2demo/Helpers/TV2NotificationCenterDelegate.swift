@@ -55,6 +55,17 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
         let info = notification.request.content.userInfo
         logPayload(info, phase: "willPresent(foreground)")
         if CampaignManager.isVioCartIntentNotificationUserInfo(info) {
+            // Suppress the foreground banner when the same activation was just
+            // dispatched via WebSocket — the in-app overlay already handles it,
+            // a banner on top would be the redundant 2nd-of-N notifications the
+            // user complained about. Background delivery is unaffected (this
+            // delegate isn't called when the app is backgrounded).
+            if let activationId = activationIdFromUserInfo(info),
+               CampaignManager.shared.wasActivationRecentlyDispatched(activationId) {
+                print("🎯 [TV2Demo] Notificación willPresent → suprimida (activationId=\(activationId) ya despachado por WS, overlay activo)")
+                completionHandler([])
+                return
+            }
             print("🎯 [TV2Demo] Notificación willPresent → Vio cart_intent — discoverCampaigns + handlePush (overlay + commerce)")
             Task { @MainActor in
                 await CampaignManager.shared.discoverCampaigns(broadcastId: nil)
@@ -66,6 +77,22 @@ final class TV2NotificationCenterDelegate: NSObject, UNUserNotificationCenterDel
             return
         }
         completionHandler(VioCartIntentNotificationPresentation.defaultWillPresentOptions())
+    }
+
+    /// Pulls `activation_id` from the canonical envelope (`vio_payload.activation_id`)
+    /// or the legacy flat key. Used to consult the recently-dispatched cache before
+    /// presenting a foreground banner.
+    private func activationIdFromUserInfo(_ userInfo: [AnyHashable: Any]) -> Int? {
+        if let payload = userInfo["vio_payload"] as? [String: Any] {
+            if let n = payload["activation_id"] as? Int { return n }
+            if let n = payload["activationId"] as? Int { return n }
+            if let s = payload["activation_id"] as? String, let n = Int(s) { return n }
+        }
+        if let n = userInfo["vio_cartIntent_activationId"] as? Int { return n }
+        if let s = userInfo["vio_cartIntent_activationId"] as? String, let n = Int(s) { return n }
+        if let n = userInfo["activation_id"] as? Int { return n }
+        if let s = userInfo["activation_id"] as? String, let n = Int(s) { return n }
+        return nil
     }
 
     func userNotificationCenter(
