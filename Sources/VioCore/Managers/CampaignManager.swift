@@ -458,7 +458,10 @@ public class CampaignManager: ObservableObject {
             activationId: base.activationId,
             sponsorId: base.sponsorId
         )
-        publishCartIntentIfChanged(merged, channel: "push/local")
+        // Channel name was "push/local" when the SDK also self-scheduled local
+        // notifications. After dropping that path, the remaining notification
+        // entries are real APNs pushes only — relabel for clarity.
+        publishCartIntentIfChanged(merged, channel: "push")
         if let envUid = merged.vioUserId?.trimmingCharacters(in: .whitespacesAndNewlines), !envUid.isEmpty,
            let appUid = userId?.trimmingCharacters(in: .whitespacesAndNewlines), !appUid.isEmpty,
            envUid != appUid {
