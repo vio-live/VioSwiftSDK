@@ -12,10 +12,26 @@ public struct VApplePayConfirmationSheet: View {
     let amount: Double
     let currencyCode: String
     let contact: PKContact?
+    /// Sponsor that owns the purchased product. The cart_intent envelope carries
+    /// `sponsorId` (TV-originated) so the confirmation can show the brand the
+    /// user actually bought from instead of always the campaign primary. When
+    /// nil → falls back to campaign logo (legacy behavior, kept for in-app
+    /// purchases without a cart_intent).
+    let sponsorId: Int?
     let onDismiss: () -> Void
 
     private var sponsorLogoUrl: String? {
+        // 1. Per-sponsor lookup — preferred. Routes a Torshov / XXL purchase
+        //    confirmation to that sponsor's logo instead of the campaign primary.
+        if let id = sponsorId,
+           let logo = VioConfiguration.shared.sponsor(withId: id)?.logoUrl,
+           !logo.isEmpty {
+            return logo
+        }
+        // 2. Campaign-level fallback (= primary sponsor logo). Used when the
+        //    purchase had no resolvable sponsor (in-app cart, no cart_intent).
         if let u = CampaignManager.shared.currentCampaign?.campaignLogo, !u.isEmpty { return u }
+        // 3. Final fallback: the host app's brand from dynamic config.
         if let u = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, !u.isEmpty { return u }
         return nil
     }
@@ -26,6 +42,7 @@ public struct VApplePayConfirmationSheet: View {
         amount: Double,
         currencyCode: String,
         contact: PKContact?,
+        sponsorId: Int? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self.productName = productName
@@ -33,6 +50,7 @@ public struct VApplePayConfirmationSheet: View {
         self.amount = amount
         self.currencyCode = currencyCode
         self.contact = contact
+        self.sponsorId = sponsorId
         self.onDismiss = onDismiss
     }
 
@@ -207,6 +225,7 @@ public struct VApplePayConfirmationSheet: View {
         amount: Double,
         currencyCode: String,
         contact: Any?,
+        sponsorId: Int? = nil,
         onDismiss: @escaping () -> Void
     ) {}
 

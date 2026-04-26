@@ -101,12 +101,19 @@ public struct VApplePayButton: View {
             }
         }
         .sheet(isPresented: $showConfirmation) {
+            // Resolve which sponsor owned this purchase by reading the active
+            // cart_intent envelope. For TV-originated buys (Torshov, XXL, …)
+            // this routes the confirmation sheet to that sponsor's logo. For
+            // in-app purchases without a cart_intent the value is nil and the
+            // sheet falls back to the campaign primary logo.
+            let purchaseSponsorId = CampaignManager.shared.activeCartIntentEvent?.sponsorId
             VApplePayConfirmationSheet(
                 productName: productName,
                 productImageUrl: productImageUrl,
                 amount: amount,
                 currencyCode: cartManager.currency,
-                contact: applePayManager.capturedContact
+                contact: applePayManager.capturedContact,
+                sponsorId: purchaseSponsorId
             ) {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
