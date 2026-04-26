@@ -16,6 +16,23 @@ public final class CommerceSdkClientProvider {
     private var sponsorClientURLs: [Int: URL] = [:]
     private var sponsorClientKeys: [Int: String] = [:]
 
+    /// The sponsor whose Commerce credentials are currently active in the
+    /// resolved SDK client. Single source of truth for "who are we transacting
+    /// with right now" — set every time `client(forSponsorId:)` or
+    /// `client(configuration:)` returns a client.
+    ///
+    /// Consumers (e.g. `VApplePayConfirmationSheet`) read this to render the
+    /// purchase sponsor's brand without trusting `CampaignManager.activeCartIntentEvent`
+    /// (which can be cleared by overlay dismissal flows before the
+    /// confirmation surface mounts).
+    ///
+    /// Semantics:
+    ///   - Per-sponsor resolution succeeded → `activeSponsorId = sponsorId`
+    ///   - Per-sponsor fell back to primary (unknown id / no commerce block) →
+    ///     `activeSponsorId = configuration.primarySponsor?.id`
+    ///   - `clear()` was called → nil
+    public private(set) var activeSponsorId: Int?
+
     private init() {}
 
     public func client(configuration: VioConfiguration = .shared) throws -> SdkClient {
@@ -25,6 +42,11 @@ public final class CommerceSdkClientProvider {
                 code: "INVALID_COMMERCE_GRAPHQL_URL")
         }
         let resolvedApiKey = configuration.resolvedCommerceApiKey
+        // Bootstrap key (no per-sponsor scope) → the active sponsor is the
+        // primary by definition. Mirrors what `client(forSponsorId: nil)`
+        // resolves to, so consumers that read activeSponsorId always see the
+        // sponsor whose key is in use.
+        activeSponsorId = configuration.primarySponsor?.id
         if let existing = cachedClient,
             cachedURL == resolvedURL,
             cachedApiKey == resolvedApiKey
@@ -62,6 +84,8 @@ public final class CommerceSdkClientProvider {
               let sponsorKey = configuration.commerce(forSponsorId: sponsorId)?.apiKey
                 .trimmingCharacters(in: .whitespacesAndNewlines),
               !sponsorKey.isEmpty else {
+            // Fallback path inside `client(configuration:)` already sets
+            // activeSponsorId to the primary's id — no need to set it here.
             return try client(configuration: configuration)
         }
         guard let resolvedURL = URL(string: configuration.resolvedCommerceGraphQLURL) else {
@@ -69,6 +93,10 @@ public final class CommerceSdkClientProvider {
                 "Invalid commerce GraphQL URL: \(configuration.resolvedCommerceGraphQLURL)",
                 code: "INVALID_COMMERCE_GRAPHQL_URL")
         }
+
+        // Per-sponsor resolution succeeded — this is the single source of
+        // truth for "who are we transacting with". Confirmation sheet reads it.
+        activeSponsorId = sponsorId
 
         if let existing = sponsorClients[sponsorId],
            sponsorClientURLs[sponsorId] == resolvedURL,
@@ -101,5 +129,6 @@ public final class CommerceSdkClientProvider {
         sponsorClients.removeAll()
         sponsorClientURLs.removeAll()
         sponsorClientKeys.removeAll()
+        activeSponsorId = nil
     }
 }

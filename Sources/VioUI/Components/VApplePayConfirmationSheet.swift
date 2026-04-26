@@ -14,10 +14,21 @@ public struct VApplePayConfirmationSheet: View {
     let contact: PKContact?
     let onDismiss: () -> Void
 
+    /// The sponsor that owns this purchase, resolved from the Commerce
+    /// SDK client provider's `activeSponsorId` — set when `ProductService`
+    /// (or any other path) opened a per-sponsor SDK client. The apiKey in
+    /// use is our single source of truth for who is being transacted with.
+    ///
+    /// No fallback chain by design: if the active sponsor can't be resolved
+    /// to a logo, the sheet renders without one (instead of showing a
+    /// misleading campaign-level or host-app brand).
     private var sponsorLogoUrl: String? {
-        if let u = CampaignManager.shared.currentCampaign?.campaignLogo, !u.isEmpty { return u }
-        if let u = VioConfiguration.shared.dynamicBrandConfig?.logoUrl, !u.isEmpty { return u }
-        return nil
+        guard let id = CommerceSdkClientProvider.shared.activeSponsorId,
+              let logo = VioConfiguration.shared.sponsor(withId: id)?.logoUrl,
+              !logo.isEmpty else {
+            return nil
+        }
+        return logo
     }
 
     public init(
