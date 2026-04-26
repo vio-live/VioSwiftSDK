@@ -1060,6 +1060,12 @@ public struct CartIntentEvent: Equatable {
     /// mobile SDK to route ``ProductService`` to the right sponsor's Commerce GraphQL key
     /// via ``VioConfiguration/commerce(forSponsorId:)``.
     public let sponsorId: Int?
+    /// When the backend sent this cart_intent. Sourced from `vio_payload.dispatched_at`
+    /// (preferred — survives WS+APNs paths uniformly) or the WS top-level `timestamp`.
+    /// Used by the dispatcher to drop stale events: a user who taps a notification an
+    /// hour after it arrived shouldn't suddenly get the product overlay raised, because
+    /// the moment is over.
+    public let dispatchedAt: Date?
 
     public init(
         type: String,
@@ -1072,7 +1078,8 @@ public struct CartIntentEvent: Equatable {
         source: String? = nil,
         deeplink: String? = nil,
         activationId: Int? = nil,
-        sponsorId: Int? = nil
+        sponsorId: Int? = nil,
+        dispatchedAt: Date? = nil
     ) {
         self.type = type
         self.productName = productName
@@ -1085,6 +1092,7 @@ public struct CartIntentEvent: Equatable {
         self.deeplink = deeplink
         self.activationId = activationId
         self.sponsorId = sponsorId
+        self.dispatchedAt = dispatchedAt
     }
 
     /// WebSocket JSON body: canonical envelope, legacy flat, or legacy `type` + fields.
@@ -1124,6 +1132,12 @@ public struct CartIntentEvent: Equatable {
             let campaignId = intFromAny(payload["campaign_id"] ?? payload["campaignId"])
             let activationId = intFromAny(payload["activation_id"] ?? payload["activationId"])
             let sponsorId = intFromAny(payload["sponsor_id"] ?? payload["sponsorId"])
+            // Backend dispatch time. Prefer payload-scoped `dispatched_at` (set by
+            // backend in vio_payload — survives WS + APNs uniformly) and fall back to
+            // the WS top-level `timestamp`.
+            let dispatchedAt =
+                dateFromAny(payload["dispatched_at"] ?? payload["dispatchedAt"])
+                ?? dateFromAny(top["timestamp"])
             let evt = (stringFromAny(top["vio_event_type"]) ?? stringFromAny(top["type"]) ?? VioPushEventType.cartIntent.rawValue)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
@@ -1140,7 +1154,8 @@ public struct CartIntentEvent: Equatable {
                 source: source,
                 deeplink: deeplink,
                 activationId: activationId,
-                sponsorId: sponsorId
+                sponsorId: sponsorId,
+                dispatchedAt: dispatchedAt
             )
         }
 
@@ -1159,6 +1174,9 @@ public struct CartIntentEvent: Equatable {
         let notifTitle = stringFromAny(top["notificationTitle"] ?? top[CartIntentNotificationKeys.notificationTitle])
         let notifBody = stringFromAny(top["notificationBody"] ?? top[CartIntentNotificationKeys.notificationBody])
         let vioUserId = stringFromAny(top["vio_user_id"] ?? top["userId"])
+        // Legacy flat shape never had a payload — pull dispatch time from the WS
+        // top-level `timestamp` (set by the backend when fanning out the event).
+        let dispatchedAt = dateFromAny(top["timestamp"] ?? top["dispatched_at"])
         return CartIntentEvent(
             type: typeRaw,
             productName: name,
@@ -1170,7 +1188,8 @@ public struct CartIntentEvent: Equatable {
             source: stringFromAny(top["source"]),
             deeplink: stringFromAny(top["deeplink"]),
             activationId: activationId,
-            sponsorId: sponsorId
+            sponsorId: sponsorId,
+            dispatchedAt: dispatchedAt
         )
     }
 
@@ -1210,6 +1229,44 @@ public struct CartIntentEvent: Equatable {
             return nil
         }
     }
+
+    /// Backend dispatch time. Accepts ISO 8601 strings (canonical, e.g.
+    /// `2026-04-26T11:25:16.426Z`), unix milliseconds (Int / NSNumber, e.g.
+    /// `1777237446923`), or unix seconds. Returns nil for any other shape.
+    private static func dateFromAny(_ any: Any?) -> Date? {
+        if let s = any as? String {
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { return nil }
+            // ISO 8601 — what `new Date().toISOString()` emits on the backend.
+            if let d = iso8601Formatter.date(from: trimmed) { return d }
+            if let d = iso8601FormatterFractional.date(from: trimmed) { return d }
+            if let n = Double(trimmed) {
+                return decodeUnixDouble(n)
+            }
+            return nil
+        }
+        if let n = any as? NSNumber {
+            return decodeUnixDouble(n.doubleValue)
+        }
+        return nil
+    }
+
+    /// Heuristic: values > 10^12 are unix milliseconds; otherwise seconds.
+    private static func decodeUnixDouble(_ n: Double) -> Date {
+        n > 1_000_000_000_000 ? Date(timeIntervalSince1970: n / 1000) : Date(timeIntervalSince1970: n)
+    }
+
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let iso8601FormatterFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
 
     /// `vio://product/{id}?...` — host `product`, path segment is the id.
     static func productIdFromVioDeeplink(_ urlString: String?) -> String? {
