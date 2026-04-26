@@ -303,7 +303,7 @@ struct TV2ProductOverlay: View {
                         ProgressView()
                             .scaleEffect(0.7)
                             .tint(.white)
-                        Text("Cargando producto...")
+                        Text("Laster produkt…")
                             .font(.system(size: 10))
                             .foregroundColor(.white.opacity(0.6))
                     }
