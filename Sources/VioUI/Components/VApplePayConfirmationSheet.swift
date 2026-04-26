@@ -67,15 +67,15 @@ public struct VApplePayConfirmationSheet: View {
 
             if let logoStr = sponsorLogoUrl, let logoUrl = URL(string: logoStr) {
                 HStack {
-                    Spacer()
                     AsyncImage(url: logoUrl) { phase in
                         if case .success(let img) = phase {
                             img.resizable().aspectRatio(contentMode: .fit)
                         } else { EmptyView() }
                     }
                     .frame(height: 22)
-                    .padding(.trailing, 20)
+                    .padding(.leading, 20)
                     .padding(.bottom, 4)
+                    Spacer()
                 }
             }
 
