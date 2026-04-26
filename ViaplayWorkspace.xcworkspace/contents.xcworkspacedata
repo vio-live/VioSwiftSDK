@@ -13,7 +13,4 @@
    <FileRef
       location = "group:Demo/tv2demo/tv2demo.xcodeproj">
    </FileRef>
-   <FileRef
-      location = "group:Demo/tv2demo-appletv/tv2demo-appletv.xcodeproj">
-   </FileRef>
 </Workspace>
