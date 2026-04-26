@@ -85,11 +85,19 @@ private struct CartIntentProductDetailHost: View {
 
     @EnvironmentObject private var cartManager: CartManager
     @State private var loadedProduct: Product?
-    @State private var isLoading = false
+    /// Default `true` so the loader appears the moment the user taps the push
+    /// notification (before `.task` runs and ProductService.loadProduct flips
+    /// it). Without this, there's a perceptible silent gap between the tap and
+    /// the spinner appearing while the SwiftUI scheduler hasn't processed
+    /// `.task` yet — the user assumes nothing happened.
+    @State private var isLoading = true
 
     var body: some View {
         ZStack {
-            Color.black.opacity(isLoading ? 0.4 : 0.001)
+            // Always-on dim while the host is mounted (was flickering between
+            // 0.001 and 0.4 depending on isLoading, so the very first frames
+            // had no visible feedback at all).
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture {
                     if isLoading {
@@ -98,9 +106,14 @@ private struct CartIntentProductDetailHost: View {
                 }
 
             if isLoading {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.large)
+                        .tint(.white)
+                    Text("Laster produkt…")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white.opacity(0.85))
+                }
             }
         }
         .task(id: productId) {
