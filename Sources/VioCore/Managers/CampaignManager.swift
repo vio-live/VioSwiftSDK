@@ -350,7 +350,24 @@ public class CampaignManager: ObservableObject {
     public func dismissCartIntent() {
         activeCartIntentEvent = nil
     }
-    
+
+    // MARK: - Unified Inbound Dispatcher
+
+    /// Single entry point for any `IncomingTVEvent` regardless of transport.
+    /// Both the WebSocket adapter (`webSocketManager.onCartIntent`) and the
+    /// push-notification adapter (`handlePushNotificationUserInfo`) call this
+    /// after parsing/validating their respective payloads.
+    ///
+    /// Routing per event type lives here; per-event dedup + state mutation
+    /// lives in the corresponding `publishXxxIfChanged` private method. To add
+    /// a new event type, see the docs on `IncomingTVEvent`.
+    public func dispatch(_ event: IncomingTVEvent, source: TVEventSource) {
+        switch event {
+        case .cartIntent(let cartEvent):
+            publishCartIntentIfChanged(cartEvent, channel: source.rawValue)
+        }
+    }
+
     /// Preferred entry point for **remote or local** notification taps: reads `vio_notification_version` / `vio_event_type`, then dispatches.
     /// Falls back to legacy `vio_cartIntent_kind` when `vio_event_type` is absent.
     /// Call after `discoverCampaigns` when possible so commerce bootstrap is ready for `ProductService`.
@@ -458,10 +475,9 @@ public class CampaignManager: ObservableObject {
             activationId: base.activationId,
             sponsorId: base.sponsorId
         )
-        // Channel name was "push/local" when the SDK also self-scheduled local
-        // notifications. After dropping that path, the remaining notification
-        // entries are real APNs pushes only — relabel for clarity.
-        publishCartIntentIfChanged(merged, channel: "push")
+        // Push-side adapter into the unified dispatcher. Same convergence point
+        // as the WS handler (CampaignManager.bindWebSocketCallbacks → onCartIntent).
+        dispatch(.cartIntent(merged), source: .push)
         if let envUid = merged.vioUserId?.trimmingCharacters(in: .whitespacesAndNewlines), !envUid.isEmpty,
            let appUid = userId?.trimmingCharacters(in: .whitespacesAndNewlines), !appUid.isEmpty,
            envUid != appUid {
@@ -1091,7 +1107,9 @@ public class CampaignManager: ObservableObject {
         
         webSocketManager?.onCartIntent = { [weak self] event in
             Task { @MainActor in
-                self?.publishCartIntentIfChanged(event, channel: "WebSocket")
+                // WS-side adapter into the unified dispatcher. Same convergence
+                // point as the push handler (applyCartIntentFromNotificationUserInfo).
+                self?.dispatch(.cartIntent(event), source: .webSocket)
             }
         }
         
