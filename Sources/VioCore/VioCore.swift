@@ -54,4 +54,30 @@ public enum VioRuntime {
     public static func ensureCommerceReady() async {
         await VioSession.shared.ensureCommerceBootstrapApplied()
     }
+
+    // MARK: - Placement registry (manifest upload)
+
+    /// Register a placement component the partner app implements. Call this
+    /// once at app boot for each component the SDK should know about. The
+    /// manifest endpoint upserts the underlying `app_components` row(s) so
+    /// the operator dashboard's "Add placement" picker only ever offers
+    /// components this app actually has implementations for.
+    ///
+    /// Idempotent — re-registering the same `componentType` is a no-op.
+    @MainActor
+    public static func registerPlacementComponent<T: VioPlacementComponent>(_ type: T.Type) {
+        VioPlacementRegistry.shared.register(type)
+    }
+
+    /// Register a placement slot location the partner's layout exposes. Call
+    /// this once at app boot for each slot. The dashboard's location picker
+    /// reads from these so an operator can never bind a `campaign_components`
+    /// instance to a slot the dev's code doesn't actually render to.
+    ///
+    /// Idempotent — re-registering the same `id` updates the displayName
+    /// (matches backend `INSERT ... ON CONFLICT DO UPDATE`).
+    @MainActor
+    public static func registerPlacementLocation(_ location: VioPlacementLocation) {
+        VioPlacementRegistry.shared.registerLocation(location)
+    }
 }
