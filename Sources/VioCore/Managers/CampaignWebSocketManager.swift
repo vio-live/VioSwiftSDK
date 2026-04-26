@@ -1,9 +1,4 @@
 import Foundation
-import UserNotifications
-
-#if canImport(UIKit) && os(iOS)
-import UIKit
-#endif
 
 /// WebSocket Manager for Campaign Lifecycle Events
 @MainActor
@@ -45,15 +40,6 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         self.userId = userId
         super.init()
         self.urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
-        
-        // Request local notification permission so cart_intent alerts can fire
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if let error = error {
-                VioLogger.error("Notification permission error: \(error)", component: "CampaignWebSocket")
-            } else {
-                VioLogger.debug("Notification permission granted: \(granted)", component: "CampaignWebSocket")
-            }
-        }
     }
     
     // MARK: - Connection Management
@@ -271,8 +257,13 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             case "cart_intent":
                 let event = try CartIntentEvent.parse(jsonData: data)
                 VioLogger.success("Decoded cart_intent event (productId: \(event.productId ?? "nil"), productName: \(event.productName ?? "unknown"))", component: "CampaignWebSocket")
+                // Single delivery path: hand off to CampaignManager via the callback. The
+                // overlay is the canonical UI; APNs (when the app is backgrounded) reaches
+                // CampaignManager via UNUserNotificationCenterDelegate → handlePushNotificationUserInfo,
+                // which converges on the same publishCartIntentIfChanged. We no longer schedule a
+                // local notification here — that path was redundant with the overlay and the
+                // re-entry through the delegate was the source of duplicate cart_intents.
                 onCartIntent?(event)
-                scheduleCartIntentNotification(for: event)
 
             case "ping":
                 // App-level heartbeat — respond immediately with pong
@@ -330,70 +321,6 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
             VioLogger.error("Failed to send identify: \(error)", component: "CampaignWebSocket")
             // Mark as disconnected so listenForMessages doesn't start on a dead socket
             isConnected = false
-        }
-    }
-    
-    // MARK: - Local Notifications
-    
-    /// Skips local notification in foreground only when ``CampaignManager/showsCartIntentLocalNotificationWhenAppIsActive`` is `false`.
-    private func shouldSkipCartIntentLocalNotificationForForeground() -> Bool {
-        if CampaignManager.shared.showsCartIntentLocalNotificationWhenAppIsActive {
-            return false
-        }
-        #if canImport(UIKit) && os(iOS)
-        return UIApplication.shared.applicationState == .active
-        #else
-        return false
-        #endif
-    }
-    
-    private func scheduleCartIntentNotification(for event: CartIntentEvent) {
-        if shouldSkipCartIntentLocalNotificationForForeground() {
-            VioLogger.debug("cart_intent: skipping local notification — app is active (overlay)", component: "CampaignWebSocket")
-            return
-        }
-        
-        enum Defaults {
-            static let title = "Tienes un artículo esperando"
-            static let bodyNoProduct = "Un producto está listo para añadir al carrito"
-        }
-        
-        let content = UNMutableNotificationContent()
-        let tTrim = event.notificationTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        content.title = tTrim.isEmpty ? Defaults.title : tTrim
-        let bTrim = event.notificationBody?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !bTrim.isEmpty {
-            content.body = bTrim
-        } else if let name = event.productName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            content.body = name
-        } else {
-            content.body = Defaults.bodyNoProduct
-        }
-        content.sound = .default
-        var info: [String: Any] = [
-            VioNotificationUserInfoKeys.notificationVersion: 1,
-            VioNotificationUserInfoKeys.eventType: VioPushEventType.cartIntent.rawValue,
-            CartIntentNotificationKeys.kind: CartIntentNotificationKeys.kindValueCartIntent,
-        ]
-        if let pid = event.productId, !pid.isEmpty { info[CartIntentNotificationKeys.productId] = pid }
-        if let name = event.productName { info[CartIntentNotificationKeys.productName] = name }
-        if let cid = event.campaignId { info[CartIntentNotificationKeys.campaignId] = cid }
-        if !tTrim.isEmpty { info[CartIntentNotificationKeys.notificationTitle] = tTrim }
-        if !bTrim.isEmpty { info[CartIntentNotificationKeys.notificationBody] = bTrim }
-        content.userInfo = info
-        
-        let request = UNNotificationRequest(
-            identifier: "cart_intent_\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                VioLogger.error("Failed to schedule cart_intent notification: \(error)", component: "CampaignWebSocket")
-            } else {
-                VioLogger.success("cart_intent notification scheduled", component: "CampaignWebSocket")
-            }
         }
     }
     

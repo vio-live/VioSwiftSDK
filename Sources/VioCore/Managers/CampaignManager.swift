@@ -34,8 +34,6 @@ public class CampaignManager: ObservableObject {
     /// Set before calling `discoverCampaigns`.
     /// Example: `CampaignManager.shared.userId = jwtPayload.sub`
     public var userId: String?
-    /// When `true` (default), schedules a **local** notification for WebSocket `cart_intent` even while the app is **active**, so the banner appears together with the overlay. Set `false` to skip local notifications in foreground (overlay only).
-    public var showsCartIntentLocalNotificationWhenAppIsActive: Bool = true
     /// Zero-config: APNs hex from the app; `register-device` runs only after `discoverCampaigns` sets `currentCampaign`.
     private var pendingApnsDeviceTokenHex: String?
     private var pendingSponsorLogoUrl: String? = nil  // Set from dynamic config, applied when Campaign is created
