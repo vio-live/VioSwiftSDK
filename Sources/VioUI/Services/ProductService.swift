@@ -185,19 +185,23 @@ public class ProductService {
     public func loadProducts(
         productIds: [Int]?,
         currency: String,
-        country: String
+        country: String,
+        sponsorId: Int? = nil
     ) async throws -> [Product] {
         let idsToUse = productIds
-        
+
         if let ids = idsToUse, !ids.isEmpty {
-            VioLogger.debug("Loading products with IDs: \(ids)", component: "ProductService")
+            VioLogger.debug("Loading products with IDs: \(ids) (sponsorId=\(sponsorId.map(String.init) ?? "primary"))", component: "ProductService")
         } else {
-            VioLogger.debug("No product IDs provided - loading all products from channel", component: "ProductService")
+            VioLogger.debug("No product IDs provided - loading all products from channel (sponsorId=\(sponsorId.map(String.init) ?? "primary"))", component: "ProductService")
         }
-        
+
         VioLogger.debug("Currency: \(currency), Country: \(country)", component: "ProductService")
-        
-        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProducts") { sdk in
+
+        // Per-sponsor commerce client routing — picks the apiKey for the
+        // sponsor that owns this placement instance instead of the global
+        // primary key. Falls back to primary when sponsorId is nil.
+        let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProducts", sponsorId: sponsorId) { sdk in
             try await sdk.channel.product.get(
                 currency: currency,
                 imageSize: "medium",

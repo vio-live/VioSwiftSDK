@@ -34,6 +34,11 @@ public final class VioSession: ObservableObject {
         // upload happens on every cold start and survives partner apps that
         // restart the SDK without restarting the process.
         await uploadPlacementManifestIfPossible()
+        // Cold-start fetch of campaign-level placement instances. Without this,
+        // a fresh app install only sees placements that arrive via WS
+        // `component_status_changed` after the operator toggles them — which
+        // misses anything already-active in the campaign at boot time.
+        await CampaignManager.shared.fetchAndApplyCampaignComponentsIfPossible()
         if CampaignManager.shared.currentCampaign != nil {
             state = .campaignReady
         } else {

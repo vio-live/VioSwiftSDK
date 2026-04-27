@@ -323,7 +323,7 @@ public class CampaignManager: ObservableObject {
     /// - Returns: Active component matching the type and optional componentId, or nil if not found
     public func getActiveComponent(type: String, componentId: String? = nil, locationId: String? = nil) -> Component? {
         guard isCampaignActive else { return nil }
-        
+
         if let locationId = locationId {
             // Search by locationId first (preferred — slot system)
             return activeComponents.first {
@@ -345,7 +345,62 @@ public class CampaignManager: ObservableObject {
         guard isCampaignActive else { return [] }
         return activeComponents.filter { $0.type == type && $0.isActive }
     }
-    
+
+    // MARK: - Cold-start fetch of campaign placements
+
+    /// Fetches `GET /v2/mobile/campaigns/:id/components` and merges the result
+    /// into `activeComponents` so the SDK can resolve placements on a fresh
+    /// install without waiting for the next `component_status_changed` WS
+    /// event. Best-effort: any failure is logged and bootstrap continues.
+    @MainActor
+    public func fetchAndApplyCampaignComponentsIfPossible() async {
+        guard let campaign = currentCampaign else {
+            VioLogger.debug("fetchAndApplyCampaignComponents: skipped — no currentCampaign", component: "CampaignManager")
+            return
+        }
+        let cfg = VioConfiguration.shared
+        let base = cfg.campaignConfiguration.restAPIBaseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let apiKey = cfg.resolvedSdkApiKey
+        guard !base.isEmpty, !apiKey.isEmpty else { return }
+        guard let url = URL(string: "\(base)/v2/mobile/campaigns/\(campaign.id)/components") else { return }
+
+        var req = URLRequest(url: url)
+        req.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        req.timeoutInterval = 15
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: req)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                VioLogger.warning("fetchAndApplyCampaignComponents: HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)", component: "CampaignManager")
+                return
+            }
+            // Lightweight envelope decoder — Component decoding via its own
+            // `init(from decoder:)` so existing tests / callers unaffected.
+            struct Envelope: Decodable { let campaignId: Int; let components: [Component] }
+            let decoded = try JSONDecoder().decode(Envelope.self, from: data)
+
+            // Merge: replace any existing entry with same (template id, locationId),
+            // keep the rest. Two campaign_components rows can share the same
+            // template (`product-carousel-template`) yet live in different slots —
+            // a key that ignores locationId would clobber one with the other on
+            // every fetch. Avoids dropping components that arrived via WS in the
+            // tiny window between bootstrap and this fetch.
+            for component in decoded.components {
+                if let idx = activeComponents.firstIndex(where: {
+                    $0.id == component.id && $0.locationId == component.locationId
+                }) {
+                    activeComponents[idx] = component
+                } else {
+                    activeComponents.append(component)
+                }
+            }
+            CacheManager.shared.saveComponents(activeComponents)
+            print("🎯 [CampaignManager] /v2/mobile/campaigns/\(campaign.id)/components → \(decoded.components.count) instance(s) merged into activeComponents")
+        } catch {
+            VioLogger.warning("fetchAndApplyCampaignComponents failed (non-fatal): \(error)", component: "CampaignManager")
+        }
+    }
+
     /// Clears cart intent UI state (e.g. after dismiss or when leaving the session).
     public func dismissCartIntent() {
         activeCartIntentEvent = nil
@@ -866,6 +921,15 @@ public class CampaignManager: ObservableObject {
                 }
                 CacheManager.shared.saveCampaign(campaign)
                 print("🎯 [CampaignManager] sdk/bootstrap    currentCampaign=#\(cb.id) paused=\(cb.isPaused == true) active=\(cb.isActive ?? true)")
+
+                // Cold-start fetch of campaign-level placement instances. Without
+                // this, fresh installs only see placements that arrive via WS
+                // `component_status_changed` after operator toggles them — which
+                // misses anything already-active in the campaign at boot time.
+                // Hooked here (inside the bootstrap success path) so it fires
+                // for both `VioSession.start()` and direct `discoverCampaigns()`
+                // callers (the latter is what most partner demos use today).
+                await fetchAndApplyCampaignComponentsIfPossible()
             }
 
             let key = primarySponsor?.commerce?.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1453,23 +1517,30 @@ public class CampaignManager: ObservableObject {
                     }
                 }
                 
-                // Only one component of each type can be active at a time
-                // Remove any existing component of the same type first
-                activeComponents.removeAll { $0.type == component.type && $0.id != componentId }
-                
-                // Add or update component
-                if let index = activeComponents.firstIndex(where: { $0.id == componentId }) {
+                // De-dup by (id + locationId) only — multi-location placements
+                // legitimately share a template id across slots (e.g. one
+                // `product-carousel-template` instance in `home_top` for XXL +
+                // another in `match_pre_kickoff` for Torshov). Removing by
+                // `type` alone clobbered the other slot whenever any toggle
+                // arrived. Mirrors the cold-start fetch dedupe key in
+                // `fetchAndApplyCampaignComponentsIfPossible`.
+                if let index = activeComponents.firstIndex(where: {
+                    $0.id == componentId && $0.locationId == component.locationId
+                }) {
                     activeComponents[index] = component
                 } else {
                     activeComponents.append(component)
                 }
-                
+
                 // Save to cache
                 CacheManager.shared.saveComponents(activeComponents)
             } else {
-                // Remove component
-                activeComponents.removeAll { $0.id == componentId }
-                
+                // Remove component — match the same composite key so we don't
+                // accidentally drop another location's instance of the same id.
+                activeComponents.removeAll {
+                    $0.id == componentId && $0.locationId == component.locationId
+                }
+
                 // Save to cache
                 CacheManager.shared.saveComponents(activeComponents)
             }

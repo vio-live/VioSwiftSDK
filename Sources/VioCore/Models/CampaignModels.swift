@@ -686,8 +686,15 @@ public struct Component: Codable, Identifiable {
     public let config: ComponentConfig
     public let status: String?  // "active" or "inactive"
     public let locationId: String?  // Slot identifier (e.g., "sport-detail-carousel", "sport-detail-banner")
+    /// Sponsor that owns this placement instance. Drives commerce-key routing
+    /// (per-sponsor apiKey via `VioConfiguration.commerce(forSponsorId:)`) and
+    /// branding when the component renders. Set by the
+    /// `/v2/mobile/campaigns/:id/components` endpoint from
+    /// `campaign_components.sponsor_id`. Nil for templates / WS events that
+    /// haven't been multi-sponsor-migrated yet → falls back to primary.
+    public let sponsorId: Int?
     public let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware components
-    
+
     public init(
         id: String,
         type: String,
@@ -695,6 +702,7 @@ public struct Component: Codable, Identifiable {
         config: ComponentConfig,
         status: String? = nil,
         locationId: String? = nil,
+        sponsorId: Int? = nil,
         broadcastContext: BroadcastContext? = nil
     ) {
         self.id = id
@@ -703,6 +711,7 @@ public struct Component: Codable, Identifiable {
         self.config = config
         self.status = status
         self.locationId = locationId
+        self.sponsorId = sponsorId
         self.broadcastContext = broadcastContext
     }
     
@@ -746,18 +755,20 @@ public struct Component: Codable, Identifiable {
         // Decode broadcastContext from response if available
         self.broadcastContext = response.broadcastContext
         self.locationId = nil
+        self.sponsorId = nil
     }
     
     /// Decode from JSON (for WebSocket events)
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         id = try container.decode(String.self, forKey: .id)
         type = try container.decode(String.self, forKey: .type)
         name = try container.decode(String.self, forKey: .name)
         config = try container.decode(ComponentConfig.self, forKey: .config)
         status = try container.decodeIfPresent(String.self, forKey: .status)
         locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
+        sponsorId = try container.decodeIfPresent(Int.self, forKey: .sponsorId)
         // Try broadcastContext first, fallback to matchContext for backward compatibility
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
             self.broadcastContext = broadcastContext
@@ -783,6 +794,7 @@ public struct Component: Codable, Identifiable {
         case type
         case name
         case locationId
+        case sponsorId
         case config
         case status
         case broadcastContext

@@ -1191,12 +1191,14 @@ public struct VProductCarousel: View {
     }
     
     private func loadProducts(with cachedConfig: CachedConfig) {
+        let sponsorId = activeComponent?.sponsorId
         Task {
             // Use cached Int product IDs (no conversion needed)
             await viewModel.loadProducts(
                 productIds: cachedConfig.productIds,
                 currency: VioConfiguration.shared.marketConfiguration.currencyCode,
-                country: VioConfiguration.shared.marketConfiguration.countryCode
+                country: VioConfiguration.shared.marketConfiguration.countryCode,
+                sponsorId: sponsorId
             )
         }
     }
@@ -1282,28 +1284,32 @@ class VProductCarouselViewModel: ObservableObject {
     @Published var isMarketUnavailable: Bool = false
     @Published var currentIndex: Int = 0 // Move currentIndex to ViewModel for safe Timer access
     
-    func loadProducts(productIds: [Int], currency: String, country: String) async {
+    func loadProducts(productIds: [Int], currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
             isLoading = false
             return
         }
-        
+
         guard !isLoading else { return }
-        
+
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
-        
+
         // Determine if we should load all products or filtered
         let idsToUse: [Int]? = productIds.isEmpty ? nil : productIds
-        
+
         do {
-            // Use ProductService to load products
+            // Use ProductService to load products. sponsorId routes to the
+            // per-sponsor commerce client (XXL's apiKey for an XXL placement,
+            // etc.) — required for multi-sponsor placements where the
+            // products live in a sponsor's catalog the primary doesn't share.
             products = try await ProductService.shared.loadProducts(
                 productIds: idsToUse,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
             
             if products.isEmpty {

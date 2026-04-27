@@ -262,8 +262,9 @@ struct MatchDetailView: View {
                             }
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             
-                            // Products carousel
-                            VProductCarousel(componentId: "bad51b3b-c4cf-445f-b15a-f9a630f40db0", layout: "compact")  
+                            // Products carousel — pre-kickoff slot, resolved by
+                            // locationId from the operator's placement.
+                            VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
                             //VProductSlider(
                                 //title: "",
                                 //layout: .cards,
