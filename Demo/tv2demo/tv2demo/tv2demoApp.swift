@@ -54,6 +54,13 @@ struct tv2demoApp: App {
         CampaignManager.shared.userId = "demo_user_001"
         print("👤 [TV2Demo] userId set: demo_user_001")
 
+        // Seed the placement registry. SDK's VioSession.start() (kicked off
+        // implicitly by ContentView's discoverCampaigns on appear) auto-uploads
+        // the manifest to /v2/mobile/components/manifest. After the upload
+        // completes, the dashboard's Add placement picker auto-shows these
+        // 3 component types + 5 locations for Campaign 36 / TV2 client_app.
+        TV2PlacementRegistration.registerAll()
+
         UNUserNotificationCenter.current().delegate = Self.notificationCenterDelegate
     }
     

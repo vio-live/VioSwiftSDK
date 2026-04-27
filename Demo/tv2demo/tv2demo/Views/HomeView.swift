@@ -90,8 +90,11 @@ struct HomeView: View {
                                 }
                                 .padding(.horizontal, TV2Theme.Spacing.md)
                                 
-                                // Products carousel
-                                VProductCarousel(componentId: "bad51b3b-c4cf-445f-b15a-f9a630f40db0", layout: "compact")  
+                                // Products carousel — resolved by locationId from the
+                                // operator's placement on Campaign 36 (dashboard → Components → Add).
+                                // Replaces the previous hardcoded componentId so a campaign
+                                // change in the dashboard takes effect without rebuilding the app.
+                                VProductCarousel(locationId: "home_top", layout: "compact")
                                 //VProductSlider(
                                     //title: "",
                                     //layout: .cards,
