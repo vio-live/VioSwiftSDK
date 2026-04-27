@@ -4,6 +4,7 @@ import VioDesignSystem
 
 #if os(iOS)
 import UIKit
+import WebKit
 #endif
 
 /// Auto-configured Product Carousel component
@@ -68,25 +69,32 @@ public struct VProductCarousel: View {
         let autoPlayInterval: TimeInterval
         let shouldAutoPlay: Bool
         let layout: String // "compact", "full", or "horizontal"
+        let title: String?           // Optional header title from operator's customConfig
+        let showSponsorLogo: Bool    // Optional flag to render the placement's sponsor logo in the header
         let configId: String // Used to detect config changes
-        
+
         init(config: ProductCarouselConfig, layoutOverride: String? = nil) {
             // Cache converted product IDs (String → Int)
             // Empty array means "load all products from channel"
             self.productIds = config.productIds.compactMap { Int($0) }
-            
+
             // Cache auto-play interval conversion (milliseconds → seconds)
             self.autoPlayInterval = Double(config.interval) / 1000.0
             self.shouldAutoPlay = config.autoPlay
-            
+
             // Use layout override if provided, otherwise use layout from config (default to "full")
             self.layout = layoutOverride ?? config.layout ?? "full"
-            
+
+            // Optional header opt-ins (default to off; operator turns them
+            // on per placement via the dashboard's customConfig fields).
+            self.title = config.title
+            self.showSponsorLogo = config.showSponsorLogo
+
             // Create unique identifier for this config (detects changes)
             // Use "all" when productIds is empty to make it clearer
             // Must match the format in updateCachedConfigIfNeeded()
             let productIdsString = config.productIds.isEmpty ? "all" : config.productIds.joined(separator: "-")
-            self.configId = "\(productIdsString)-\(config.autoPlay)-\(config.interval)-\(self.layout)"
+            self.configId = "\(productIdsString)-\(config.autoPlay)-\(config.interval)-\(self.layout)-\(config.title ?? "")-\(config.showSponsorLogo)"
         }
     }
     
@@ -303,21 +311,30 @@ public struct VProductCarousel: View {
             skeletonView
                 .opacity(isLoading ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.3), value: isLoading)
-            
+
             // Content with badge container
             VStack(spacing: 0) {
+                // Optional config-driven header (title + sponsor logo).
+                // Both are opt-in via the placement's customConfig in the
+                // dashboard — if the operator doesn't set them, no header
+                // renders and the carousel sits without a label (current
+                // legacy behavior preserved).
+                placementHeader
+                    .opacity(isLoading ? 0.0 : 1.0)
+                    .animation(.easeInOut(duration: 0.3), value: isLoading)
+
                 // Badge container above carousel (if top position)
                 if shouldShowBadge, let logoUrl = currentLogoUrl, isTopPosition {
                     sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
                         .opacity(isLoading ? 0.0 : 1.0)
                         .animation(.easeInOut(duration: 0.3), value: isLoading)
                 }
-                
+
                 // Carousel content
                 carouselContent
                     .opacity(isLoading ? 0.0 : 1.0)
                     .animation(.easeInOut(duration: 0.3), value: isLoading)
-                
+
                 // Badge container below carousel (if bottom position)
                 if shouldShowBadge, let logoUrl = currentLogoUrl, !isTopPosition {
                     sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
@@ -325,6 +342,48 @@ public struct VProductCarousel: View {
                         .animation(.easeInOut(duration: 0.3), value: isLoading)
                 }
             }
+        }
+    }
+
+    /// Header strip with optional title text + sponsor logo. Both come from
+    /// the placement's config — operator-controllable via the dashboard's
+    /// customConfig fields:
+    ///
+    ///   `title`             → "Ukens tilbud", "Featured", etc. Empty/nil → hide.
+    ///   `showSponsorLogo`   → bool. true → resolve sponsor.logoUrl by sponsorId
+    ///                                        and render right-aligned.
+    ///
+    /// Renders nothing when both opts are off (zero overhead, no extra
+    /// padding, no spacer block). Replaces the host app's hand-rolled
+    /// "Ukens tilbud" Text + Image("logo") wrapper around the carousel.
+    @ViewBuilder
+    private var placementHeader: some View {
+        let title = (cachedConfig?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let showLogo = cachedConfig?.showSponsorLogo == true
+        // Render the operator-uploaded **logoUrl** (the official brand logo
+        // — what the dashboard's "Logo" field accepts). Format-agnostic:
+        // VRemoteImage routes raster (PNG/JPEG) through AsyncImage and
+        // vector (.svg) through a WKWebView fallback so SVG logos render
+        // without adding a third-party dep. AvatarUrl is reserved for
+        // surfaces that explicitly want the square mark (cards, badges).
+        let sponsorLogoUrl: String? = {
+            guard showLogo, let sponsorId = activeComponent?.sponsorId else { return nil }
+            return VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl
+        }()
+        if !title.isEmpty || sponsorLogoUrl != nil {
+            HStack {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(adaptiveColors.textPrimary)
+                }
+                Spacer()
+                if let url = sponsorLogoUrl {
+                    VRemoteImage(urlString: url, height: 20)
+                }
+            }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.bottom, VioSpacing.sm)
         }
     }
     
@@ -1387,4 +1446,84 @@ private struct ShimmerEffectModifier: ViewModifier {
             }
     }
 }
+
+// MARK: - VRemoteImage (format-agnostic remote image)
+
+/// Renders a remote image regardless of format. Routes:
+///   - `.svg` URLs → WKWebView (SwiftUI's `AsyncImage` cannot decode SVG)
+///   - everything else → `AsyncImage`
+///
+/// Inline component (per rule #7: no new files) used by the carousel
+/// header for sponsor logos. Sponsors often upload SVG as their primary
+/// logo (vector, scales cleanly). Without this fallback, the header
+/// silently shows an empty space.
+///
+/// iOS-only — Apple TV (`tvOS`) renders are out of scope; this file is
+/// gated `#if os(iOS)`. For tvOS support add a parallel branch.
+private struct VRemoteImage: View {
+    let urlString: String
+    let height: CGFloat
+
+    var body: some View {
+        guard let url = URL(string: urlString) else {
+            return AnyView(EmptyView())
+        }
+        let isSvg = url.pathExtension.lowercased() == "svg"
+        if isSvg {
+            #if os(iOS)
+            return AnyView(VSVGWebView(url: url).frame(height: height))
+            #else
+            return AnyView(EmptyView())
+            #endif
+        } else {
+            return AnyView(
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFit()
+                    default:
+                        Color.clear
+                    }
+                }
+                .frame(height: height)
+            )
+        }
+    }
+}
+
+#if os(iOS)
+/// Minimal WKWebView wrapper that loads a single SVG URL into a
+/// transparent, non-scrollable web view sized to its container. Used by
+/// `VRemoteImage` to render vector logos that `AsyncImage` can't decode.
+///
+/// HTML wrapper centers the image vertically and aligns it to the right
+/// (matches the carousel header's "logo on the right" layout). Scaled
+/// `height: 100%` so the SVG fits the container and never overflows.
+private struct VSVGWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.scrollView.isScrollEnabled = false
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
+        webView.scrollView.backgroundColor = .clear
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        let html = """
+        <!doctype html>
+        <html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>
+        <style>
+          html, body { margin: 0; padding: 0; height: 100%; background: transparent; }
+          body { display: flex; align-items: center; justify-content: flex-end; }
+          img { height: 100%; width: auto; max-width: 100%; }
+        </style></head>
+        <body><img src='\(url.absoluteString)'/></body></html>
+        """
+        webView.loadHTMLString(html, baseURL: nil)
+    }
+}
+#endif
 

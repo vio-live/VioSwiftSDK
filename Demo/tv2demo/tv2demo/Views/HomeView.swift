@@ -73,38 +73,16 @@ struct HomeView: View {
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             .padding(.top, TV2Theme.Spacing.lg)
                             
-                            // Products Section - Ukens tilbud
-                            VStack(alignment: .leading, spacing: TV2Theme.Spacing.md) {
-                                // Custom header with logo
-                                HStack {
-                                    Text("Ukens tilbud")
-                                        .font(TV2Theme.Typography.title)
-                                        .foregroundColor(TV2Theme.Colors.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    Image("logo")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(height: 20)
-                                }
-                                .padding(.horizontal, TV2Theme.Spacing.md)
-                                
-                                // Products carousel — resolved by locationId from the
-                                // operator's placement on Campaign 36 (dashboard → Components → Add).
-                                // Replaces the previous hardcoded componentId so a campaign
-                                // change in the dashboard takes effect without rebuilding the app.
-                                VProductCarousel(locationId: "home_top", layout: "compact")
-                                //VProductSlider(
-                                    //title: "",
-                                    //layout: .cards,
-                                    //maxItems: 6,
-                                    //currency: cartManager.currency,
-                                    //country: cartManager.country
-                                //)
-                                //.environmentObject(cartManager)
-                            }
-                            .padding(.top, TV2Theme.Spacing.lg)
+                            // Products Section.
+                            //
+                            // Header (title + sponsor logo) is now rendered BY the carousel
+                            // when the operator turns on `customConfig.title` and/or
+                            // `customConfig.showSponsorLogo` in the dashboard placement
+                            // form. Removes the previously hardcoded "Ukens tilbud" Text
+                            // + Image("logo") wrapper — host app no longer dictates the
+                            // label, the active campaign does.
+                            VProductCarousel(locationId: "home_top", layout: "compact")
+                                .padding(.top, TV2Theme.Spacing.lg)
                             .padding(.bottom, TV2Theme.Spacing.xl)
                         }
                     }

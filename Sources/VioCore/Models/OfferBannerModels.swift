@@ -321,35 +321,52 @@ public struct ProductCarouselConfig: Codable, Equatable {
     public let autoPlay: Bool
     public let interval: Int  // milliseconds
     public let layout: String?  // "compact", "full", or "horizontal" (default: "full")
-    
-    public init(productIds: [String] = [], autoPlay: Bool = false, interval: Int = 3000, layout: String? = nil) {
+    /// Optional header title above the carousel ("Ukens tilbud", "Featured",
+    /// etc). Operator sets via `customConfig.title` in the dashboard. When
+    /// nil/empty, no header renders.
+    public let title: String?
+    /// Render the sponsor's logo next to the header title. Sponsor logoUrl
+    /// is resolved at runtime from the active component's `sponsor` block
+    /// (no need to embed image URLs in the config). Default false.
+    public let showSponsorLogo: Bool
+
+    public init(productIds: [String] = [], autoPlay: Bool = false, interval: Int = 3000, layout: String? = nil, title: String? = nil, showSponsorLogo: Bool = false) {
         self.productIds = productIds
         self.autoPlay = autoPlay
         self.interval = interval
         self.layout = layout
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         // productIds is optional, defaults to empty array (loads all products)
         self.productIds = try container.decodeIfPresent([String].self, forKey: .productIds) ?? []
-        
+
         // autoPlay is optional, defaults to false if not present
         self.autoPlay = try container.decodeIfPresent(Bool.self, forKey: .autoPlay) ?? false
-        
+
         // interval is optional, defaults to 3000ms if not present
         self.interval = try container.decodeIfPresent(Int.self, forKey: .interval) ?? 3000
-        
+
         // layout is optional
         self.layout = try container.decodeIfPresent(String.self, forKey: .layout)
+
+        // Header opt-ins (both default to off; operator turns them on per
+        // placement in the dashboard's customConfig).
+        self.title = try container.decodeIfPresent(String.self, forKey: .title)
+        self.showSponsorLogo = try container.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case productIds
         case autoPlay
         case interval
         case layout
+        case title
+        case showSponsorLogo
     }
 }
 

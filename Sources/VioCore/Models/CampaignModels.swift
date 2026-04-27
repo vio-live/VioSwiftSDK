@@ -372,6 +372,7 @@ internal struct SdkBootstrapResponse: Codable {
         let id: Int
         let name: String
         let logoUrl: String?
+        let avatarUrl: String?
         let primaryColor: String?
         let secondaryColor: String?
         let commerce: CommerceBlock?
