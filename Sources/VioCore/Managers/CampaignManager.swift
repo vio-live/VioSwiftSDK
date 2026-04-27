@@ -401,6 +401,33 @@ public class CampaignManager: ObservableObject {
         }
     }
 
+    /// Posts the placement registry manifest to
+    /// `POST /v2/mobile/components/manifest`. Best-effort: errors are
+    /// logged and swallowed. Hooked from inside the bootstrap success
+    /// path so it fires regardless of whether the partner uses
+    /// `VioSession.start()` or calls `discoverCampaigns()` directly.
+    @MainActor
+    internal func uploadPlacementManifestIfPossible() async {
+        let cfg = VioConfiguration.shared
+        let baseURL = cfg.campaignConfiguration.restAPIBaseURL
+        let apiKey = cfg.resolvedSdkApiKey
+        guard !baseURL.isEmpty, !apiKey.isEmpty else {
+            VioLogger.debug("Manifest upload skipped — base URL or API key not yet resolved", component: "CampaignManager")
+            return
+        }
+        do {
+            let response = try await VioPlacementManifestUploader.upload(baseURL: baseURL, apiKey: apiKey)
+            VioLogger.success(
+                "Placement manifest uploaded — placements=\(response.placements?.count ?? 0) components=\(response.components.count) locations=\(response.locations.count) warnings=\(response.warnings?.count ?? 0)",
+                component: "CampaignManager"
+            )
+        } catch VioPlacementManifestUploader.UploadError.skipped(let reason) {
+            VioLogger.debug("Manifest upload skipped — \(reason)", component: "CampaignManager")
+        } catch {
+            VioLogger.warning("Manifest upload failed (non-fatal): \(error)", component: "CampaignManager")
+        }
+    }
+
     /// Clears cart intent UI state (e.g. after dismiss or when leaving the session).
     public func dismissCartIntent() {
         activeCartIntentEvent = nil
@@ -922,13 +949,18 @@ public class CampaignManager: ObservableObject {
                 CacheManager.shared.saveCampaign(campaign)
                 print("🎯 [CampaignManager] sdk/bootstrap    currentCampaign=#\(cb.id) paused=\(cb.isPaused == true) active=\(cb.isActive ?? true)")
 
-                // Cold-start fetch of campaign-level placement instances. Without
-                // this, fresh installs only see placements that arrive via WS
-                // `component_status_changed` after operator toggles them — which
-                // misses anything already-active in the campaign at boot time.
-                // Hooked here (inside the bootstrap success path) so it fires
-                // for both `VioSession.start()` and direct `discoverCampaigns()`
-                // callers (the latter is what most partner demos use today).
+                // Manifest upload + cold-start fetch are hooked HERE (inside
+                // the bootstrap success path) so they fire for BOTH
+                // `VioSession.start()` and direct `discoverCampaigns()`
+                // callers — most partner demos use the latter, which would
+                // otherwise skip the manifest endpoint entirely.
+                //
+                // Order matters: manifest first (so the dashboard knows what
+                // placements exist for this app), then cold-start fetch (so
+                // the SDK knows which placement instances are bound to this
+                // campaign). Both are best-effort; failures are logged but
+                // don't fail the bootstrap.
+                await uploadPlacementManifestIfPossible()
                 await fetchAndApplyCampaignComponentsIfPossible()
             }
 
