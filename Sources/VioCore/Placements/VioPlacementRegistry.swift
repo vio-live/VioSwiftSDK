@@ -80,9 +80,11 @@ public struct VioPlacementLocation: Sendable, Equatable {
 
 // MARK: - Internal model: what the registry stores
 
-/// Type-erased descriptor of a registered component. Used by the manifest
-/// upload + by the upcoming `VioPlacementSlot` resolver. Not generic so it
-/// can sit in a homogeneous array.
+/// Type-erased descriptor of a registered component type. Retained for the
+/// `VioPlacementComponent` protocol (kept as an opt-in marker) but no
+/// longer the primary mechanism — the SDK now declares only locations,
+/// and named placements are created in the dashboard. The legacy
+/// component registration is unused at runtime; left as a typing aid.
 public struct VioPlacementComponentRegistration: Sendable, Equatable {
     public let componentType: String
     public let productMode: VioProductBindingMode
@@ -92,27 +94,6 @@ public struct VioPlacementComponentRegistration: Sendable, Equatable {
         self.componentType = componentType
         self.productMode = productMode
         self.maxProducts = maxProducts
-    }
-}
-
-/// Named instance of a placement — the explicit (name, componentType,
-/// locationId) tuple the dev's app implements. Replaces the implicit
-/// (types × locations) cross-product that older versions of the SDK used.
-///
-/// The dashboard's "Add placement" picker reads from these. Operator picks
-/// one named placement, then assigns sponsor + product list. Cannot bind
-/// to a (component, location) combo the dev hasn't declared explicitly.
-public struct VioPlacementRegistration: Sendable, Equatable {
-    public let name: String
-    public let componentType: String
-    public let locationId: String
-    public let locationDisplayName: String?
-
-    public init(name: String, componentType: String, locationId: String, locationDisplayName: String? = nil) {
-        self.name = name
-        self.componentType = componentType
-        self.locationId = locationId
-        self.locationDisplayName = locationDisplayName
     }
 }
 
@@ -133,125 +114,31 @@ public struct VioPlacementRegistration: Sendable, Equatable {
 public final class VioPlacementRegistry {
     public static let shared = VioPlacementRegistry()
 
-    private var componentsByType: [String: VioPlacementComponentRegistration] = [:]
+    /// Slot locations the partner's SwiftUI/Compose layout exposes. The
+    /// SDK manifest uploads these (and only these) to the backend at app
+    /// boot — operator-facing dashboard then creates `app_placements`
+    /// entries pairing a library template with one of these locations.
     private var locationsById: [String: VioPlacementLocation] = [:]
-    /// Named placements indexed by their human name (UNIQUE per app on the
-    /// backend). Two indexes mirror the backend's dual-UNIQUE schema so
-    /// in-process collisions surface before the manifest round-trip.
-    private var placementsByName: [String: VioPlacementRegistration] = [:]
-    /// Slot index `(componentType, locationId)` → name, for collision detection.
-    private var placementsBySlot: [String: String] = [:]
-    private static func slotKey(componentType: String, locationId: String) -> String {
-        "\(componentType)|\(locationId)"
-    }
 
     private init() {}
 
-    /// Register a component type. Idempotent — the same `componentType` is
-    /// stored once. Subsequent registrations with a different `productMode`
-    /// or `maxProducts` overwrite (last writer wins) so devs iterating in
-    /// dev mode see their changes reflected immediately.
+    /// Register a slot location the dev's UI exposes. Idempotent — same
+    /// `id` is stored once; re-registering updates the optional
+    /// `displayName`.
     ///
-    /// **Prefer `registerPlacement(name:type:locationId:)`** for new code —
-    /// this method registers the type only, leaving the (type, location)
-    /// binding implicit. The named-placement API makes the contract
-    /// explicit and prevents the dashboard from offering combos the app
-    /// doesn't render.
-    public func register<T: VioPlacementComponent>(_ type: T.Type) {
-        let reg = VioPlacementComponentRegistration(
-            componentType: T.componentType,
-            productMode: T.productMode,
-            maxProducts: T.maxProducts
-        )
-        componentsByType[reg.componentType] = reg
-    }
-
-    /// Register a location id. Idempotent — same `id` is stored once.
-    /// `displayName` is overwritten on re-register (matches backend upsert
-    /// semantics so dev can rename slots).
-    ///
-    /// **Prefer `registerPlacement(name:type:locationId:)`** for new code.
+    /// At app boot the SDK uploads the registered locations to
+    /// `POST /v2/mobile/components/manifest`. Sync-semantic: locations
+    /// not in a new payload get soft-deprecated server-side. Dashboard's
+    /// "Add from library" form reads from this list — operator can never
+    /// bind a placement to a slot the dev's code doesn't declare.
     public func registerLocation(_ location: VioPlacementLocation) {
         locationsById[location.id] = location
     }
 
-    /// Register a named placement instance. Replaces the implicit
-    /// (component × location) cross-product with an explicit declaration.
-    ///
-    /// Auto-populates the legacy `componentsByType` and `locationsById`
-    /// indexes too, so views that resolve via `component(forType:)` or
-    /// `location(forId:)` keep working even if the partner only uses the
-    /// named-placement API.
-    ///
-    /// Conflict semantics in-process (mirror backend's smart upsert):
-    ///  - Same `name` re-registered → overwrite (last writer wins for the
-    ///    componentType/locationId fields).
-    ///  - Different `name` claiming the same (componentType, locationId)
-    ///    slot → reject + log; the dev should pick a distinct location_id
-    ///    for A/B variants.
-    public func registerPlacement<T: VioPlacementComponent>(
-        name: String,
-        type: T.Type,
-        locationId: String,
-        locationDisplayName: String? = nil
-    ) {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLocation = locationId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty, !trimmedLocation.isEmpty else {
-            print("⚠️ [VioPlacementRegistry] registerPlacement ignored — empty name or locationId")
-            return
-        }
-        let slotKey = Self.slotKey(componentType: T.componentType, locationId: trimmedLocation)
-        if let occupant = placementsBySlot[slotKey], occupant != trimmedName {
-            print("⚠️ [VioPlacementRegistry] slot already named '\(occupant)' — refusing to also name it '\(trimmedName)'. Use a distinct locationId for A/B variants.")
-            return
-        }
-        // Drop any prior slot mapping for this name (rename within same SDK boot).
-        if let existing = placementsByName[trimmedName] {
-            placementsBySlot.removeValue(forKey: Self.slotKey(componentType: existing.componentType, locationId: existing.locationId))
-        }
-        let registration = VioPlacementRegistration(
-            name: trimmedName,
-            componentType: T.componentType,
-            locationId: trimmedLocation,
-            locationDisplayName: locationDisplayName
-        )
-        placementsByName[trimmedName] = registration
-        placementsBySlot[slotKey] = trimmedName
-
-        // Auto-populate legacy indexes — view-side code (`getActiveComponent`
-        // etc.) still consults these. Backwards-compat for partners that
-        // mix the two APIs and for the manifest endpoint's dual-write path.
-        componentsByType[T.componentType] = VioPlacementComponentRegistration(
-            componentType: T.componentType,
-            productMode: T.productMode,
-            maxProducts: T.maxProducts
-        )
-        locationsById[trimmedLocation] = VioPlacementLocation(
-            id: trimmedLocation,
-            displayName: locationDisplayName ?? locationsById[trimmedLocation]?.displayName
-        )
-    }
-
-    /// Snapshot of what's currently registered. Sorted by type/id so manifest
-    /// payloads are stable across runs (helpful for telemetry / debugging).
-    public var registeredComponents: [VioPlacementComponentRegistration] {
-        componentsByType.values.sorted { $0.componentType < $1.componentType }
-    }
-
+    /// Snapshot of locations. Sorted by `id` so manifest payloads are
+    /// stable across runs.
     public var registeredLocations: [VioPlacementLocation] {
         locationsById.values.sorted { $0.id < $1.id }
-    }
-
-    /// Snapshot of named placements registered via `registerPlacement(...)`.
-    /// Sorted by `name` so manifest payloads are stable across runs.
-    public var registeredPlacements: [VioPlacementRegistration] {
-        placementsByName.values.sorted { $0.name < $1.name }
-    }
-
-    /// Look up a registered component by type. Returns nil for unknown types.
-    public func component(forType type: String) -> VioPlacementComponentRegistration? {
-        componentsByType[type]
     }
 
     /// Look up a registered location by id. Returns nil for unknown ids.
@@ -259,67 +146,21 @@ public final class VioPlacementRegistry {
         locationsById[id]
     }
 
-    /// Look up a named placement. Returns nil for unknown names.
-    public func placement(forName name: String) -> VioPlacementRegistration? {
-        placementsByName[name]
-    }
-
-    /// Look up a named placement by its slot. Returns nil if no placement
-    /// has been registered for that (componentType, locationId).
-    public func placement(forSlot componentType: String, locationId: String) -> VioPlacementRegistration? {
-        guard let name = placementsBySlot[Self.slotKey(componentType: componentType, locationId: locationId)] else {
-            return nil
-        }
-        return placementsByName[name]
-    }
-
-    /// Reset state. Used by the SDK test suite — host apps should never call
-    /// this in production.
+    /// Reset state. Used by the SDK test suite — host apps should never
+    /// call this in production.
     internal func _resetForTesting() {
-        componentsByType.removeAll()
         locationsById.removeAll()
-        placementsByName.removeAll()
-        placementsBySlot.removeAll()
     }
 
     // MARK: - Manifest payload
 
     /// Build the request body for `POST /v2/mobile/components/manifest`.
-    /// Three top-level arrays:
-    ///   - `placements[]` — v2 named instances (preferred). Each entry is
-    ///     `{name, componentType, locationId}`. The dashboard picker reads
-    ///     from these.
-    ///   - `components[]` — v1 type-only registry. Auto-derived from named
-    ///     placements + any types registered via the legacy
-    ///     `register(_ type:)` API. Backend dual-writes `app_components`.
-    ///   - `locations[]` — v1 slot registry. Auto-derived from named
-    ///     placements + any locations from the legacy `registerLocation(_:)`
-    ///     API. Backend dual-writes `app_component_locations`.
-    ///
-    /// Empty arrays are still emitted so the backend can distinguish "I
-    /// have nothing to declare" from "I haven't told you about that bucket".
+    /// Single `locations[]` array — sync-semantic on the backend
+    /// (locations not in a new payload get soft-deprecated). Named
+    /// placements (`app_placements`) are NO longer declared by the SDK;
+    /// they're created by the operator via the dashboard `/apps/:id`
+    /// "Add from library" form against this declared location set.
     public func manifestPayload() -> [String: Any] {
-        let placements: [[String: Any]] = registeredPlacements.map { reg in
-            var dict: [String: Any] = [
-                "name": reg.name,
-                "componentType": reg.componentType,
-                "locationId": reg.locationId,
-            ]
-            if let display = reg.locationDisplayName {
-                dict["locationDisplayName"] = display
-            }
-            return dict
-        }
-        let components: [[String: Any]] = registeredComponents.map { reg in
-            var dict: [String: Any] = [
-                "type": reg.componentType,
-                "productMode": reg.productMode.rawValue,
-            ]
-            if let max = reg.maxProducts {
-                dict["maxProducts"] = max
-            }
-            return dict
-        }
         let locations: [[String: Any]] = registeredLocations.map { loc in
             var dict: [String: Any] = ["id": loc.id]
             if let name = loc.displayName {
@@ -327,10 +168,6 @@ public final class VioPlacementRegistry {
             }
             return dict
         }
-        return [
-            "components": components,
-            "locations": locations,
-            "placements": placements,
-        ]
+        return ["locations": locations]
     }
 }

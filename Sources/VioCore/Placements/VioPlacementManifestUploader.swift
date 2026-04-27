@@ -17,32 +17,17 @@ public enum VioPlacementManifestUploader {
 
     public struct Response: Decodable, Sendable {
         public let clientAppId: Int
-        public let components: [PersistedComponent]
         public let locations: [PersistedLocation]
-        /// v2: persisted named placements. Optional in the response so older
-        /// backends that don't yet populate this field decode cleanly.
-        public let placements: [PersistedPlacement]?
+        /// Count of locations that were soft-deprecated server-side because
+        /// they were absent from this manifest payload. Sync semantics —
+        /// the manifest is the source of truth.
+        public let deprecatedCount: Int?
         public let warnings: [Warning]?
-
-        public struct PersistedComponent: Decodable, Sendable {
-            public let type: String
-            public let componentId: String
-            public let templateName: String?
-            public let appComponentId: Int
-        }
 
         public struct PersistedLocation: Decodable, Sendable {
             public let id: Int
             public let locationId: String
             public let displayName: String?
-        }
-
-        public struct PersistedPlacement: Decodable, Sendable {
-            public let id: Int
-            public let name: String
-            public let componentId: String
-            public let componentType: String
-            public let locationId: String
         }
 
         public struct Warning: Decodable, Sendable {
@@ -67,13 +52,11 @@ public enum VioPlacementManifestUploader {
     public static func upload(baseURL: String, apiKey: String) async throws -> Response {
         let registry = VioPlacementRegistry.shared
         let payload = registry.manifestPayload()
-        let components = (payload["components"] as? [Any]) ?? []
         let locations = (payload["locations"] as? [Any]) ?? []
-        let placements = (payload["placements"] as? [Any]) ?? []
-        if components.isEmpty && locations.isEmpty && placements.isEmpty {
+        if locations.isEmpty {
             // Nothing to upload — short-circuit instead of POSTing an empty
             // body that the backend rejects with 400.
-            throw UploadError.skipped(reason: "registry empty (no placements, components, or locations declared)")
+            throw UploadError.skipped(reason: "registry empty (no locations declared)")
         }
         guard !apiKey.isEmpty else { throw UploadError.missingApiKey }
 
@@ -101,16 +84,13 @@ public enum VioPlacementManifestUploader {
         let decoder = JSONDecoder()
         let decoded = try decoder.decode(Response.self, from: data)
 
-        // Surface warnings to the dev so a typo in registerPlacement(...) or
-        // an unknown componentType isn't silent. The manifest is best-effort
-        // — we don't throw — but loud logs make the failure mode obvious.
+        // Surface warnings so a typo (e.g. empty locationId) isn't silent.
         if let warnings = decoded.warnings, !warnings.isEmpty {
             for w in warnings {
                 print("⚠️ [VioPlacementManifest] \(w.kind): \(w.detail)")
             }
         }
-        let placementCount = decoded.placements?.count ?? 0
-        print("🧩 [VioPlacementManifest] uploaded → placements=\(placementCount) components=\(decoded.components.count) locations=\(decoded.locations.count) warnings=\(decoded.warnings?.count ?? 0)")
+        print("🧩 [VioPlacementManifest] uploaded → locations=\(decoded.locations.count) deprecated=\(decoded.deprecatedCount ?? 0) warnings=\(decoded.warnings?.count ?? 0)")
 
         return decoded
     }

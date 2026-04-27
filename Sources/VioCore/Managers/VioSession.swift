@@ -63,7 +63,7 @@ public final class VioSession: ObservableObject {
         do {
             let response = try await VioPlacementManifestUploader.upload(baseURL: baseURL, apiKey: apiKey)
             VioLogger.success(
-                "Placement manifest uploaded — components=\(response.components.count) locations=\(response.locations.count) warnings=\(response.warnings?.count ?? 0)",
+                "Placement manifest uploaded — locations=\(response.locations.count) deprecated=\(response.deprecatedCount ?? 0) warnings=\(response.warnings?.count ?? 0)",
                 component: "VioSession"
             )
             for w in response.warnings ?? [] {

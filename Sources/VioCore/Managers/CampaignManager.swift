@@ -418,7 +418,7 @@ public class CampaignManager: ObservableObject {
         do {
             let response = try await VioPlacementManifestUploader.upload(baseURL: baseURL, apiKey: apiKey)
             VioLogger.success(
-                "Placement manifest uploaded — placements=\(response.placements?.count ?? 0) components=\(response.components.count) locations=\(response.locations.count) warnings=\(response.warnings?.count ?? 0)",
+                "Placement manifest uploaded — locations=\(response.locations.count) deprecated=\(response.deprecatedCount ?? 0) warnings=\(response.warnings?.count ?? 0)",
                 component: "CampaignManager"
             )
         } catch VioPlacementManifestUploader.UploadError.skipped(let reason) {
