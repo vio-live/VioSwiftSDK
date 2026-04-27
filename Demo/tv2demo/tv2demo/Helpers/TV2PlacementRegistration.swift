@@ -23,18 +23,24 @@ import VioCore
 
 enum TV2PlacementRegistration {
 
-    /// Call once at app boot from `tv2demoApp.init`. To expose a new slot,
-    /// add a `registerPlacementLocation(...)` call here AND render the
-    /// matching `VProductCarousel(locationId: ...)` (or other view) at the
-    /// right place in the layout. After cold-start the operator can create
-    /// an `app_placement` against this slot in the dashboard.
+    /// Call once at app boot from `tv2demoApp.init`. **Rule for the dev**:
+    /// every slot id registered here MUST be rendered by a placement view
+    /// somewhere in the layout (`VProductCarousel(locationId: ...)`, etc).
+    /// Otherwise the dashboard offers an operator a slot the app doesn't
+    /// actually render to — operator creates a placement, nothing happens.
+    ///
+    /// To add a new slot:
+    ///   1. Add a `registerPlacementLocation(...)` call here.
+    ///   2. Render the matching placement view in the SwiftUI layout.
+    ///   3. Cold-start the app — the manifest endpoint upserts the slot.
+    ///   4. Tell the operator/admin the slot is available.
     @MainActor
     static func registerAll() {
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",         displayName: "Home — Top"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_below_video", displayName: "Home — Below video"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_sidebar",    displayName: "Match — Sidebar"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff",displayName: "Match — Pre-kickoff"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "casting_overlay",  displayName: "Casting overlay"))
+        // Rendered by HomeView.swift:97  → VProductCarousel(locationId: "home_top", layout: "compact")
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",          displayName: "Home — Top"))
+
+        // Rendered by MatchDetailView.swift:267  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff", displayName: "Match — Pre-kickoff"))
 
         let registry = VioPlacementRegistry.shared
         print("🧩 [TV2Demo] Slot registry seeded — locations=\(registry.registeredLocations.count)")
