@@ -44,27 +44,52 @@ struct TV2ProductBannerPlacement: VioPlacementComponent {
 
 enum TV2PlacementRegistration {
 
-    /// Call once at app boot from `tv2demoApp.init`. The order here is the
-    /// order the SDK serializes into the manifest payload (sorted
-    /// alphabetically by type / id once they hit the registry, so the actual
-    /// payload is stable across runs).
+    /// Call once at app boot from `tv2demoApp.init`. Each call declares an
+    /// explicit named placement = (name, type, locationId). The dashboard's
+    /// "Add placement" picker reads these and operators can ONLY bind
+    /// campaign placements to one of these named entries — strict contract.
+    ///
+    /// To add a new placement (e.g. a banner above the casting overlay):
+    /// 1. Call `registerPlacement` here with a unique `name` and the
+    ///    locationId your view uses.
+    /// 2. In the SwiftUI view at that location, instantiate
+    ///    `VProductBanner(locationId: "casting_above")` (or similar).
+    /// 3. Reboot the demo. Manifest endpoint upserts the row, dashboard
+    ///    picker shows it next time the operator adds a placement.
     @MainActor
     static func registerAll() {
-        // Component types this demo's iOS code knows how to render.
-        VioRuntime.registerPlacementComponent(TV2ProductCarouselPlacement.self)
-        VioRuntime.registerPlacementComponent(TV2ProductSpotlightPlacement.self)
-        VioRuntime.registerPlacementComponent(TV2ProductBannerPlacement.self)
-
-        // Slot locations the demo's layout exposes. The dashboard picker only
-        // ever shows these — the operator can't bind a placement to a slot
-        // the dev hasn't declared.
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",         displayName: "Home — Top"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_below_video", displayName: "Home — Below video"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_sidebar",    displayName: "Match — Sidebar"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff",displayName: "Match — Pre-kickoff"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "casting_overlay",  displayName: "Casting overlay"))
+        VioRuntime.registerPlacement(
+            name: "Carrusel home (TV2)",
+            type: TV2ProductCarouselPlacement.self,
+            locationId: "home_top",
+            locationDisplayName: "Home — Top"
+        )
+        VioRuntime.registerPlacement(
+            name: "Carrusel pre-kickoff",
+            type: TV2ProductCarouselPlacement.self,
+            locationId: "match_pre_kickoff",
+            locationDisplayName: "Match — Pre-kickoff"
+        )
+        VioRuntime.registerPlacement(
+            name: "Carrusel below-video",
+            type: TV2ProductCarouselPlacement.self,
+            locationId: "home_below_video",
+            locationDisplayName: "Home — Below video"
+        )
+        VioRuntime.registerPlacement(
+            name: "Banner match sidebar",
+            type: TV2ProductBannerPlacement.self,
+            locationId: "match_sidebar",
+            locationDisplayName: "Match — Sidebar"
+        )
+        VioRuntime.registerPlacement(
+            name: "Spotlight casting overlay",
+            type: TV2ProductSpotlightPlacement.self,
+            locationId: "casting_overlay",
+            locationDisplayName: "Casting overlay"
+        )
 
         let registry = VioPlacementRegistry.shared
-        print("🧩 [TV2Demo] Placement registry seeded — components=\(registry.registeredComponents.count) locations=\(registry.registeredLocations.count)")
+        print("🧩 [TV2Demo] Placement registry seeded — placements=\(registry.registeredPlacements.count) (components=\(registry.registeredComponents.count) locations=\(registry.registeredLocations.count) auto-derived)")
     }
 }
