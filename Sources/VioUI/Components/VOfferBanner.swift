@@ -298,11 +298,34 @@ public struct VOfferBanner: View {
     }
     
     // MARK: - Computed Properties
-    
+
+    /// Resolved CTA button color. Priority:
+    ///   1. Operator's `customConfig.buttonColor` (if set + valid hex)
+    ///   2. Placement's sponsor `primaryColor` (campaign-driven mode only)
+    ///   3. Brand fallback `Color.purple` (legacy default)
+    ///
+    /// Mirrors the dashboard's BrandColorPicker fallback behavior so the
+    /// preview and the SDK render match when the operator leaves
+    /// buttonColor unset and instead relies on the sponsor's brand color.
     private var buttonColor: Color {
-        if let colorString = config.buttonColor {
-            return Color(hex: colorString) ?? Color.purple
+        // 1. Operator override
+        if let colorString = config.buttonColor,
+           !colorString.isEmpty,
+           let parsed = Color(hex: colorString) {
+            return parsed
         }
+        // 2. Sponsor primary color (campaign-driven mode)
+        if let component = campaignManager.getActiveComponent(
+                type: "offer_banner",
+                componentId: resolvedComponentId,
+                locationId: resolvedLocationId
+            ),
+           let sponsorId = component.sponsorId,
+           let sponsorPrimary = VioConfiguration.shared.sponsor(withId: sponsorId)?.primaryColor,
+           let parsed = Color(hex: sponsorPrimary) {
+            return parsed
+        }
+        // 3. Brand fallback
         return Color.purple
     }
     
