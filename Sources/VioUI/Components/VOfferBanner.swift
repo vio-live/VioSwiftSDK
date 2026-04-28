@@ -175,57 +175,68 @@ public struct VOfferBanner: View {
             // Content in two columns (same layout as hardcoded banner)
             // Solo mostrar contenido cuando la imagen esté cargada
             if isImageLoaded {
+                // Banner has a dark image + gradient overlay regardless
+                // of the system color scheme, so text must be white in
+                // both light and dark mode. Using `adaptiveColors.surface`
+                // here was a bug — `surface` is dark in dark mode, which
+                // made the title disappear against the dark overlay.
+                // Matches the hardcoded OfferBannerView's `.white` calls.
                 HStack(alignment: .center, spacing: 16) {
                     // Left column: Logo, title, subtitle, countdown
                     VStack(alignment: .leading, spacing: 4) {
                         // Logo
                         logoImageView
-                        
+
                         // Title - always show if configuration exists
                         Text(config.title)
                             .font(.system(size: customTitleFontSize ?? 24, weight: .bold))
-                            .foregroundColor(adaptiveColors.surface)
-                        
+                            .foregroundColor(.white)
+
                         // Subtitle
                         if let subtitle = config.subtitle {
                             Text(subtitle)
                                 .font(.system(size: customSubtitleFontSize ?? 11, weight: .regular))
-                                .foregroundColor(adaptiveColors.surface.opacity(0.9))
+                                .foregroundColor(Color.white.opacity(0.9))
                         }
-                        
+
                         // Countdown (analog style like hardcoded banner)
                         if let remaining = timeRemaining {
                             analogCountdown(timeRemaining: remaining)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Right column: Discount badge + Button (centered vertically)
                     VStack(spacing: 8) {
-                        // Discount badge
+                        // Discount badge — dark capsule + white text,
+                        // matches the hardcoded TV2Theme.Colors.background
+                        // (dark) used by OfferBannerView.
                         Text(config.discountBadgeText)
                             .font(.system(size: customBadgeFontSize ?? 18, weight: .bold))
-                            .foregroundColor(adaptiveColors.surface)
+                            .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                             .background(
                                 Capsule()
-                                    .fill(adaptiveColors.textPrimary.opacity(0.8))
+                                    .fill(Color.black.opacity(0.7))
                             )
-                        
-                        // Button
+
+                        // Button — text + arrow always white over the
+                        // colored capsule (resolved via `buttonColor`,
+                        // which prioritizes operator override > sponsor
+                        // primary > Color.purple legacy fallback).
                         Button(action: {
                             handleCTAAction()
                         }) {
                             HStack(spacing: 6) {
                                 Text(config.ctaText)
                                     .font(.system(size: customButtonFontSize ?? 12, weight: .semibold))
-                                    .foregroundColor(adaptiveColors.surface)
-                                
+                                    .foregroundColor(.white)
+
                                 Image(systemName: "arrow.right")
                                     .font(.system(size: (customButtonFontSize ?? 12) - 1, weight: .semibold))
-                                    .foregroundColor(adaptiveColors.surface)
+                                    .foregroundColor(.white)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -1067,39 +1078,39 @@ public struct VOfferBannerContainer: View {
     }
 }
 
-/// Countdown Unit Component (same style as hardcoded banner)
+/// Countdown Unit Component (same style as hardcoded banner).
+///
+/// Always renders white over a translucent white background — banner
+/// has a dark image overlay regardless of system color scheme, so
+/// using `.white` directly (instead of `adaptiveColors.surface`) keeps
+/// the digits legible in both light and dark mode. Matches the
+/// hardcoded `CountdownUnit` in Demo/tv2demo's OfferBanner.swift.
 struct CountdownUnit: View {
     let value: Int
     let label: String
-    
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
-    
-    private var adaptiveColors: AdaptiveColors {
-        VioColors.adaptive(for: colorScheme)
-    }
-    
+
     var body: some View {
         VStack(spacing: 1) {
             // Digits
             Text(String(format: "%02d", value))
                 .font(.system(size: 13, weight: .bold))
-                .foregroundColor(adaptiveColors.surface)
+                .foregroundColor(.white)
                 .frame(minWidth: 24)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 5)
                 .background(
                     RoundedRectangle(cornerRadius: VioBorderRadius.small)
-                        .fill(adaptiveColors.surface.opacity(0.15))
+                        .fill(Color.white.opacity(0.15))
                         .overlay(
                             RoundedRectangle(cornerRadius: VioBorderRadius.small)
-                                .stroke(adaptiveColors.surface.opacity(0.3), lineWidth: 1)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
                         )
                 )
-            
+
             // Label
             Text(label)
                 .font(.system(size: 7, weight: .medium))
-                .foregroundColor(adaptiveColors.surface.opacity(0.85))
+                .foregroundColor(Color.white.opacity(0.85))
         }
     }
 }
