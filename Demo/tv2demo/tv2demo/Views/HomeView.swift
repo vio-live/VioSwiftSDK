@@ -48,7 +48,16 @@ struct HomeView: View {
                                 title: "Direkte",
                                 items: filteredContent.filter { $0.isLive }
                             )
-                            
+
+                            // Featured product spotlight slot (sits just
+                            // below the Direkte rail on the Home tab).
+                            // Renders only when an operator has bound a
+                            // campaign_component to the `home_spotlight`
+                            // placement in the dashboard. Sprint 2026-04-28
+                            // PM polish parity with VProductCarousel.
+                            VProductSpotlight(locationId: "home_spotlight")
+                                .padding(.top, TV2Theme.Spacing.md)
+
                             // Recent Content Section
                             contentSection(
                                 title: "Nylig",
@@ -82,14 +91,6 @@ struct HomeView: View {
                             // + Image("logo") wrapper — host app no longer dictates the
                             // label, the active campaign does.
                             VProductCarousel(locationId: "home_top", layout: "compact")
-                                .padding(.top, TV2Theme.Spacing.lg)
-
-                            // Featured product spotlight slot (sits below
-                            // the carousel on the Home tab). Renders only
-                            // when an operator has bound a campaign_component
-                            // to the `home_spotlight` placement in the
-                            // dashboard. Sprint 2026-04-28 PM polish parity.
-                            VProductSpotlight(locationId: "home_spotlight")
                                 .padding(.top, TV2Theme.Spacing.lg)
                             .padding(.bottom, TV2Theme.Spacing.xl)
                         }

@@ -40,7 +40,9 @@ enum TV2PlacementRegistration {
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",          displayName: "Home — Top"))
 
         // Rendered by HomeView.swift  → VProductSpotlight(locationId: "home_spotlight")
-        // Featured product (single-product hero) below the carousel on the Home tab.
+        // Featured product (single-product hero) right below the "Direkte" rail
+        // on the Home tab. Renders nothing until an operator binds a campaign
+        // component — pure layout-friendly placeholder.
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_spotlight",    displayName: "Home — Featured product"))
 
         // Rendered by MatchDetailView.swift  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
