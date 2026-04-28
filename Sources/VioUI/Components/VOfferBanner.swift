@@ -320,32 +320,66 @@ public struct VOfferBanner: View {
     }
     
     // MARK: - Logo Image View
-    
-    private var logoImageView: some View {
-        let logoFullURL = buildFullURL(from: config.logoUrl)
-        return LoadedImage(
-            url: URL(string: logoFullURL),
-            placeholder: AnyView(
-                Rectangle()
-                    .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                    .frame(height: 16)
+
+    /// Resolved logo URL — the operator's `customConfig.logoUrl`
+    /// wins, but when empty/absent the SDK falls back to the
+    /// placement's sponsor logo (`sponsor.logoUrl` resolved by the
+    /// active component's sponsorId via VioConfiguration). That way
+    /// operators don't have to upload a logo at all in the common
+    /// case where the banner brands a known sponsor — same UX
+    /// pattern as `showSponsorLogo` on Carousel/Spotlight/Store.
+    private var resolvedLogoUrl: String {
+        if !config.logoUrl.isEmpty { return config.logoUrl }
+        // Campaign-driven mode: pull the placement's sponsor.
+        if let component = campaignManager.getActiveComponent(
+                type: "offer_banner",
+                componentId: resolvedComponentId,
+                locationId: resolvedLocationId
             ),
-            errorView: AnyView(
-                // Si falla la carga del logo, mostrar un placeholder visible
-                Rectangle()
-                    .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                    .frame(height: 16)
-                    .overlay(
-                        Image(systemName: "photo")
-                            .font(.system(size: 10))
-                            .foregroundColor(adaptiveColors.textSecondary.opacity(0.5))
+            let sponsorId = component.sponsorId,
+            let sponsorLogo = VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl,
+            !sponsorLogo.isEmpty {
+            return sponsorLogo
+        }
+        // Host-driven mode + no campaign sponsor → empty (renders
+        // the photo placeholder; operator can fix by setting a
+        // logoUrl in customConfig).
+        return ""
+    }
+
+    private var logoImageView: some View {
+        let logoUrl = resolvedLogoUrl
+        // SVG-capable rendering when the URL is a vector asset (sponsor
+        // logos often are). Falls back to the legacy LoadedImage path
+        // for raster URLs / when the resolution returns empty.
+        return Group {
+            if logoUrl.lowercased().hasSuffix(".svg") {
+                VRemoteImage(urlString: logoUrl, height: 16)
+                    .onAppear { isLogoLoaded = true }
+            } else {
+                let logoFullURL = buildFullURL(from: logoUrl)
+                LoadedImage(
+                    url: URL(string: logoFullURL),
+                    placeholder: AnyView(
+                        Rectangle()
+                            .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
+                            .frame(height: 16)
+                    ),
+                    errorView: AnyView(
+                        Rectangle()
+                            .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
+                            .frame(height: 16)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(adaptiveColors.textSecondary.opacity(0.5))
+                            )
                     )
-            )
-        )
-        .aspectRatio(contentMode: .fit)
-        .frame(height: 16)
-        .onAppear {
-            isLogoLoaded = true
+                )
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 16)
+                .onAppear { isLogoLoaded = true }
+            }
         }
     }
     

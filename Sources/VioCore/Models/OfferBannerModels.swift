@@ -2,8 +2,14 @@ import Foundation
 import VioCore
 
 /// Configuration for Offer Banner component
+///
+/// `logoUrl` is **optional** post-Sprint-2026-04-28 PM Phase 2: when
+/// empty/missing, VOfferBanner auto-resolves the placement's sponsor
+/// logo via `VioConfiguration.sponsor(withId:).logoUrl`. The operator
+/// only fills in `logoUrl` when they want to override the sponsor
+/// branding for a specific banner (e.g. a co-branded promo).
 public struct OfferBannerConfig: Codable, Equatable {
-    public let logoUrl: String
+    public let logoUrl: String  // empty string treated as "use sponsor logo"
     public let title: String
     public let subtitle: String?
     public let backgroundImageUrl: String?  // Optional: can use backgroundColor instead
@@ -25,7 +31,7 @@ public struct OfferBannerConfig: Codable, Equatable {
     }
     
     public init(
-        logoUrl: String,
+        logoUrl: String = "",
         title: String,
         subtitle: String? = nil,
         backgroundImageUrl: String? = nil,
@@ -56,8 +62,10 @@ public struct OfferBannerConfig: Codable, Equatable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        logoUrl = try container.decode(String.self, forKey: .logoUrl)
+
+        // Optional: empty string = SDK falls back to sponsor.logoUrl
+        // resolved by the placement's sponsorId.
+        logoUrl = try container.decodeIfPresent(String.self, forKey: .logoUrl) ?? ""
         title = try container.decode(String.self, forKey: .title)
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
         backgroundImageUrl = try container.decodeIfPresent(String.self, forKey: .backgroundImageUrl)
