@@ -257,6 +257,40 @@ public struct BannerConfig: Codable {
 public struct ProductSpotlightConfig: Codable {
     public let productId: String
     public let highlightText: String?
+    /// Operator-controllable header strip rendered above the product card.
+    /// Same opt-in pattern as `ProductCarouselConfig.title` —
+    /// empty/nil hides the header entirely so existing apps that
+    /// haven't filled it in keep their legacy layout untouched.
+    public let title: String?
+    /// When true, resolve `sponsor.logoUrl` (by the placement's
+    /// `sponsorId`) and render it right-aligned in the header. Format-
+    /// agnostic — SVG sponsor logos route through `VSVGWebView` so
+    /// the brand asset shows up without an extra dep.
+    public let showSponsorLogo: Bool
+
+    public init(
+        productId: String,
+        highlightText: String? = nil,
+        title: String? = nil,
+        showSponsorLogo: Bool = false
+    ) {
+        self.productId = productId
+        self.highlightText = highlightText
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case productId, highlightText, title, showSponsorLogo
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        productId = try c.decode(String.self, forKey: .productId)
+        highlightText = try c.decodeIfPresent(String.self, forKey: .highlightText)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
+    }
 }
 
 /// Countdown Config

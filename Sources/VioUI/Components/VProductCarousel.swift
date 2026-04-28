@@ -4,7 +4,6 @@ import VioDesignSystem
 
 #if os(iOS)
 import UIKit
-import WebKit
 #endif
 
 /// Auto-configured Product Carousel component
@@ -1447,83 +1446,8 @@ private struct ShimmerEffectModifier: ViewModifier {
     }
 }
 
-// MARK: - VRemoteImage (format-agnostic remote image)
-
-/// Renders a remote image regardless of format. Routes:
-///   - `.svg` URLs → WKWebView (SwiftUI's `AsyncImage` cannot decode SVG)
-///   - everything else → `AsyncImage`
-///
-/// Inline component (per rule #7: no new files) used by the carousel
-/// header for sponsor logos. Sponsors often upload SVG as their primary
-/// logo (vector, scales cleanly). Without this fallback, the header
-/// silently shows an empty space.
-///
-/// iOS-only — Apple TV (`tvOS`) renders are out of scope; this file is
-/// gated `#if os(iOS)`. For tvOS support add a parallel branch.
-private struct VRemoteImage: View {
-    let urlString: String
-    let height: CGFloat
-
-    var body: some View {
-        guard let url = URL(string: urlString) else {
-            return AnyView(EmptyView())
-        }
-        let isSvg = url.pathExtension.lowercased() == "svg"
-        if isSvg {
-            #if os(iOS)
-            return AnyView(VSVGWebView(url: url).frame(height: height))
-            #else
-            return AnyView(EmptyView())
-            #endif
-        } else {
-            return AnyView(
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFit()
-                    default:
-                        Color.clear
-                    }
-                }
-                .frame(height: height)
-            )
-        }
-    }
-}
-
-#if os(iOS)
-/// Minimal WKWebView wrapper that loads a single SVG URL into a
-/// transparent, non-scrollable web view sized to its container. Used by
-/// `VRemoteImage` to render vector logos that `AsyncImage` can't decode.
-///
-/// HTML wrapper centers the image vertically and aligns it to the right
-/// (matches the carousel header's "logo on the right" layout). Scaled
-/// `height: 100%` so the SVG fits the container and never overflows.
-private struct VSVGWebView: UIViewRepresentable {
-    let url: URL
-
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.scrollView.isScrollEnabled = false
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.backgroundColor = .clear
-        return webView
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        let html = """
-        <!doctype html>
-        <html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <style>
-          html, body { margin: 0; padding: 0; height: 100%; background: transparent; }
-          body { display: flex; align-items: center; justify-content: flex-end; }
-          img { height: 100%; width: auto; max-width: 100%; }
-        </style></head>
-        <body><img src='\(url.absoluteString)'/></body></html>
-        """
-        webView.loadHTMLString(html, baseURL: nil)
-    }
-}
-#endif
+// `VRemoteImage` (format-agnostic remote image with SVG fallback) lives
+// in its own file (`VRemoteImage.swift`) — extracted so VProductSpotlight
+// and other placement views can render sponsor logos without
+// duplicating the WKWebView fallback.
 

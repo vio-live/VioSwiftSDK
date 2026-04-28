@@ -9,19 +9,20 @@ import UIKit
 
 /// Auto-configured Product Spotlight component
 /// Automatically loads configuration from active campaign
-/// 
+///
 /// **Usage:**
 /// ```swift
-/// // Basic usage - uses first product_spotlight component from backend
-/// VProductSpotlight()
+/// // Slot-aware (post-2026-04-28 placements model — recommended)
+/// VProductSpotlight(locationId: "home_top")
 ///
-/// // Specific component ID - uses a specific product_spotlight component
+/// // Backwards-compat: pick by componentId or first matching
+/// VProductSpotlight()
 /// VProductSpotlight(componentId: "product-spotlight-1")
-/// VProductSpotlight(componentId: "product-spotlight-2")
 /// ```
 ///
 /// **Parameters:**
 /// - `componentId: String?` - Optional component ID to identify a specific component. If `nil`, uses the first matching component.
+/// - `locationId: String?` - Optional placement slot identifier (e.g. `"home_top"`). Resolves the active component for the slot via `getActiveComponent(type:locationId:)` so the same template can power multiple slots in one campaign.
 /// - `variant: VProductCard.Variant?` - Optional card variant override. Options: `.grid`, `.list`, `.hero`, `.minimal`. If `nil`, uses `.hero` (default).
 /// - `showAddToCartButton: Bool` - Whether to show the "Add to Cart" button in hero variant. Default: `true`. Button only shows if product has no variants.
 ///
@@ -52,61 +53,79 @@ import UIKit
 public struct VProductSpotlight: View {
     
     // MARK: - Properties
-    
+
     /// Optional component ID to identify a specific component
     /// If nil, uses the first matching component from the campaign
     private let componentId: String?
-    
+
+    /// Optional placement slot identifier (e.g. `"home_top"`,
+    /// `"match_pre_kickoff"`). When provided, resolves the active
+    /// component via `getActiveComponent(type:locationId:)` so the
+    /// same `product_spotlight` template can be bound to multiple
+    /// slots in one campaign without colliding on the template id.
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    private let locationId: String?
+
     /// Optional card variant override for demo/testing
     /// If nil, uses .hero (default)
     private let variant: VProductCard.Variant?
-    
+
     /// Whether to show the "Add to Cart" button in hero variant
     /// Default: true. Button only shows if product has no variants.
     private let showAddToCartButton: Bool
-    
+
     /// Whether to show sponsor badge
     private let showSponsor: Bool
-    
+
     /// Sponsor badge position: "topRight", "topLeft", "bottomRight", "bottomLeft"
     /// Default: "topRight"
     private let sponsorPosition: String
-    
+
     @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var viewModel = VProductSpotlightViewModel()
-    
+
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
     @EnvironmentObject private var cartManager: CartManager
-    
+
     @State private var showingProductDetail: Product?
-    
+
     // Cache parsed config values - only recalculated when config changes
     @State private var cachedProductId: String?
     @State private var cachedHighlightText: String?
+    @State private var cachedTitle: String?
+    @State private var cachedShowSponsorLogo: Bool = false
     @State private var currentConfigId: String?
-    
+
     // Computed colors based on current color scheme
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
+
     // MARK: - Initializer
-    
-    public init(componentId: String? = nil, variant: VProductCard.Variant? = nil, showAddToCartButton: Bool = true, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+
+    public init(
+        componentId: String? = nil,
+        locationId: String? = nil,
+        variant: VProductCard.Variant? = nil,
+        showAddToCartButton: Bool = true,
+        showSponsor: Bool = false,
+        sponsorPosition: String? = nil
+    ) {
         self.componentId = componentId
+        self.locationId = locationId
         self.variant = variant
         self.showAddToCartButton = showAddToCartButton
         self.showSponsor = showSponsor
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
-    
+
     // MARK: - Computed Properties
-    
+
     /// Get active product spotlight component from campaign
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_spotlight", componentId: componentId)
+        campaignManager.getActiveComponent(type: "product_spotlight", componentId: componentId, locationId: locationId)
     }
-    
+
     /// Extract ProductSpotlightConfig from component
     private var config: ProductSpotlightConfig? {
         guard let component = activeComponent,
@@ -115,24 +134,30 @@ public struct VProductSpotlight: View {
         }
         return config
     }
-    
+
     /// Update cached config when config changes
     private func updateCachedConfigIfNeeded() {
         guard let config = config else {
             if cachedProductId != nil {
                 cachedProductId = nil
                 cachedHighlightText = nil
+                cachedTitle = nil
+                cachedShowSponsorLogo = false
                 currentConfigId = nil
             }
             return
         }
-        
-        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")"
-        
-        // Only recalculate if config actually changed
+
+        // Include the new operator-controllable fields in the cache
+        // identity so changes to title / showSponsorLogo trigger a
+        // re-render path (matches the carousel pattern).
+        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")-\(config.title ?? "")-\(config.showSponsorLogo)"
+
         if currentConfigId != newConfigId {
             cachedProductId = config.productId
             cachedHighlightText = config.highlightText
+            cachedTitle = config.title
+            cachedShowSponsorLogo = config.showSponsorLogo
             currentConfigId = newConfigId
         }
     }
@@ -249,17 +274,64 @@ public struct VProductSpotlight: View {
     
     // MARK: - Content Views
     
+    /// Header strip with optional title text + sponsor logo. Both come
+    /// from the placement's customConfig — operator-controllable via
+    /// the dashboard:
+    ///
+    ///   `title`             → "Producto destacado", "Featured", etc.
+    ///                         Empty/nil → hide.
+    ///   `showSponsorLogo`   → bool. true → resolve sponsor.logoUrl by
+    ///                         the placement's sponsorId and render
+    ///                         right-aligned. SVG logos route through
+    ///                         `VRemoteImage`/`VSVGWebView` so vector
+    ///                         brand assets render without an extra dep.
+    ///
+    /// Renders nothing when both opts are off (zero overhead, no extra
+    /// padding, no spacer block) — preserving the legacy spotlight
+    /// layout bit-for-bit for apps that haven't filled in the new
+    /// fields yet.
+    ///
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    @ViewBuilder
+    private var placementHeader: some View {
+        let title = (cachedTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let showLogo = cachedShowSponsorLogo
+        let sponsorLogoUrl: String? = {
+            guard showLogo, let sponsorId = activeComponent?.sponsorId else { return nil }
+            return VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl
+        }()
+        if !title.isEmpty || sponsorLogoUrl != nil {
+            HStack {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(adaptiveColors.textPrimary)
+                }
+                Spacer()
+                if let url = sponsorLogoUrl {
+                    VRemoteImage(urlString: url, height: 20)
+                }
+            }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.bottom, VioSpacing.sm)
+        }
+    }
+
     /// Main spotlight content view with product card and highlight badge
     private func spotlightContentView(product: Product, highlightText: String?) -> some View {
         let currentLogoUrl = campaignLogoUrl
         let shouldShowBadge = shouldShowSponsorBadge
         let position = sponsorPosition.isEmpty ? "topRight" : sponsorPosition
-        
+
         // Determine if badge should be above or below content
         let isTopPosition = position == "topRight" || position == "topLeft"
         let isRightPosition = position == "topRight" || position == "bottomRight"
-        
+
         return VStack(spacing: 0) {
+            // Operator-controlled header (title + sponsor logo). Opt-in
+            // via customConfig; renders nothing when both fields are off.
+            placementHeader
+
             // Badge container above content (if top position)
             if shouldShowBadge, let logoUrl = currentLogoUrl, isTopPosition {
                 sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
