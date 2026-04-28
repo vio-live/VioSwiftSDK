@@ -571,9 +571,27 @@ public struct VProductSpotlight: View {
     }
     
     // MARK: - Skeleton View
-    
-    /// Skeleton loader shown while product is loading
+
+    /// Skeleton loader shown while product is loading.
+    ///
+    /// Variant-aware so the skeleton matches the card's natural
+    /// height. Critical for non-hero layouts: the parent ZStack sizes
+    /// itself to the tallest child, so a hero-sized skeleton (~600pt
+    /// image + content) makes the whole spotlight section eat half
+    /// the screen even when the actual layout is `.list` (~90pt).
+    @ViewBuilder
     private var skeletonView: some View {
+        let resolvedVariant = effectiveVariant
+        if resolvedVariant == nil || resolvedVariant == .hero {
+            heroSkeletonView
+        } else {
+            compactSkeletonView
+        }
+    }
+
+    /// Hero-sized skeleton — the legacy big-card layout. Matches
+    /// `customHeroLayout` proportions (300pt image + content).
+    private var heroSkeletonView: some View {
         VStack(spacing: VioSpacing.md) {
             // Highlight badge skeleton
             RoundedRectangle(cornerRadius: VioBorderRadius.circle)
@@ -644,7 +662,45 @@ public struct VProductSpotlight: View {
         }
         .padding(.vertical, VioSpacing.md)
     }
-    
+
+    /// Compact skeleton — matches `VProductCard.listLayout`
+    /// proportions (70x70 image + 3 lines of text). Used when the
+    /// operator picked `.list`, `.minimal`, or `.grid` so the
+    /// spotlight section sizes to the actual card height instead of
+    /// reserving the hero skeleton's ~600pt.
+    private var compactSkeletonView: some View {
+        HStack(alignment: .center, spacing: VioSpacing.sm) {
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                .frame(width: 70, height: 70)
+                .shimmerEffect()
+
+            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(width: 60, height: 10)
+                    .shimmerEffect()
+
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(height: 14)
+                    .shimmerEffect()
+
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(width: 80, height: 14)
+                    .shimmerEffect()
+            }
+
+            Spacer()
+        }
+        .padding(VioSpacing.sm)
+        .background(adaptiveColors.surface)
+        .cornerRadius(VioBorderRadius.small)
+        .vioCardShadow(for: colorScheme)
+        .padding(.horizontal, VioSpacing.md)
+    }
+
     // MARK: - Error & Empty States
     
     private var errorView: some View {
