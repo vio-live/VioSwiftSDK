@@ -1092,10 +1092,13 @@ public struct PlacementStatusChangedEvent: Codable {
 }
 
 /// Operator changed customConfig (productIds, title, layout, autoPlay,
-/// interval, showSponsorLogo, etc.). The SDK applies the new config in
-/// place. If `productIdsChanged == true`, the carousel/banner shows a
-/// brief skeleton while reloading the catalog; otherwise the swap is
-/// silent.
+/// interval, showSponsorLogo, etc.) and/or the placement's sponsor.
+/// The SDK applies the new config + sponsor in place. If
+/// `productIdsChanged == true`, the carousel/banner shows a brief
+/// skeleton while reloading the catalog; otherwise the swap is
+/// silent. When `sponsorId` differs from the SDK's cached value,
+/// ProductService routes to the new sponsor's commerce key on the
+/// next product load.
 public struct PlacementConfigUpdatedEvent: Codable {
     public let type: String
     public let module: String?
@@ -1110,6 +1113,15 @@ public struct PlacementConfigUpdatedEvent: Codable {
     /// true, the SDK refreshes the catalog (skeleton flash); when false
     /// it patches in place (no flicker for title/layout-only edits).
     public let productIdsChanged: Bool
+    /// Current sponsor of the row (after the update). Use this to
+    /// update Component.sponsorId so per-sponsor commerce key routing
+    /// stays consistent. Optional only for backward compatibility with
+    /// older backends that pre-date the in-place sponsor-swap support.
+    public let sponsorId: Int?
+    /// True when the operator actually changed the sponsor (vs. just
+    /// edited customConfig). The SDK uses this to decide whether to
+    /// re-render the header sponsor logo.
+    public let sponsorChanged: Bool?
 }
 
 /// Multi-sponsor rotation: within a single (campaignId, appPlacementId),

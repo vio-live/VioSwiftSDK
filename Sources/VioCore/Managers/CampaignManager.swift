@@ -1778,6 +1778,10 @@ public class CampaignManager: ObservableObject {
         }
 
         let existing = activeComponents[index]
+        // When the operator swapped the sponsor in place, honor the new
+        // sponsorId from the event payload (falls back to existing for
+        // pre-multi-sponsor-edit servers that don't ship sponsorId).
+        let nextSponsorId = event.sponsorId ?? existing.sponsorId
         let patched = Component(
             id: existing.id,
             type: existing.type,
@@ -1785,7 +1789,7 @@ public class CampaignManager: ObservableObject {
             config: newConfig,
             status: existing.status,
             locationId: existing.locationId,
-            sponsorId: existing.sponsorId,
+            sponsorId: nextSponsorId,
             campaignComponentId: existing.campaignComponentId,
             broadcastContext: existing.broadcastContext
         )
@@ -1796,7 +1800,8 @@ public class CampaignManager: ObservableObject {
         // `productIdsChanged` hint isn't consumed by CampaignManager
         // — it surfaces in the event for views that want to flash a
         // skeleton during the catalog reload (handled in the view layer).
-        VioLogger.success("Patched config for cc=\(rowId) (productIdsChanged=\(event.productIdsChanged))", component: "CampaignManager")
+        let sponsorNote = (event.sponsorChanged == true) ? " sponsorChanged \(existing.sponsorId ?? -1)→\(nextSponsorId ?? -1)" : ""
+        VioLogger.success("Patched config for cc=\(rowId) (productIdsChanged=\(event.productIdsChanged))\(sponsorNote)", component: "CampaignManager")
     }
 
     private func handlePlacementActivationSwapped(_ event: PlacementActivationSwappedEvent) {
