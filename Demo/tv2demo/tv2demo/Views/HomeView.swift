@@ -141,6 +141,27 @@ struct HomeView: View {
                             // label, the active campaign does.
                             VProductCarousel(locationId: "home_top", layout: "compact")
                                 .padding(.top, TV2Theme.Spacing.lg)
+
+                            // Single-product banner slot. Sprint
+                            // 2026-04-28 PM Phase 2 — operator binds
+                            // a `product_banner` template here from
+                            // the dashboard, picks layout preset
+                            // (compact / standard / large), brand
+                            // colors, optional sponsor-logo overlay.
+                            // Renders nothing until bound. Wrapped in
+                            // a NavigationLink → ProductsGridView so
+                            // tapping the banner falls back to the
+                            // in-app catalog when the operator hasn't
+                            // configured a deeplink (matches the
+                            // offer-banner pattern above).
+                            NavigationLink(destination: ProductsGridView()
+                                .environmentObject(cartManager)
+                                .environmentObject(checkoutDraft)
+                            ) {
+                                VProductBanner(locationId: "home_product_banner")
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(.top, TV2Theme.Spacing.lg)
                             .padding(.bottom, TV2Theme.Spacing.xl)
                         }
                     }

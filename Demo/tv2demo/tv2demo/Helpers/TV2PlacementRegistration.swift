@@ -53,6 +53,16 @@ enum TV2PlacementRegistration {
         // gets removed once the dynamic flow is validated end-to-end.
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_offer",        displayName: "Home — Offer banner (promo with countdown)"))
 
+        // Rendered by HomeView.swift  → VProductBanner(locationId: "home_product_banner")
+        // Single-product banner with bg image + CTA + optional sponsor
+        // logo overlay. Layout preset (compact / standard / large)
+        // adjusts height + font sizes from the dashboard. Mounted
+        // below the carousel to give the operator a separate slot
+        // from `home_offer` (offer_banner = countdown promo,
+        // product_banner = single-product feature). Sprint 2026-04-28
+        // PM Phase 2.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_product_banner", displayName: "Home — Product banner (single product)"))
+
         // Rendered by MatchDetailView.swift  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff", displayName: "Match — Pre-kickoff"))
 
