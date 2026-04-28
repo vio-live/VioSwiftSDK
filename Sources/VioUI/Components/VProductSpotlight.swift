@@ -94,6 +94,7 @@ public struct VProductSpotlight: View {
     @State private var cachedHighlightText: String?
     @State private var cachedTitle: String?
     @State private var cachedShowSponsorLogo: Bool = false
+    @State private var cachedLayout: String?
     @State private var currentConfigId: String?
 
     // Computed colors based on current color scheme
@@ -135,6 +136,23 @@ public struct VProductSpotlight: View {
         return config
     }
 
+    /// Resolve the operator's `layout` choice to a `VProductCard.Variant`.
+    /// Falls back to the call-site `variant` parameter if the operator
+    /// didn't pick a layout, then to `.hero` (legacy default) if neither
+    /// is set.
+    private var effectiveVariant: VProductCard.Variant? {
+        // Call-site override wins (e.g. `VProductSpotlight(variant: .list)`).
+        if let v = variant { return v }
+        // Otherwise honor the operator's customConfig.layout.
+        switch (cachedLayout ?? "").lowercased() {
+        case "list":    return .list
+        case "minimal": return .minimal
+        case "grid":    return .grid
+        case "hero":    return .hero
+        default:        return nil  // → falls into the customHeroLayout path below
+        }
+    }
+
     /// Update cached config when config changes
     private func updateCachedConfigIfNeeded() {
         guard let config = config else {
@@ -143,21 +161,23 @@ public struct VProductSpotlight: View {
                 cachedHighlightText = nil
                 cachedTitle = nil
                 cachedShowSponsorLogo = false
+                cachedLayout = nil
                 currentConfigId = nil
             }
             return
         }
 
         // Include the new operator-controllable fields in the cache
-        // identity so changes to title / showSponsorLogo trigger a
-        // re-render path (matches the carousel pattern).
-        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")-\(config.title ?? "")-\(config.showSponsorLogo)"
+        // identity so changes to title / showSponsorLogo / layout trigger
+        // a re-render path (matches the carousel pattern).
+        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")-\(config.title ?? "")-\(config.showSponsorLogo)-\(config.layout ?? "")"
 
         if currentConfigId != newConfigId {
             cachedProductId = config.productId
             cachedHighlightText = config.highlightText
             cachedTitle = config.title
             cachedShowSponsorLogo = config.showSponsorLogo
+            cachedLayout = config.layout
             currentConfigId = newConfigId
         }
     }
@@ -339,7 +359,7 @@ public struct VProductSpotlight: View {
             
             VStack(spacing: VioSpacing.md) {
                 // Highlight badge (if provided) - only show for hero variant
-                if let highlightText = highlightText, !highlightText.isEmpty, variant == nil || variant == .hero {
+                if let highlightText = highlightText, !highlightText.isEmpty, effectiveVariant == nil || effectiveVariant == .hero {
                     Text(highlightText)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(adaptiveColors.surface)
@@ -352,15 +372,17 @@ public struct VProductSpotlight: View {
                         .padding(.horizontal, VioSpacing.md)
                 }
                 
-                // Use custom hero layout if hero variant, otherwise use VProductCard
-                if variant == nil || variant == .hero {
+                // Resolve variant: call-site override wins, then operator's
+                // customConfig.layout, then fall back to the legacy big
+                // hero card (`customHeroLayout`).
+                let resolvedVariant = effectiveVariant
+                if resolvedVariant == nil || resolvedVariant == .hero {
                     customHeroLayout(product: product)
                         .padding(.horizontal, VioSpacing.md)
                 } else {
-                    // For other variants, use VProductCard directly
                     VProductCard(
                         product: product,
-                        variant: variant!,
+                        variant: resolvedVariant!,
                         showBrand: VioConfiguration.shared.uiConfiguration.showProductBrands,
                         showDescription: VioConfiguration.shared.uiConfiguration.showProductDescriptions,
                         showProductDetail: true
@@ -689,15 +711,23 @@ public struct VProductSpotlight: View {
               let productId = Int(productIdString) else {
             return
         }
-        
+
         let currency = VioConfiguration.shared.marketConfiguration.currencyCode
         let country = VioConfiguration.shared.marketConfiguration.countryCode
-        
+        // Multi-sponsor commerce key routing: pull the placement's
+        // sponsor from the active component so ProductService routes to
+        // the right Commerce GraphQL apiKey (XXL's, Elkjøp's, etc.).
+        // Without this, secondary-sponsor placements always queried the
+        // primary sponsor's catalog and "found 0 rows" for any product
+        // the primary doesn't sell. Mirrors VProductCarousel.loadProducts.
+        let sponsorId = activeComponent?.sponsorId
+
         Task {
             await viewModel.loadProduct(
                 productId: productId,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
         }
     }
@@ -713,27 +743,32 @@ private class VProductSpotlightViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
     
-    func loadProduct(productId: Int, currency: String, country: String) async {
+    func loadProduct(productId: Int, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
             isLoading = false
             return
         }
-        
+
         guard !isLoading else { return }
-        
+
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
-        
+
         do {
-            // Use ProductService to load product
+            // Use ProductService to load product. sponsorId routes to
+            // the per-sponsor commerce client (XXL's apiKey for an XXL
+            // placement, etc.) — required for multi-sponsor placements
+            // where the product lives in a sponsor's catalog the
+            // primary doesn't share.
             product = try await ProductService.shared.loadProduct(
                 productId: productId,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
-            
+
         } catch ProductServiceError.productNotFound(let id) {
             errorMessage = "Product not found"
             VioLogger.warning("Product not found for ID: \(id) - Currency: \(currency), Country: \(country)", component: "VProductSpotlight")

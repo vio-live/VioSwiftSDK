@@ -267,21 +267,32 @@ public struct ProductSpotlightConfig: Codable {
     /// agnostic — SVG sponsor logos route through `VSVGWebView` so
     /// the brand asset shows up without an extra dep.
     public let showSponsorLogo: Bool
+    /// Layout override picked by the operator from the dashboard.
+    /// Maps onto `VProductCard.Variant`:
+    ///   "hero"    → .hero    (default — large featured card)
+    ///   "list"    → .list    (horizontal compact, image left)
+    ///   "minimal" → .minimal (smallest, suggestion style)
+    ///   "grid"    → .grid    (vertical compact)
+    /// Empty/nil falls back to the SwiftUI call-site override or to
+    /// `.hero` so existing host apps keep the legacy big card.
+    public let layout: String?
 
     public init(
         productId: String,
         highlightText: String? = nil,
         title: String? = nil,
-        showSponsorLogo: Bool = false
+        showSponsorLogo: Bool = false,
+        layout: String? = nil
     ) {
         self.productId = productId
         self.highlightText = highlightText
         self.title = title
         self.showSponsorLogo = showSponsorLogo
+        self.layout = layout
     }
 
     private enum CodingKeys: String, CodingKey {
-        case productId, highlightText, title, showSponsorLogo
+        case productId, highlightText, title, showSponsorLogo, layout
     }
 
     public init(from decoder: Decoder) throws {
@@ -290,6 +301,7 @@ public struct ProductSpotlightConfig: Codable {
         highlightText = try c.decodeIfPresent(String.self, forKey: .highlightText)
         title = try c.decodeIfPresent(String.self, forKey: .title)
         showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
+        layout = try c.decodeIfPresent(String.self, forKey: .layout)
     }
 }
 
