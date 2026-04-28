@@ -188,20 +188,28 @@ public struct VProductSpotlight: View {
         guard VioConfiguration.shared.shouldUseSDK else {
             return false
         }
-        
+
+        // Hide-on-failure: after a non-recoverable load error, fall
+        // through to EmptyView until a config change / WS event
+        // resets the flag and triggers a fresh load. Sprint 2026-04-28
+        // PM Phase 2 polish.
+        if viewModel.loadFailed && viewModel.product == nil {
+            return false
+        }
+
         // Check campaign state
         let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             // No campaign configured - show component (legacy behavior)
             return true
         }
-        
+
         // Campaign must be active and not paused
         guard campaignManager.isCampaignActive,
               campaignManager.currentCampaign?.isPaused != true else {
             return false
         }
-        
+
         // Component must exist and be active
         return activeComponent?.isActive == true && config != nil
     }
@@ -798,7 +806,12 @@ private class VProductSpotlightViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
-    
+    /// Hide-on-failure flag — set when load throws a non-recoverable
+    /// error. View's `shouldShow` falls through to EmptyView so the
+    /// placement disappears instead of showing a stuck skeleton.
+    /// Reset on every load attempt.
+    @Published var loadFailed: Bool = false
+
     func loadProduct(productId: Int, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
@@ -811,6 +824,7 @@ private class VProductSpotlightViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
+        loadFailed = false
 
         do {
             // Use ProductService to load product. sponsorId routes to
@@ -827,9 +841,11 @@ private class VProductSpotlightViewModel: ObservableObject {
 
         } catch ProductServiceError.productNotFound(let id) {
             errorMessage = "Product not found"
+            loadFailed = true
             VioLogger.warning("Product not found for ID: \(id) - Currency: \(currency), Country: \(country)", component: "VProductSpotlight")
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = "Invalid configuration"
+            loadFailed = true
             VioLogger.error("Invalid configuration: \(message)", component: "VProductSpotlight")
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
@@ -838,13 +854,15 @@ private class VProductSpotlightViewModel: ObservableObject {
                 VioLogger.warning("Market not available", component: "VProductSpotlight")
             } else {
                 errorMessage = error.message
+                loadFailed = true
                 VioLogger.error("Error loading product: \(error.message)", component: "VProductSpotlight")
             }
         } catch {
             errorMessage = "Failed to load product"
+            loadFailed = true
             VioLogger.error("Unexpected error: \(error.localizedDescription)", component: "VProductSpotlight")
         }
-        
+
         isLoading = false
     }
 }

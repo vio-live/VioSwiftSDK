@@ -219,19 +219,29 @@ public struct VProductCarousel: View {
         guard VioConfiguration.shared.shouldUseSDK else {
             return false
         }
-        
+
+        // Hide-on-failure: when the product fetch failed and we have no
+        // cached products to render, fall through to EmptyView instead
+        // of showing a perpetual skeleton or an error CTA. Operator
+        // fixes the binding via dashboard → next config change resets
+        // the flag and the next loadProducts attempts again.
+        // Sprint 2026-04-28 PM Phase 2 polish.
+        if viewModel.loadFailed && viewModel.products.isEmpty {
+            return false
+        }
+
         // Check campaign state
         let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             return config != nil
         }
-        
+
         // Campaign must be active and not paused
         guard campaignManager.isCampaignActive,
               campaignManager.currentCampaign?.isPaused != true else {
             return false
         }
-        
+
         // Component must exist and be active
         // Also check if config can be extracted (component might exist but config decoding failed)
         return activeComponent?.isActive == true && config != nil
@@ -1340,8 +1350,15 @@ class VProductCarouselViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
+    /// Hide-on-failure flag — set true after a non-recoverable load
+    /// error (auth failure, network outage, etc.). Combined with
+    /// `products.isEmpty` it lets the view render EmptyView instead
+    /// of a perpetual skeleton or an error CTA. Reset to false at the
+    /// start of every load so any config change / WS event triggers a
+    /// fresh attempt automatically.
+    @Published var loadFailed: Bool = false
     @Published var currentIndex: Int = 0 // Move currentIndex to ViewModel for safe Timer access
-    
+
     func loadProducts(productIds: [Int], currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
@@ -1354,6 +1371,7 @@ class VProductCarouselViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
+        loadFailed = false  // Fresh attempt — clear stale failure flag
 
         // Determine if we should load all products or filtered
         let idsToUse: [Int]? = productIds.isEmpty ? nil : productIds
@@ -1369,26 +1387,30 @@ class VProductCarouselViewModel: ObservableObject {
                 country: country,
                 sponsorId: sponsorId
             )
-            
+
             if products.isEmpty {
                 // No products found - will show empty state
             }
-            
+
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = message
+            loadFailed = true
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
                 isMarketUnavailable = true
                 errorMessage = nil
             } else {
                 errorMessage = error.message
+                loadFailed = true
             }
         } catch ProductServiceError.networkError(let error) {
             errorMessage = error.localizedDescription
+            loadFailed = true
         } catch {
             errorMessage = error.localizedDescription
+            loadFailed = true
         }
-        
+
         isLoading = false
     }
 }

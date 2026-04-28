@@ -141,20 +141,27 @@ public struct VProductStore: View {
         guard VioConfiguration.shared.shouldUseSDK else {
             return false
         }
-        
+
+        // Hide-on-failure: stuck-skeleton guard. Sprint 2026-04-28 PM
+        // Phase 2 polish — see VProductCarousel.shouldShow for the
+        // shared rationale.
+        if viewModel.loadFailed && viewModel.products.isEmpty {
+            return false
+        }
+
         // Check campaign state
         let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             // No campaign configured - show component (legacy behavior)
             return true
         }
-        
+
         // Campaign must be active and not paused
         guard campaignManager.isCampaignActive,
               campaignManager.currentCampaign?.isPaused != true else {
             return false
         }
-        
+
         // Component must exist and be active
         return activeComponent?.isActive == true && config != nil
     }
@@ -474,19 +481,25 @@ class VProductStoreViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
-    
+    /// Hide-on-failure flag — set when load throws a non-recoverable
+    /// error. View's `shouldShow` falls through to EmptyView so the
+    /// store disappears instead of showing a stuck skeleton.
+    /// Reset on every load attempt.
+    @Published var loadFailed: Bool = false
+
     func loadProducts(mode: String, productIds: [Int]?, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
             isLoading = false
             return
         }
-        
+
         guard !isLoading else { return }
-        
+
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
+        loadFailed = false
         
         VioLogger.debug("Loading products - Mode: \(mode)", component: "VProductStore")
         
@@ -544,6 +557,7 @@ class VProductStoreViewModel: ObservableObject {
             
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = message
+            loadFailed = true
             VioLogger.error("Invalid configuration: \(message)", component: "VProductStore")
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
@@ -552,13 +566,16 @@ class VProductStoreViewModel: ObservableObject {
                 VioLogger.warning("Market not available", component: "VProductStore")
             } else {
                 errorMessage = error.message
+                loadFailed = true
                 VioLogger.error("Failed to load products: \(error.message)", component: "VProductStore")
             }
         } catch ProductServiceError.networkError(let error) {
             errorMessage = error.localizedDescription
+            loadFailed = true
             VioLogger.error("Network error: \(error.localizedDescription)", component: "VProductStore")
         } catch {
             errorMessage = error.localizedDescription
+            loadFailed = true
             VioLogger.error("Failed to load products: \(error.localizedDescription)", component: "VProductStore")
         }
         
