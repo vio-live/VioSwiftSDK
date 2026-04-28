@@ -480,6 +480,20 @@ public struct ProductBannerConfig: Codable {
     /// Carousel/Spotlight and only exposes this single opt-in.
     public let showSponsorLogo: Bool
 
+    /// Layout preset that adjusts banner height + font sizes in one
+    /// pick instead of forcing the operator to tune each granular
+    /// field. Sprint 2026-04-28 PM Phase 2 polish.
+    ///
+    ///   "compact"  → height 120pt, title 12pt, subtitle 9pt, button 12pt
+    ///   "standard" → height 200pt, title 14pt, subtitle 10pt, button 14pt (legacy default)
+    ///   "large"    → height 280pt, title 18pt, subtitle 12pt, button 16pt
+    ///
+    /// When `layout` is set, the preset wins UNLESS the operator also
+    /// provided an explicit `bannerHeight` / `titleFontSize` / etc.
+    /// — those fine-grained overrides keep their priority. Empty/nil
+    /// → use legacy defaults (back-compat for existing rows).
+    public let layout: String?
+
     public init(
         productId: String,
         backgroundImageUrl: String,
@@ -501,7 +515,8 @@ public struct ProductBannerConfig: Codable {
         buttonFontSize: Int? = nil,
         textAlignment: String? = nil,
         contentVerticalAlignment: String? = nil,
-        showSponsorLogo: Bool = false
+        showSponsorLogo: Bool = false,
+        layout: String? = nil
     ) {
         self.productId = productId
         self.backgroundImageUrl = backgroundImageUrl
@@ -524,6 +539,7 @@ public struct ProductBannerConfig: Codable {
         self.textAlignment = textAlignment
         self.contentVerticalAlignment = contentVerticalAlignment
         self.showSponsorLogo = showSponsorLogo
+        self.layout = layout
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -532,7 +548,7 @@ public struct ProductBannerConfig: Codable {
         case backgroundColor, overlayOpacity, bannerHeight, bannerHeightRatio
         case titleFontSize, subtitleFontSize, buttonFontSize
         case textAlignment, contentVerticalAlignment
-        case showSponsorLogo
+        case showSponsorLogo, layout
     }
 
     public init(from decoder: Decoder) throws {
@@ -558,6 +574,7 @@ public struct ProductBannerConfig: Codable {
         textAlignment = try c.decodeIfPresent(String.self, forKey: .textAlignment)
         contentVerticalAlignment = try c.decodeIfPresent(String.self, forKey: .contentVerticalAlignment)
         showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
+        layout = try c.decodeIfPresent(String.self, forKey: .layout)
     }
 }
 

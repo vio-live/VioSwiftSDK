@@ -37,13 +37,27 @@ public struct VProductBanner: View {
             // Build full URL (cache this)
             let fullImageURL = Self.buildFullURL(from: config.backgroundImageUrl)
             self.imageURL = URL(string: fullImageURL)
-            
-            // Cache clamped sizes
-            self.bannerHeight = CGFloat(Self.getClampedSize(config.bannerHeight, min: 150, max: 400, default: 200))
-            // Smaller title and subtitle, slightly larger button
-            self.titleFontSize = CGFloat(Self.getClampedSize(config.titleFontSize, min: 10, max: 18, default: 14))
-            self.subtitleFontSize = CGFloat(Self.getClampedSize(config.subtitleFontSize, min: 8, max: 12, default: 10))
-            self.buttonFontSize = CGFloat(Self.getClampedSize(config.buttonFontSize, min: 12, max: 16, default: 14))
+
+            // Layout preset → defaults for height + font sizes. Each
+            // preset is a one-pick UX shortcut; granular fields
+            // (`bannerHeight`, `titleFontSize`, etc.) still win when
+            // explicitly set so existing rows aren't disturbed.
+            // Sprint 2026-04-28 PM Phase 2.
+            let preset: (height: Int, title: Int, subtitle: Int, button: Int) = {
+                switch config.layout?.lowercased() {
+                case "compact": return (height: 120, title: 12, subtitle: 9,  button: 12)
+                case "large":   return (height: 280, title: 18, subtitle: 12, button: 16)
+                default:        return (height: 200, title: 14, subtitle: 10, button: 14) // "standard" / nil → legacy default
+                }
+            }()
+
+            // Cache clamped sizes — granular config wins over preset
+            // (the operator's explicit fontSize/bannerHeight beats the
+            // shortcut value).
+            self.bannerHeight = CGFloat(Self.getClampedSize(config.bannerHeight, min: 100, max: 400, default: preset.height))
+            self.titleFontSize = CGFloat(Self.getClampedSize(config.titleFontSize, min: 10, max: 22, default: preset.title))
+            self.subtitleFontSize = CGFloat(Self.getClampedSize(config.subtitleFontSize, min: 8, max: 16, default: preset.subtitle))
+            self.buttonFontSize = CGFloat(Self.getClampedSize(config.buttonFontSize, min: 10, max: 18, default: preset.button))
             
             // Cache parsed colors - use adaptive colors as defaults
             let defaultTextColor = adaptiveColors.textPrimary
@@ -92,8 +106,9 @@ public struct VProductBanner: View {
                 self.contentVerticalAlignment = .bottom
             }
             
-            // Create unique identifier for this config (detects changes)
-            self.configId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)"
+            // Create unique identifier for this config (detects changes).
+            // Includes layout so switching presets re-derives heights/fonts.
+            self.configId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")"
         }
         
         /// Build full URL from relative path (static helper)
@@ -281,7 +296,7 @@ public struct VProductBanner: View {
             return
         }
         
-        let newConfigId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)"
+        let newConfigId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")"
         
         // Only recalculate if config actually changed
         if currentConfigId != newConfigId {
@@ -335,7 +350,7 @@ public struct VProductBanner: View {
         // If we have cached styling and config hasn't changed, use it
         if let cached = cachedStyling,
            let configId = currentConfigId,
-           configId == "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)" {
+           configId == "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")" {
             return cached
         }
         
