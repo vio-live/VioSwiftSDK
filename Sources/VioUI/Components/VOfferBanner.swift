@@ -386,9 +386,21 @@ public struct VOfferBanner: View {
         // SVG-capable rendering when the URL is a vector asset (sponsor
         // logos often are). Falls back to the legacy LoadedImage path
         // for raster URLs / when the resolution returns empty.
-        return Group {
+        //
+        // Both branches align the logo to the LEADING edge so it sits
+        // at the left of the banner's content column (matching the
+        // hardcoded OfferBannerView). The SVG branch passes
+        // `alignment: .leading` to VRemoteImage which translates to
+        // CSS `justify-content: flex-start` inside the embedded
+        // WKWebView. The raster branch uses an HStack + Spacer to
+        // pin the LoadedImage to the leading edge — `.scaledToFit()`
+        // keeps the natural aspect ratio. Width is capped at 120pt
+        // to prevent the SVG WebView from stretching the parent
+        // VStack horizontally beyond what the title needs.
+        return HStack(spacing: 0) {
             if logoUrl.lowercased().hasSuffix(".svg") {
-                VRemoteImage(urlString: logoUrl, height: 16)
+                VRemoteImage(urlString: logoUrl, height: 16, alignment: .leading)
+                    .frame(maxWidth: 120, alignment: .leading)
                     .onAppear { isLogoLoaded = true }
             } else {
                 let logoFullURL = buildFullURL(from: logoUrl)
@@ -397,12 +409,12 @@ public struct VOfferBanner: View {
                     placeholder: AnyView(
                         Rectangle()
                             .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                            .frame(height: 16)
+                            .frame(width: 80, height: 16)
                     ),
                     errorView: AnyView(
                         Rectangle()
                             .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                            .frame(height: 16)
+                            .frame(width: 80, height: 16)
                             .overlay(
                                 Image(systemName: "photo")
                                     .font(.system(size: 10))
@@ -414,6 +426,7 @@ public struct VOfferBanner: View {
                 .frame(height: 16)
                 .onAppear { isLogoLoaded = true }
             }
+            Spacer(minLength: 0)
         }
     }
     
@@ -474,12 +487,22 @@ public struct VOfferBanner: View {
                     }
             }
             
-            // Dark overlay for readability (solo cuando imagen está cargada)
+            // Dark overlay for readability (solo cuando imagen está cargada).
+            //
+            // Always BLACK (not `adaptiveColors.textPrimary`, which flips
+            // to light in dark mode and made the overlay washed out).
+            // Matches the hardcoded OfferBannerView line-for-line:
+            //   LinearGradient(colors: [black @ 0.4, black @ 0.2],
+            //                  startPoint: .leading, endPoint: .trailing)
+            // Operator's `overlayOpacity` (default 0.4) controls only the
+            // left-side opacity; the right side fades to half that for
+            // depth.
             if isImageLoaded {
+                let opacityLeft = config.overlayOpacity ?? 0.4
                 LinearGradient(
                     colors: [
-                        adaptiveColors.textPrimary.opacity(config.overlayOpacity ?? 0.4),
-                        adaptiveColors.textPrimary.opacity((config.overlayOpacity ?? 0.4) * 0.5)
+                        Color.black.opacity(opacityLeft),
+                        Color.black.opacity(opacityLeft * 0.5)
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
