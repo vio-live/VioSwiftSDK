@@ -158,12 +158,19 @@ public struct VProductCard: View {
         .vioCardShadow(for: colorScheme)
     }
     
-    /// List Layout - Horizontal card for search results
+    /// List Layout - Horizontal card for inline product slots and
+    /// search results. Height is the natural sum of brand + title +
+    /// description + price (no internal `Spacer()` that pushes price
+    /// to the bottom). Prevents vertical-expansion when placed inside
+    /// a parent that doesn't constrain height — e.g. the
+    /// VProductSpotlight slot in the Home tab. Search-result lists
+    /// already constrain row height via LazyVStack so they're
+    /// unaffected by the natural-height behavior.
     private var listLayout: some View {
-        HStack(spacing: VioSpacing.sm) {
+        HStack(alignment: .center, spacing: VioSpacing.sm) {
             // Product Image (smaller for list)
             productImageView(height: 70, width: 70)
-            
+
             // Product Info
             VStack(alignment: .leading, spacing: VioSpacing.xs) {
                 if showBrand, let brand = product.brand {
@@ -172,25 +179,24 @@ public struct VProductCard: View {
                         .foregroundColor(adaptiveColors.textSecondary)
                         .lineLimit(1)
                 }
-                
+
                 Text(product.title)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(adaptiveColors.textPrimary)
                     .lineLimit(2)
-                
+
                 if showDescription, let description = product.description {
                     Text(description)
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(adaptiveColors.textSecondary)
                         .lineLimit(1)
                 }
-                
-                Spacer()
-                
-                // Price only (quick add removed - products have variations)
+
+                // Price right under the description — natural height,
+                // no internal vertical expansion.
                 priceView
             }
-            
+
             Spacer()
         }
         .padding(VioSpacing.sm)
