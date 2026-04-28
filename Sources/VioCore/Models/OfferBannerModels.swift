@@ -578,10 +578,35 @@ public struct ProductBannerConfig: Codable {
     }
 }
 
+/// One product entry in a multi-sponsor `ProductStoreConfig.products`
+/// list. Each entry carries its own sponsor so the SDK routes the
+/// product fetch through the right per-sponsor commerce key — the
+/// store can showcase products from XXL, Elkjøp, Torshov, etc. all in
+/// the same grid. Sprint 2026-04-28 PM Phase 2.
+public struct ProductStoreEntry: Codable, Equatable {
+    public let productId: String
+    public let sponsorId: Int
+
+    public init(productId: String, sponsorId: Int) {
+        self.productId = productId
+        self.sponsorId = sponsorId
+    }
+}
+
 /// Product Store Config
 public struct ProductStoreConfig: Codable {
     public let mode: String  // "all" or "filtered"
+    /// Legacy single-sponsor list — every productId fetched through
+    /// the placement's `sponsorId` (campaign_components.sponsor_id).
+    /// Kept for back-compat. New rows use `products` (multi-sponsor).
     public let productIds: [String]?
+    /// Multi-sponsor product list. Each entry pairs a productId with
+    /// the sponsor that owns it; the SDK loads each product through
+    /// that sponsor's commerce credentials so a single store can
+    /// surface SKUs from multiple sponsors at once. When set, takes
+    /// priority over `productIds`. Operator builds this via the
+    /// dashboard's MultiSponsorProductPicker.
+    public let products: [ProductStoreEntry]?
     public let displayType: String  // "grid" or "list"
     public let columns: Int
     /// Operator-controllable: free text rendered above the grid.
@@ -596,6 +621,7 @@ public struct ProductStoreConfig: Codable {
     public init(
         mode: String,
         productIds: [String]? = nil,
+        products: [ProductStoreEntry]? = nil,
         displayType: String = "grid",
         columns: Int = 2,
         title: String? = nil,
@@ -603,6 +629,7 @@ public struct ProductStoreConfig: Codable {
     ) {
         self.mode = mode
         self.productIds = productIds
+        self.products = products
         self.displayType = displayType
         self.columns = columns
         self.title = title
@@ -610,13 +637,14 @@ public struct ProductStoreConfig: Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case mode, productIds, displayType, columns, title, showSponsorLogo
+        case mode, productIds, products, displayType, columns, title, showSponsorLogo
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         mode = try c.decode(String.self, forKey: .mode)
         productIds = try c.decodeIfPresent([String].self, forKey: .productIds)
+        products = try c.decodeIfPresent([ProductStoreEntry].self, forKey: .products)
         displayType = try c.decodeIfPresent(String.self, forKey: .displayType) ?? "grid"
         columns = try c.decodeIfPresent(Int.self, forKey: .columns) ?? 2
         title = try c.decodeIfPresent(String.self, forKey: .title)

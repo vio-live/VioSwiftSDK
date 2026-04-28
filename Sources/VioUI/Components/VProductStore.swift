@@ -14,6 +14,11 @@ public struct VProductStore: View {
     private struct CachedConfig {
         let mode: String
         let productIds: [Int]?
+        /// Multi-sponsor entries — when present, takes priority over
+        /// `productIds` and the SDK loads each product through its
+        /// own sponsor's commerce credentials. Each tuple is
+        /// (productIdInt, sponsorId).
+        let products: [(productId: Int, sponsorId: Int)]?
         let displayType: String
         let columns: Int
         let gridItems: [GridItem] // Pre-computed grid layout
@@ -37,6 +42,17 @@ public struct VProductStore: View {
                 self.productIds = nil
             }
 
+            // Multi-sponsor: parse `products[]` into (Int, Int) tuples.
+            // Drop entries where productId isn't a valid Int (defensive).
+            if let entries = config.products, !entries.isEmpty {
+                self.products = entries.compactMap { entry in
+                    guard let pid = Int(entry.productId) else { return nil }
+                    return (productId: pid, sponsorId: entry.sponsorId)
+                }
+            } else {
+                self.products = nil
+            }
+
             // Pre-compute grid layout (expensive operation)
             self.gridItems = Array(repeating: GridItem(.flexible(), spacing: VioSpacing.md), count: config.columns)
 
@@ -45,9 +61,12 @@ public struct VProductStore: View {
             self.title = config.title
             self.showSponsorLogo = config.showSponsorLogo
 
-            // Create unique identifier for this config (detects changes)
+            // Create unique identifier for this config (detects changes).
+            // Includes the multi-sponsor entries so swapping the list
+            // triggers a re-load.
             let productIdsString = config.productIds?.joined(separator: "-") ?? "all"
-            self.configId = "\(config.mode)-\(productIdsString)-\(config.displayType)-\(config.columns)-\(config.title ?? "")-\(config.showSponsorLogo)"
+            let productsString = config.products?.map { "\($0.productId)@\($0.sponsorId)" }.joined(separator: ",") ?? ""
+            self.configId = "\(config.mode)-\(productIdsString)-\(productsString)-\(config.displayType)-\(config.columns)-\(config.title ?? "")-\(config.showSponsorLogo)"
         }
     }
 
@@ -454,20 +473,33 @@ public struct VProductStore: View {
             viewModel.products = []
             return
         }
-        // Multi-sponsor commerce key routing — pass the placement's
-        // sponsor so ProductService picks the right per-sponsor apiKey.
-        // Mirrors VProductCarousel / VProductSpotlight / VProductBanner.
-        let sponsorId = activeComponent?.sponsorId
+        // Two paths:
+        //   1. Multi-sponsor (`config.products[]`) — Sprint 2026-04-28
+        //      PM Phase 2. Each entry has its own sponsorId so the
+        //      store can surface SKUs across sponsors. ViewModel
+        //      iterates and calls loadProduct per item with the
+        //      right sponsor's commerce key.
+        //   2. Legacy single-sponsor (`config.productIds[]` + the
+        //      placement's `sponsorId`) — kept for back-compat with
+        //      rows authored before multi-sponsor shipped.
+        let placementSponsorId = activeComponent?.sponsorId
 
         Task {
-            // Use cached config values (no conversion needed)
-            await viewModel.loadProducts(
-                mode: cachedConfig.mode,
-                productIds: cachedConfig.productIds,
-                currency: VioConfiguration.shared.marketConfiguration.currencyCode,
-                country: VioConfiguration.shared.marketConfiguration.countryCode,
-                sponsorId: sponsorId
-            )
+            if let multiSponsorEntries = cachedConfig.products, !multiSponsorEntries.isEmpty {
+                await viewModel.loadProductsMultiSponsor(
+                    entries: multiSponsorEntries,
+                    currency: VioConfiguration.shared.marketConfiguration.currencyCode,
+                    country: VioConfiguration.shared.marketConfiguration.countryCode
+                )
+            } else {
+                await viewModel.loadProducts(
+                    mode: cachedConfig.mode,
+                    productIds: cachedConfig.productIds,
+                    currency: VioConfiguration.shared.marketConfiguration.currencyCode,
+                    country: VioConfiguration.shared.marketConfiguration.countryCode,
+                    sponsorId: placementSponsorId
+                )
+            }
         }
     }
 }
@@ -486,6 +518,81 @@ class VProductStoreViewModel: ObservableObject {
     /// store disappears instead of showing a stuck skeleton.
     /// Reset on every load attempt.
     @Published var loadFailed: Bool = false
+    /// productId → sponsorId. Populated by the multi-sponsor load
+    /// path so the view layer can show a per-card sponsor badge and
+    /// (future) route cart actions to the right per-sponsor commerce
+    /// key. Empty for legacy single-sponsor loads.
+    @Published var productSponsorMap: [Int: Int] = [:]
+
+    /// Multi-sponsor load path. Iterates the operator-curated list,
+    /// fetches each product through ITS sponsor's commerce key, and
+    /// stamps `sponsorId` on the resulting Product so downstream
+    /// (cart routing, sponsor-logo overlay on the card) knows where
+    /// each SKU came from. Sprint 2026-04-28 PM Phase 2.
+    ///
+    /// Failures: a single product's fetch error (e.g. one sponsor
+    /// offline) is logged and dropped — the rest of the list still
+    /// renders. Only sets loadFailed when the ENTIRE list errors out
+    /// (zero products loaded), so a flaky third-party sponsor
+    /// doesn't tank the whole store.
+    func loadProductsMultiSponsor(
+        entries: [(productId: Int, sponsorId: Int)],
+        currency: String,
+        country: String
+    ) async {
+        guard VioConfiguration.shared.shouldUseSDK else {
+            isMarketUnavailable = true
+            isLoading = false
+            return
+        }
+        guard !isLoading else { return }
+
+        isLoading = true
+        errorMessage = nil
+        isMarketUnavailable = false
+        loadFailed = false
+
+        // Sequential per-product fetches. Each product uses its
+        // own sponsor's commerce key (loadProduct routes via
+        // VioConfiguration.commerce(forSponsorId:)). The visible
+        // grid is correct end-to-end. Cart routing on tap currently
+        // uses the SDK's active commerce client (last loaded
+        // sponsor) — for multi-sponsor stores this is a known
+        // limitation, tracked as a follow-up. The detail overlay
+        // shows the right product regardless.
+        var loaded: [Product] = []
+        productSponsorMap.removeAll(keepingCapacity: true)
+        for entry in entries {
+            do {
+                let p = try await ProductService.shared.loadProduct(
+                    productId: entry.productId,
+                    currency: currency,
+                    country: country,
+                    sponsorId: entry.sponsorId
+                )
+                loaded.append(p)
+                // Side map: productId → sponsorId, used by the view's
+                // tap handler / sponsor-logo overlay on the card.
+                productSponsorMap[p.id] = entry.sponsorId
+            } catch {
+                VioLogger.warning(
+                    "Multi-sponsor store: failed to load productId=\(entry.productId) sponsor=\(entry.sponsorId): \(error.localizedDescription)",
+                    component: "VProductStore"
+                )
+                // Keep iterating — one bad sponsor shouldn't blank the store.
+            }
+        }
+
+        products = loaded
+        if loaded.isEmpty {
+            // Every entry failed — surface as a load failure so
+            // shouldShow short-circuits to EmptyView instead of an
+            // empty grid stuck on "No products available".
+            loadFailed = true
+            errorMessage = "Multi-sponsor store: every product failed to load"
+        }
+        isLoading = false
+    }
 
     func loadProducts(mode: String, productIds: [Int]?, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
