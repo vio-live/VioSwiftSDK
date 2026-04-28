@@ -162,7 +162,17 @@ struct HomeView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                             .padding(.top, TV2Theme.Spacing.lg)
-                            .padding(.bottom, TV2Theme.Spacing.xl)
+
+                            // Multi-sponsor product store. Sprint
+                            // 2026-04-28 PM Phase 2 — operator
+                            // curates products across sponsors via
+                            // the dashboard's MultiSponsorProductPicker.
+                            // Each tap opens VProductDetailOverlay
+                            // (one at a time via SwiftUI @State).
+                            // Renders nothing until bound.
+                            VProductStore(locationId: "home_store")
+                                .padding(.top, TV2Theme.Spacing.lg)
+                                .padding(.bottom, TV2Theme.Spacing.xl)
                         }
                     }
                     

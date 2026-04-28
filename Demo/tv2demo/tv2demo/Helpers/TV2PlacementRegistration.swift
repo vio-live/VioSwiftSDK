@@ -63,6 +63,13 @@ enum TV2PlacementRegistration {
         // PM Phase 2.
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_product_banner", displayName: "Home — Product banner (single product)"))
 
+        // Rendered by HomeView.swift  → VProductStore(locationId: "home_store")
+        // Multi-sponsor product grid (Phase 2). Operator curates
+        // products from any campaign sponsor; tap opens detail
+        // modal (one at a time). Lives at the bottom of the Home
+        // tab as a "shop" section.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_store",         displayName: "Home — Multi-sponsor product store"))
+
         // Rendered by MatchDetailView.swift  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff", displayName: "Match — Pre-kickoff"))
 
