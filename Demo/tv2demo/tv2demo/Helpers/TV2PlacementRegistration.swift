@@ -36,10 +36,14 @@ enum TV2PlacementRegistration {
     ///   4. Tell the operator/admin the slot is available.
     @MainActor
     static func registerAll() {
-        // Rendered by HomeView.swift:97  → VProductCarousel(locationId: "home_top", layout: "compact")
+        // Rendered by HomeView.swift  → VProductCarousel(locationId: "home_top", layout: "compact")
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",          displayName: "Home — Top"))
 
-        // Rendered by MatchDetailView.swift:267  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
+        // Rendered by HomeView.swift  → VProductSpotlight(locationId: "home_spotlight")
+        // Featured product (single-product hero) below the carousel on the Home tab.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_spotlight",    displayName: "Home — Featured product"))
+
+        // Rendered by MatchDetailView.swift  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff", displayName: "Match — Pre-kickoff"))
 
         let registry = VioPlacementRegistry.shared

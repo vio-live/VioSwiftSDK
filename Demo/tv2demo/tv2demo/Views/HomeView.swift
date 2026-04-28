@@ -83,6 +83,14 @@ struct HomeView: View {
                             // label, the active campaign does.
                             VProductCarousel(locationId: "home_top", layout: "compact")
                                 .padding(.top, TV2Theme.Spacing.lg)
+
+                            // Featured product spotlight slot (sits below
+                            // the carousel on the Home tab). Renders only
+                            // when an operator has bound a campaign_component
+                            // to the `home_spotlight` placement in the
+                            // dashboard. Sprint 2026-04-28 PM polish parity.
+                            VProductSpotlight(locationId: "home_spotlight")
+                                .padding(.top, TV2Theme.Spacing.lg)
                             .padding(.bottom, TV2Theme.Spacing.xl)
                         }
                     }
