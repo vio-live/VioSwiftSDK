@@ -425,7 +425,7 @@ public struct ProductBannerConfig: Codable {
     public let ctaText: String
     public let ctaLink: String?
     public let deeplink: String?
-    
+
     // Optional styling properties
     public let titleColor: String?
     public let subtitleColor: String?
@@ -440,7 +440,16 @@ public struct ProductBannerConfig: Codable {
     public let buttonFontSize: Int?
     public let textAlignment: String?  // "left", "center", "right"
     public let contentVerticalAlignment: String?  // "top", "center", "bottom"
-    
+
+    /// Operator-controllable: when true, the banner overlays the
+    /// placement's sponsor logo (resolved by `sponsorId` →
+    /// `VioConfiguration.sponsor(withId:).logoUrl`) on the top-right
+    /// corner of the banner image. Format-agnostic via `VRemoteImage`
+    /// (PNG/JPEG/SVG). Banner already has its own `title` visual, so
+    /// the polish skips the separate "header strip" pattern used by
+    /// Carousel/Spotlight and only exposes this single opt-in.
+    public let showSponsorLogo: Bool
+
     public init(
         productId: String,
         backgroundImageUrl: String,
@@ -461,7 +470,8 @@ public struct ProductBannerConfig: Codable {
         subtitleFontSize: Int? = nil,
         buttonFontSize: Int? = nil,
         textAlignment: String? = nil,
-        contentVerticalAlignment: String? = nil
+        contentVerticalAlignment: String? = nil,
+        showSponsorLogo: Bool = false
     ) {
         self.productId = productId
         self.backgroundImageUrl = backgroundImageUrl
@@ -483,6 +493,41 @@ public struct ProductBannerConfig: Codable {
         self.buttonFontSize = buttonFontSize
         self.textAlignment = textAlignment
         self.contentVerticalAlignment = contentVerticalAlignment
+        self.showSponsorLogo = showSponsorLogo
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case productId, backgroundImageUrl, title, subtitle, ctaText, ctaLink, deeplink
+        case titleColor, subtitleColor, buttonBackgroundColor, buttonTextColor
+        case backgroundColor, overlayOpacity, bannerHeight, bannerHeightRatio
+        case titleFontSize, subtitleFontSize, buttonFontSize
+        case textAlignment, contentVerticalAlignment
+        case showSponsorLogo
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        productId = try c.decode(String.self, forKey: .productId)
+        backgroundImageUrl = try c.decode(String.self, forKey: .backgroundImageUrl)
+        title = try c.decode(String.self, forKey: .title)
+        subtitle = try c.decodeIfPresent(String.self, forKey: .subtitle)
+        ctaText = try c.decode(String.self, forKey: .ctaText)
+        ctaLink = try c.decodeIfPresent(String.self, forKey: .ctaLink)
+        deeplink = try c.decodeIfPresent(String.self, forKey: .deeplink)
+        titleColor = try c.decodeIfPresent(String.self, forKey: .titleColor)
+        subtitleColor = try c.decodeIfPresent(String.self, forKey: .subtitleColor)
+        buttonBackgroundColor = try c.decodeIfPresent(String.self, forKey: .buttonBackgroundColor)
+        buttonTextColor = try c.decodeIfPresent(String.self, forKey: .buttonTextColor)
+        backgroundColor = try c.decodeIfPresent(String.self, forKey: .backgroundColor)
+        overlayOpacity = try c.decodeIfPresent(Double.self, forKey: .overlayOpacity)
+        bannerHeight = try c.decodeIfPresent(Int.self, forKey: .bannerHeight)
+        bannerHeightRatio = try c.decodeIfPresent(Double.self, forKey: .bannerHeightRatio)
+        titleFontSize = try c.decodeIfPresent(Int.self, forKey: .titleFontSize)
+        subtitleFontSize = try c.decodeIfPresent(Int.self, forKey: .subtitleFontSize)
+        buttonFontSize = try c.decodeIfPresent(Int.self, forKey: .buttonFontSize)
+        textAlignment = try c.decodeIfPresent(String.self, forKey: .textAlignment)
+        contentVerticalAlignment = try c.decodeIfPresent(String.self, forKey: .contentVerticalAlignment)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
     }
 }
 
@@ -492,12 +537,43 @@ public struct ProductStoreConfig: Codable {
     public let productIds: [String]?
     public let displayType: String  // "grid" or "list"
     public let columns: Int
-    
-    public init(mode: String, productIds: [String]? = nil, displayType: String = "grid", columns: Int = 2) {
+    /// Operator-controllable: free text rendered above the grid.
+    /// Empty/nil hides the header band entirely (legacy behavior
+    /// preserved for hosts that haven't filled it in).
+    public let title: String?
+    /// When true, resolves `sponsor.logoUrl` (by the placement's
+    /// `sponsorId`) and renders it right-aligned in the header
+    /// alongside `title`. SVG-capable via shared `VRemoteImage`.
+    public let showSponsorLogo: Bool
+
+    public init(
+        mode: String,
+        productIds: [String]? = nil,
+        displayType: String = "grid",
+        columns: Int = 2,
+        title: String? = nil,
+        showSponsorLogo: Bool = false
+    ) {
         self.mode = mode
         self.productIds = productIds
         self.displayType = displayType
         self.columns = columns
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, productIds, displayType, columns, title, showSponsorLogo
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try c.decode(String.self, forKey: .mode)
+        productIds = try c.decodeIfPresent([String].self, forKey: .productIds)
+        displayType = try c.decodeIfPresent(String.self, forKey: .displayType) ?? "grid"
+        columns = try c.decodeIfPresent(Int.self, forKey: .columns) ?? 2
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
     }
 }
 

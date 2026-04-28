@@ -17,68 +17,93 @@ public struct VProductStore: View {
         let displayType: String
         let columns: Int
         let gridItems: [GridItem] // Pre-computed grid layout
+        /// Operator-set header title (above the grid). Empty/nil hides
+        /// the header strip entirely.
+        let title: String?
+        /// Operator opt-in to render the placement's sponsor logo
+        /// right-aligned in the header.
+        let showSponsorLogo: Bool
         let configId: String // Used to detect config changes
-        
+
         init(config: ProductStoreConfig) {
             self.mode = config.mode
             self.displayType = config.displayType
             self.columns = config.columns
-            
+
             // Cache converted product IDs if available (String → Int)
             if let stringIds = config.productIds, !stringIds.isEmpty {
                 self.productIds = stringIds.compactMap { Int($0) }
             } else {
                 self.productIds = nil
             }
-            
+
             // Pre-compute grid layout (expensive operation)
             self.gridItems = Array(repeating: GridItem(.flexible(), spacing: VioSpacing.md), count: config.columns)
-            
+
+            // Header opt-ins (default off; operator turns them on per
+            // placement via the dashboard's customConfig).
+            self.title = config.title
+            self.showSponsorLogo = config.showSponsorLogo
+
             // Create unique identifier for this config (detects changes)
             let productIdsString = config.productIds?.joined(separator: "-") ?? "all"
-            self.configId = "\(config.mode)-\(productIdsString)-\(config.displayType)-\(config.columns)"
+            self.configId = "\(config.mode)-\(productIdsString)-\(config.displayType)-\(config.columns)-\(config.title ?? "")-\(config.showSponsorLogo)"
         }
     }
-    
+
     // MARK: - Properties
-    
+
     /// Optional component ID to identify a specific component
     /// If nil, uses the first matching component from the campaign
     private let componentId: String?
-    
+
+    /// Optional placement slot identifier (e.g. `"home_store"`).
+    /// When provided, resolves the active component via
+    /// `getActiveComponent(type:componentId:locationId:)` so the
+    /// same `product_store` template can power multiple slots in
+    /// one campaign without colliding on the template id.
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    private let locationId: String?
+
     /// Whether to show sponsor badge
     private let showSponsor: Bool
-    
+
     /// Sponsor badge position: "topRight", "topLeft", "bottomRight", "bottomLeft"
     /// Default: "topRight"
     private let sponsorPosition: String
-    
+
     @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var viewModel = VProductStoreViewModel()
-    
+
     // Cache parsed config values - only recalculated when config changes
     @State private var cachedConfig: CachedConfig?
     @State private var currentConfigId: String?
-    
+
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
-    
+
     // MARK: - Initializer
-    
-    public init(componentId: String? = nil, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+
+    public init(
+        componentId: String? = nil,
+        locationId: String? = nil,
+        showSponsor: Bool = false,
+        sponsorPosition: String? = nil
+    ) {
         self.componentId = componentId
+        self.locationId = locationId
         self.showSponsor = showSponsor
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
+
     /// Get active product store component from campaign
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_store", componentId: componentId)
+        campaignManager.getActiveComponent(type: "product_store", componentId: componentId, locationId: locationId)
     }
     
     /// Extract ProductStoreConfig from component
@@ -101,8 +126,8 @@ public struct VProductStore: View {
         }
         
         let productIdsString = config.productIds?.joined(separator: "-") ?? "all"
-        let newConfigId = "\(config.mode)-\(productIdsString)-\(config.displayType)-\(config.columns)"
-        
+        let newConfigId = "\(config.mode)-\(productIdsString)-\(config.displayType)-\(config.columns)-\(config.title ?? "")-\(config.showSponsorLogo)"
+
         // Only recalculate if config actually changed
         if currentConfigId != newConfigId {
             cachedConfig = CachedConfig(config: config)
@@ -225,16 +250,50 @@ public struct VProductStore: View {
     
     // MARK: - Content Views
     
+    /// Operator-controlled header strip (title + sponsor logo).
+    /// Same opt-in pattern as VProductCarousel / VProductSpotlight —
+    /// renders nothing when both `title` is empty and `showSponsorLogo`
+    /// is false, so legacy hosts that haven't filled the new fields
+    /// keep their existing layout untouched.
+    @ViewBuilder
+    private var placementHeader: some View {
+        let title = (cachedConfig?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let showLogo = cachedConfig?.showSponsorLogo == true
+        let sponsorLogoUrl: String? = {
+            guard showLogo, let sponsorId = activeComponent?.sponsorId else { return nil }
+            return VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl
+        }()
+        if !title.isEmpty || sponsorLogoUrl != nil {
+            HStack {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(adaptiveColors.textPrimary)
+                }
+                Spacer()
+                if let url = sponsorLogoUrl {
+                    VRemoteImage(urlString: url, height: 20)
+                }
+            }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.bottom, VioSpacing.sm)
+        }
+    }
+
     private var storeContent: some View {
         let currentLogoUrl = campaignLogoUrl
         let shouldShowBadge = shouldShowSponsorBadge
         let position = sponsorPosition.isEmpty ? "topRight" : sponsorPosition
-        
+
         // Determine if badge should be above or below content
         let isTopPosition = position == "topRight" || position == "topLeft"
         let isRightPosition = position == "topRight" || position == "bottomRight"
-        
+
         return VStack(spacing: 0) {
+            // Operator-controlled header (title + sponsor logo).
+            // Renders nothing when neither opt-in is set.
+            placementHeader
+
             // Badge container above content (if top position)
             if shouldShowBadge, let logoUrl = currentLogoUrl, isTopPosition {
                 sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
@@ -388,14 +447,19 @@ public struct VProductStore: View {
             viewModel.products = []
             return
         }
-        
+        // Multi-sponsor commerce key routing — pass the placement's
+        // sponsor so ProductService picks the right per-sponsor apiKey.
+        // Mirrors VProductCarousel / VProductSpotlight / VProductBanner.
+        let sponsorId = activeComponent?.sponsorId
+
         Task {
             // Use cached config values (no conversion needed)
             await viewModel.loadProducts(
                 mode: cachedConfig.mode,
                 productIds: cachedConfig.productIds,
                 currency: VioConfiguration.shared.marketConfiguration.currencyCode,
-                country: VioConfiguration.shared.marketConfiguration.countryCode
+                country: VioConfiguration.shared.marketConfiguration.countryCode,
+                sponsorId: sponsorId
             )
         }
     }
@@ -411,7 +475,7 @@ class VProductStoreViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
     
-    func loadProducts(mode: String, productIds: [Int]?, currency: String, country: String) async {
+    func loadProducts(mode: String, productIds: [Int]?, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
             isLoading = false
@@ -446,23 +510,27 @@ class VProductStoreViewModel: ObservableObject {
                 idsToUse = nil
             }
             
-            // Load products with determined IDs
+            // Load products with determined IDs. sponsorId routes to
+            // the per-sponsor commerce client (mirrors carousel /
+            // spotlight / banner).
             products = try await ProductService.shared.loadProducts(
                 productIds: idsToUse,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
-            
+
             // Fallback: If filtered mode returned 0 products, try loading all products instead
             if products.isEmpty && mode == "filtered" && hasValidIds {
                 VioLogger.warning("No products found for filtered IDs: \(productIds ?? []) - falling back to all products", component: "VProductStore")
-                
+
                 // Retry with all products (no productIds filter)
                 let allProducts: [Int]? = nil
                 products = try await ProductService.shared.loadProducts(
                     productIds: allProducts,
                     currency: currency,
-                    country: country
+                    country: country,
+                    sponsorId: sponsorId
                 )
             }
             
