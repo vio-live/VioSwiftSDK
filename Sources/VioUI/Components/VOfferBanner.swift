@@ -6,10 +6,40 @@ import VioDesignSystem
 import UIKit
 #endif
 
-/// Dynamic Offer Banner component that receives configuration from backend
+/// Dynamic Offer Banner component that receives configuration from backend.
+///
+/// Two ways to mount:
+///
+/// **Host-driven** — caller passes the config explicitly (used by hosts
+/// that resolve the banner from their own state, e.g. the demo's
+/// `componentManager.activeBanner` legacy path):
+/// ```swift
+/// VOfferBanner(config: bannerConfig)
+/// ```
+///
+/// **Campaign-driven (Sprint 2026-04-28 PM Phase 2)** — caller provides
+/// only the placement slot; the SDK resolves the active component via
+/// `CampaignManager.getActiveComponent(type:"offer_banner", locationId:)`
+/// and renders nothing when no operator binding exists. Live updates
+/// (pause/resume/config edit/sponsor swap) flow through the same
+/// placement_* WS events the rest of the placement system uses.
+/// ```swift
+/// VOfferBanner(locationId: "home_offer", onNavigateToStore: { … })
+/// ```
 public struct VOfferBanner: View {
-    let config: OfferBannerConfig
-    
+    /// Host-passed config (mode 1). Nil when in campaign-driven mode.
+    private let storedConfig: OfferBannerConfig?
+    /// Slot lookup keys (mode 2). Both nil when in host-driven mode.
+    private let resolvedComponentId: String?
+    private let resolvedLocationId: String?
+
+    /// Observed for campaign-driven mode — when activeComponents
+    /// changes (pause / resume / customConfig edit / sponsor swap)
+    /// the body re-evaluates and `effectiveConfig` picks up the new
+    /// shape. Harmless overhead in host-driven mode (no re-renders
+    /// triggered because effectiveConfig still returns storedConfig).
+    @ObservedObject private var campaignManager = CampaignManager.shared
+
     // Optional parameters to override config values
     let customDeeplink: String?
     let customHeight: CGFloat?
@@ -18,23 +48,51 @@ public struct VOfferBanner: View {
     let customBadgeFontSize: CGFloat?
     let customButtonFontSize: CGFloat?
     let onNavigateToStore: (() -> Void)? // Callback to navigate to VProductStore
-    
+
     @State private var timeRemaining: DateComponents?
     @State private var timer: Timer?
     @State private var isImageLoaded = false
     @State private var isLogoLoaded = false
     @State private var countdownEndDate: Date? // Store parsed date
     @State private var timerId: UUID = UUID() // Unique identifier for current timer
-    
+
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
-    
+
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
-    /// Initialize with full config (original method)
+
+    /// Resolved config — explicit one wins, then falls back to a
+    /// CampaignManager lookup by `(type, componentId, locationId)`.
+    /// Returns nil when no operator binding matches in campaign-driven
+    /// mode. The body uses this to short-circuit to EmptyView so the
+    /// helpers below can keep referencing `config` as a non-optional.
+    private var effectiveConfig: OfferBannerConfig? {
+        if let stored = storedConfig { return stored }
+        guard let component = campaignManager.getActiveComponent(
+            type: "offer_banner",
+            componentId: resolvedComponentId,
+            locationId: resolvedLocationId
+        ),
+              case .offerBanner(let cfg) = component.config else {
+            return nil
+        }
+        return cfg
+    }
+
+    /// Computed `config` for the helpers below. Force-unwraps
+    /// `effectiveConfig` — only safe because the body's outer Group
+    /// early-outs to EmptyView when effectiveConfig is nil, meaning
+    /// none of the helpers run while config could be missing.
+    private var config: OfferBannerConfig {
+        effectiveConfig ?? OfferBannerConfig.placeholder
+    }
+
+    /// Initialize with full config (original method) — host-driven mode.
     public init(config: OfferBannerConfig) {
-        self.config = config
+        self.storedConfig = config
+        self.resolvedComponentId = nil
+        self.resolvedLocationId = nil
         self.customDeeplink = nil
         self.customHeight = nil
         self.customTitleFontSize = nil
@@ -43,8 +101,8 @@ public struct VOfferBanner: View {
         self.customButtonFontSize = nil
         self.onNavigateToStore = nil
     }
-    
-    /// Initialize with config and optional custom parameters
+
+    /// Initialize with config and optional custom parameters — host-driven mode.
     public init(
         config: OfferBannerConfig,
         deeplink: String? = nil,
@@ -55,7 +113,9 @@ public struct VOfferBanner: View {
         buttonFontSize: CGFloat? = nil,
         onNavigateToStore: (() -> Void)? = nil
     ) {
-        self.config = config
+        self.storedConfig = config
+        self.resolvedComponentId = nil
+        self.resolvedLocationId = nil
         self.customDeeplink = deeplink
         self.customHeight = height
         self.customTitleFontSize = titleFontSize
@@ -64,8 +124,48 @@ public struct VOfferBanner: View {
         self.customButtonFontSize = buttonFontSize
         self.onNavigateToStore = onNavigateToStore
     }
+
+    /// Campaign-driven init — resolve the active offer_banner
+    /// component from CampaignManager via `(componentId, locationId)`.
+    /// Renders nothing until the operator binds a campaign_component
+    /// to the slot. Sprint 2026-04-28 PM Phase 2.
+    public init(
+        componentId: String? = nil,
+        locationId: String? = nil,
+        height: CGFloat? = nil,
+        onNavigateToStore: (() -> Void)? = nil
+    ) {
+        self.storedConfig = nil
+        self.resolvedComponentId = componentId
+        self.resolvedLocationId = locationId
+        self.customDeeplink = nil
+        self.customHeight = height
+        self.customTitleFontSize = nil
+        self.customSubtitleFontSize = nil
+        self.customBadgeFontSize = nil
+        self.customButtonFontSize = nil
+        self.onNavigateToStore = onNavigateToStore
+    }
     
     public var body: some View {
+        // Campaign-driven mode renders nothing until the operator binds
+        // an offer_banner component to the requested slot. Host-driven
+        // mode never hits this branch because storedConfig is non-nil.
+        Group {
+            if effectiveConfig != nil {
+                bannerContent
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    /// The actual banner content — extracted so the outer body can
+    /// short-circuit to EmptyView when no config resolves. All helpers
+    /// reference `self.config` (computed) which falls back to a safe
+    /// placeholder when nil; that fallback never actually renders
+    /// because this view isn't constructed in the nil case.
+    private var bannerContent: some View {
         ZStack {
             // Background layer - debe estar primero y ocupar todo el espacio
             backgroundLayer

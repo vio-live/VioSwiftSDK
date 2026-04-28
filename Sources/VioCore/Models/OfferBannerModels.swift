@@ -77,7 +77,7 @@ public struct OfferBannerConfig: Codable, Equatable {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(logoUrl, forKey: .logoUrl)
         try container.encode(title, forKey: .title)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
@@ -92,6 +92,28 @@ public struct OfferBannerConfig: Codable, Equatable {
         try container.encodeIfPresent(deeplinkUrl, forKey: .deeplinkUrl)
         try container.encodeIfPresent(deeplinkAction, forKey: .deeplinkAction)
     }
+
+    /// Sentinel used by `VOfferBanner.config` (computed) when the
+    /// body's outer Group has already short-circuited to EmptyView —
+    /// the helpers technically reference `config` but the view itself
+    /// isn't being rendered, so the placeholder values never reach the
+    /// screen. Kept as a single static so the same allocation is
+    /// reused on every read.
+    public static let placeholder = OfferBannerConfig(
+        logoUrl: "",
+        title: "",
+        subtitle: nil,
+        backgroundImageUrl: nil,
+        backgroundColor: nil,
+        countdownEndDate: "",
+        discountBadgeText: "",
+        ctaText: "",
+        ctaLink: nil,
+        overlayOpacity: nil,
+        buttonColor: nil,
+        deeplinkUrl: nil,
+        deeplinkAction: nil
+    )
 }
 
 /// Component Response Models
