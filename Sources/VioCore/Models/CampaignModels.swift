@@ -694,6 +694,16 @@ public struct Component: Codable, Identifiable {
     /// `campaign_components.sponsor_id`. Nil for templates / WS events that
     /// haven't been multi-sponsor-migrated yet → falls back to primary.
     public let sponsorId: Int?
+    /// `campaign_components.id` (numeric row PK) — the unique identifier
+    /// for live updates. The `id` field above is the **template** uuid
+    /// for backward-compat with `getActiveComponent(componentId:)`, but
+    /// the WS placement_* events key off `campaignComponentId` because
+    /// two rows can share a template across different placements (e.g.
+    /// the same product_carousel template in `home_top` and
+    /// `match_pre_kickoff` slots). Sourced from the GET response field
+    /// of the same name and from the wire payload of every placement_*
+    /// event. Nil only for legacy code paths that pre-date 2026-04-28.
+    public let campaignComponentId: Int?
     public let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware components
 
     public init(
@@ -704,6 +714,7 @@ public struct Component: Codable, Identifiable {
         status: String? = nil,
         locationId: String? = nil,
         sponsorId: Int? = nil,
+        campaignComponentId: Int? = nil,
         broadcastContext: BroadcastContext? = nil
     ) {
         self.id = id
@@ -713,6 +724,7 @@ public struct Component: Codable, Identifiable {
         self.status = status
         self.locationId = locationId
         self.sponsorId = sponsorId
+        self.campaignComponentId = campaignComponentId
         self.broadcastContext = broadcastContext
     }
     
@@ -728,7 +740,7 @@ public struct Component: Codable, Identifiable {
     init(from response: ComponentResponse) throws {
         // Use componentId as the id (it's the template ID)
         self.id = response.componentId
-        
+
         // Get type and name from nested component, or use defaults
         guard let componentData = response.component else {
             throw DecodingError.keyNotFound(
@@ -736,11 +748,11 @@ public struct Component: Codable, Identifiable {
                 DecodingError.Context(codingPath: [], debugDescription: "Component data is missing")
             )
         }
-        
+
         self.type = componentData.type
         self.name = componentData.name
         self.status = response.status
-        
+
         // Use customConfig if available, otherwise use component.config
         let configToUse: [String: AnyCodable]
         if let customConfig = response.customConfig, !customConfig.isEmpty {
@@ -748,18 +760,21 @@ public struct Component: Codable, Identifiable {
         } else {
             configToUse = componentData.config
         }
-        
+
         // Convert [String: AnyCodable] to JSON Data and decode as ComponentConfig
         let jsonData = try JSONSerialization.data(withJSONObject: configToUse.mapValues { $0.value })
         self.config = try JSONDecoder().decode(ComponentConfig.self, from: jsonData)
-        
+
         // Decode broadcastContext from response if available
         self.broadcastContext = response.broadcastContext
         self.locationId = nil
         self.sponsorId = nil
+        // Legacy v1 path doesn't surface campaignComponentId — `response.id`
+        // is the row PK, capture it.
+        self.campaignComponentId = response.id
     }
-    
-    /// Decode from JSON (for WebSocket events)
+
+    /// Decode from JSON (for WebSocket events + v2 GET response)
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -770,6 +785,7 @@ public struct Component: Codable, Identifiable {
         status = try container.decodeIfPresent(String.self, forKey: .status)
         locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
         sponsorId = try container.decodeIfPresent(Int.self, forKey: .sponsorId)
+        campaignComponentId = try container.decodeIfPresent(Int.self, forKey: .campaignComponentId)
         // Try broadcastContext first, fallback to matchContext for backward compatibility
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
             self.broadcastContext = broadcastContext
@@ -777,25 +793,29 @@ public struct Component: Codable, Identifiable {
             self.broadcastContext = try container.decodeIfPresent(BroadcastContext.self, forKey: .matchContext)
         }
     }
-    
+
     /// Encode to JSON (for WebSocket events)
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(id, forKey: .id)
         try container.encode(type, forKey: .type)
         try container.encode(name, forKey: .name)
         try container.encode(config, forKey: .config)
         try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(locationId, forKey: .locationId)
+        try container.encodeIfPresent(sponsorId, forKey: .sponsorId)
+        try container.encodeIfPresent(campaignComponentId, forKey: .campaignComponentId)
         try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case id
         case type
         case name
         case locationId
         case sponsorId
+        case campaignComponentId
         case config
         case status
         case broadcastContext

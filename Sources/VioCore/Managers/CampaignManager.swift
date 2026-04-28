@@ -1703,7 +1703,6 @@ public class CampaignManager: ObservableObject {
 
     private func handlePlacementStatusChanged(_ event: PlacementStatusChangedEvent) {
         let rowId = event.campaignComponentId
-        let idStr = String(rowId)
 
         guard acceptPlacementEventTimestamp(event.serverTimestamp, forCampaignComponentId: rowId) else { return }
 
@@ -1714,8 +1713,12 @@ public class CampaignManager: ObservableObject {
             return
         }
 
+        // Match on `campaignComponentId` field — the GET response field
+        // by the same name. The Swift `id` field is the template uuid,
+        // which can collide across slots; campaignComponentId is the
+        // unique row PK and the only reliable lookup key.
         if event.status == "active" {
-            if let index = activeComponents.firstIndex(where: { $0.id == idStr }) {
+            if let index = activeComponents.firstIndex(where: { $0.campaignComponentId == rowId }) {
                 // Already in cache (was active before, status flipped through some
                 // race). Promote status field; everything else stays.
                 let existing = activeComponents[index]
@@ -1727,6 +1730,7 @@ public class CampaignManager: ObservableObject {
                     status: "active",
                     locationId: existing.locationId,
                     sponsorId: existing.sponsorId,
+                    campaignComponentId: existing.campaignComponentId,
                     broadcastContext: existing.broadcastContext
                 )
                 activeComponents[index] = promoted
@@ -1745,7 +1749,9 @@ public class CampaignManager: ObservableObject {
             // row from activeComponents. The component disappears from
             // SwiftUI views with no animation — matches the "hard cut"
             // UX agreed during planning.
-            activeComponents.removeAll { $0.id == idStr }
+            let before = activeComponents.count
+            activeComponents.removeAll { $0.campaignComponentId == rowId }
+            VioLogger.success("Paused cc=\(rowId) (\(before) → \(activeComponents.count) active components)", component: "CampaignManager")
             CacheManager.shared.saveComponents(activeComponents)
             ComponentManager.shared.refreshActiveBannerFromCampaignManager()
         }
@@ -1753,11 +1759,10 @@ public class CampaignManager: ObservableObject {
 
     private func handlePlacementConfigUpdated(_ event: PlacementConfigUpdatedEvent) {
         let rowId = event.campaignComponentId
-        let idStr = String(rowId)
 
         guard acceptPlacementEventTimestamp(event.serverTimestamp, forCampaignComponentId: rowId) else { return }
 
-        guard let index = activeComponents.firstIndex(where: { $0.id == idStr }) else {
+        guard let index = activeComponents.firstIndex(where: { $0.campaignComponentId == rowId }) else {
             // Operator edited a paused row. Backend filters that case
             // (Phase 3 emits only when status='active'), so this
             // branch implies the SDK's local state drifted — silent
@@ -1781,6 +1786,7 @@ public class CampaignManager: ObservableObject {
             status: existing.status,
             locationId: existing.locationId,
             sponsorId: existing.sponsorId,
+            campaignComponentId: existing.campaignComponentId,
             broadcastContext: existing.broadcastContext
         )
         activeComponents[index] = patched
@@ -1802,15 +1808,12 @@ public class CampaignManager: ObservableObject {
             return
         }
 
-        let fromIdStr = String(event.fromCampaignComponentId)
-        let toIdStr = String(event.toCampaignComponentId)
-
         // Find the FROM component to inherit type/name/locationId — those
         // don't change across a sponsor rotation (same placement template,
         // same slot). If the FROM isn't in cache, fall back to a silent
         // fetch so we don't end up with an orphaned activeComponents entry
         // that's missing rendering metadata.
-        guard let fromIndex = activeComponents.firstIndex(where: { $0.id == fromIdStr }) else {
+        guard let fromIndex = activeComponents.firstIndex(where: { $0.campaignComponentId == event.fromCampaignComponentId }) else {
             VioLogger.debug("placement_activation_swapped from unknown cc=\(event.fromCampaignComponentId) — triggering silent re-fetch", component: "CampaignManager")
             Task { await self.fetchAndApplyCampaignComponentsIfPossible() }
             return
@@ -1819,16 +1822,19 @@ public class CampaignManager: ObservableObject {
 
         // Build the new Component from the event's `newComponent` payload,
         // inheriting type/name/locationId from the FROM since they're
-        // immutable across the swap (same app_placement).
+        // immutable across the swap (same app_placement). Keep the
+        // FROM's `id` (template uuid) too — same template across the
+        // swap — so any code that looks up by template id keeps working.
         let newConfig = decodeComponentConfig(event.newComponent.customConfig) ?? fromComponent.config
         let newComponent = Component(
-            id: toIdStr,
+            id: fromComponent.id,
             type: fromComponent.type,
             name: fromComponent.name,
             config: newConfig,
             status: event.newComponent.status,
             locationId: fromComponent.locationId,
             sponsorId: event.newComponent.sponsorId ?? event.toSponsorId,
+            campaignComponentId: event.toCampaignComponentId,
             broadcastContext: fromComponent.broadcastContext
         )
 
