@@ -20,8 +20,24 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
     public var onCampaignEnded: ((CampaignEndedEvent) -> Void)?
     public var onCampaignPaused: ((CampaignPausedEvent) -> Void)?
     public var onCampaignResumed: ((CampaignResumedEvent) -> Void)?
+    /// Placement live-update callbacks (Sprint 2026-04-28 PM).
+    /// Wire types `placement_status_changed` / `placement_config_updated`
+    /// / `placement_activation_swapped` are emitted by the outbox worker
+    /// and arrive only when the host app is subscribed to the
+    /// `placements` module.
+    public var onPlacementStatusChanged: ((PlacementStatusChangedEvent) -> Void)?
+    public var onPlacementConfigUpdated: ((PlacementConfigUpdatedEvent) -> Void)?
+    public var onPlacementActivationSwapped: ((PlacementActivationSwappedEvent) -> Void)?
+
+    /// Legacy callbacks for the pre-Sprint-2026-04-28 wire types
+    /// (`component_status_changed` / `component_config_updated`). The
+    /// backend no longer emits these names — kept here only so any
+    /// external integration that bound to them keeps compiling.
+    @available(*, deprecated, message: "Use onPlacementStatusChanged. Backend emits placement_status_changed (v2026-04-28).")
     public var onComponentStatusChanged: ((ComponentStatusChangedEvent) -> Void)?
+    @available(*, deprecated, message: "Use onPlacementConfigUpdated. Backend emits placement_config_updated (v2026-04-28).")
     public var onComponentConfigUpdated: ((ComponentConfigUpdatedEvent) -> Void)?
+
     public var onConnectionStatusChanged: ((Bool) -> Void)?
     /// Called when backend triggers lineup display. Carries the video timestamp and optional broadcastId.
     public var onLineupShow: ((LineupShowEvent) -> Void)?
@@ -222,15 +238,31 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
                 VioLogger.success("Decoded campaign_resumed event", component: "CampaignWebSocket")
                 onCampaignResumed?(event)
                 
+            case "placement_status_changed":
+                let event = try JSONDecoder().decode(PlacementStatusChangedEvent.self, from: data)
+                VioLogger.success("Decoded placement_status_changed event (cc=\(event.campaignComponentId), status=\(event.status))", component: "CampaignWebSocket")
+                onPlacementStatusChanged?(event)
+
+            case "placement_config_updated":
+                let event = try JSONDecoder().decode(PlacementConfigUpdatedEvent.self, from: data)
+                VioLogger.success("Decoded placement_config_updated event (cc=\(event.campaignComponentId), productIdsChanged=\(event.productIdsChanged))", component: "CampaignWebSocket")
+                onPlacementConfigUpdated?(event)
+
+            case "placement_activation_swapped":
+                let event = try JSONDecoder().decode(PlacementActivationSwappedEvent.self, from: data)
+                VioLogger.success("Decoded placement_activation_swapped event (\(event.fromCampaignComponentId) → \(event.toCampaignComponentId))", component: "CampaignWebSocket")
+                onPlacementActivationSwapped?(event)
+
+            // Legacy wire types — backend v2026-04-28 stopped emitting
+            // these. Logged so an older backend version is detectable
+            // (and users know to upgrade), but no callbacks fire — the
+            // legacy on*(callback) properties below are kept only for
+            // source-compat with external code that bound to them.
             case "component_status_changed":
-                let event = try JSONDecoder().decode(ComponentStatusChangedEvent.self, from: data)
-                VioLogger.success("Decoded component_status_changed event", component: "CampaignWebSocket")
-                onComponentStatusChanged?(event)
-                
+                VioLogger.warning("Received legacy component_status_changed event — backend should emit placement_status_changed (v2026-04-28+)", component: "CampaignWebSocket")
+
             case "component_config_updated":
-                let event = try JSONDecoder().decode(ComponentConfigUpdatedEvent.self, from: data)
-                VioLogger.success("Decoded component_config_updated event", component: "CampaignWebSocket")
-                onComponentConfigUpdated?(event)
+                VioLogger.warning("Received legacy component_config_updated event — backend should emit placement_config_updated (v2026-04-28+)", component: "CampaignWebSocket")
                 
             case "config:updated":
                 // Handle config update event for dynamic configuration
@@ -296,6 +328,39 @@ public class CampaignWebSocketManager: NSObject, ObservableObject {
         }
     }
     
+    /// Sends `{ "type": "subscribe", "modules": [...] }` to declare
+    /// which event buckets this socket wants to receive. Sockets that
+    /// skip this stay on the legacy firehose path; sending it tells the
+    /// server to filter out everything outside the declared modules.
+    ///
+    /// Sprint 2026-04-28 PM (Phase 4). Modules come from
+    /// `VioConfiguration.shared.enabledModules` so the host app
+    /// controls subscriptions via standard configuration calls.
+    private func sendSubscribeIfNeeded() async {
+        guard isConnected, let task = webSocketTask else {
+            VioLogger.debug("sendSubscribe skipped — socket not connected", component: "CampaignWebSocket")
+            return
+        }
+        let modules = VioConfiguration.shared.enabledModules.map { $0.rawValue }.sorted()
+        guard !modules.isEmpty else {
+            VioLogger.debug("sendSubscribe skipped — enabledModules is empty", component: "CampaignWebSocket")
+            return
+        }
+        let payload: [String: Any] = ["type": "subscribe", "modules": modules]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let text = String(data: data, encoding: .utf8) else {
+            VioLogger.error("Failed to encode subscribe payload", component: "CampaignWebSocket")
+            return
+        }
+        do {
+            try await task.send(.string(text))
+            print("🎯 [CampaignWebSocket] subscribe → enviado modules=\(modules)")
+            VioLogger.debug("Sent subscribe modules=\(modules)", component: "CampaignWebSocket")
+        } catch {
+            VioLogger.error("Failed to send subscribe: \(error)", component: "CampaignWebSocket")
+        }
+    }
+
     /// Sends `{ "type": "identify", "userId": "..." }` to the backend if `userId` is set.
     /// Registers this WS connection in the server's `wsUserMap` for targeted notifications.
     private func sendIdentifyIfNeeded() async {
@@ -382,11 +447,18 @@ extension CampaignWebSocketManager: URLSessionWebSocketDelegate {
             
             // Now send identify — receive() is already active
             await self.sendIdentifyIfNeeded()
-            
-            // If identify failed, isConnected was set to false — schedule reconnect
-            // (listenForMessages will also exit since isConnected=false)
+
+            // Then declare module subscriptions so the server starts
+            // filtering events for this socket (placements / engagement
+            // / cart_intent / broadcast — controlled by
+            // VioConfiguration.shared.enabledModules).
+            await self.sendSubscribeIfNeeded()
+
+            // If identify or subscribe failed, isConnected was set to
+            // false — schedule reconnect (listenForMessages will also
+            // exit since isConnected=false)
             if !self.isConnected {
-                VioLogger.debug("identify failed post-open — scheduling reconnect", component: "CampaignWebSocket")
+                VioLogger.debug("identify/subscribe failed post-open — scheduling reconnect", component: "CampaignWebSocket")
                 await self.attemptReconnect()
             }
         }

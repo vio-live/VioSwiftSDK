@@ -1044,6 +1044,86 @@ public struct ComponentConfigUpdatedEvent: Codable {
 
 
 
+// MARK: - Placement Events (live WS — Sprint 2026-04-28 PM)
+//
+// These three event models match the wire payload shape emitted by the
+// outbox worker (server/events/worker.ts) — flat fields under the
+// envelope, no `data` wrapper. They replace the legacy
+// `ComponentStatusChangedEvent` / `ComponentConfigUpdatedEvent` shapes
+// for placement-scoped events; the legacy types are kept around as
+// dead types for any inert code that still references them but no
+// backend handler emits the legacy wire names anymore (Phase 3 of the
+// live-updates sprint).
+
+/// Operator paused or resumed a placement binding.
+///
+/// Hard cut on the SDK side — no animation. `inactive` makes the
+/// component disappear; `active` brings it back. Visibility is the only
+/// thing that changes; config + products are unchanged.
+public struct PlacementStatusChangedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let campaignComponentId: Int
+    /// Mirrors `campaign_components.status` — `'active' | 'inactive'`.
+    public let status: String
+}
+
+/// Operator changed customConfig (productIds, title, layout, autoPlay,
+/// interval, showSponsorLogo, etc.). The SDK applies the new config in
+/// place. If `productIdsChanged == true`, the carousel/banner shows a
+/// brief skeleton while reloading the catalog; otherwise the swap is
+/// silent.
+public struct PlacementConfigUpdatedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let campaignComponentId: Int
+    /// New customConfig blob (already merged with template defaults
+    /// server-side; the SDK can decode straight into `ComponentConfig`).
+    public let customConfig: [String: AnyCodable]?
+    /// Hint: did the productIds array (order or contents) change? When
+    /// true, the SDK refreshes the catalog (skeleton flash); when false
+    /// it patches in place (no flicker for title/layout-only edits).
+    public let productIdsChanged: Bool
+}
+
+/// Multi-sponsor rotation: within a single (campaignId, appPlacementId),
+/// the active campaign_components row swapped from A → B atomically at
+/// the DB layer. One event, two component IDs so the SDK can replace
+/// the active component cleanly without an intermediate "no active row"
+/// state.
+public struct PlacementActivationSwappedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let fromCampaignComponentId: Int
+    public let toCampaignComponentId: Int
+    public let fromSponsorId: Int?
+    public let toSponsorId: Int?
+    /// Full new component shape so the SDK can render without a
+    /// follow-up GET. Mirrors `campaign_components` row + linked sponsor.
+    public let newComponent: NewComponentData
+
+    public struct NewComponentData: Codable {
+        public let id: Int
+        /// Template type id (e.g. uuid of the canonical product_carousel
+        /// template). May be null when the SDK can resolve the type
+        /// from its cached `app_placements` table — the activation
+        /// payload is intentionally light to keep the wire small.
+        public let componentTypeId: String?
+        public let sponsorId: Int?
+        public let customConfig: [String: AnyCodable]?
+        public let status: String
+    }
+}
+
 // MARK: - Cart Intent (WebSocket + push — canonical `vio_payload` or legacy flat)
 
 /// Parsing errors for ``CartIntentEvent/parse(jsonData:)``.

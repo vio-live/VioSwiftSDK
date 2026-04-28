@@ -86,6 +86,39 @@ public class VioConfiguration: ObservableObject {
         sponsor(withId: id)?.commerce
     }
 
+    // MARK: - Module subscriptions (live WS events)
+
+    /// SDK feature modules whose live WS events the host app wants to
+    /// receive. Sent to the server via `{type:"subscribe", modules:[…]}`
+    /// right after `identify`. The server filters every emit by this
+    /// set so disabled modules consume neither bandwidth nor CPU.
+    ///
+    /// Default: `.placements` + `.cartIntent` (the two modules in
+    /// production today). Host apps can flip individual modules on/off
+    /// via `enableModule(_:)` / `disableModule(_:)`. Re-subscribes
+    /// happen automatically on the next WS connect; live connections
+    /// are not currently re-subscribed (Phase 4 trade-off — call
+    /// `CampaignManager.shared.reconnectWebSocket()` to force).
+    ///
+    /// Sprint 2026-04-28 PM. See `Sources/VioCore/Models/VioModule.swift`.
+    @Published public private(set) var enabledModules: Set<VioModule> = [.placements, .cartIntent]
+
+    /// Add a module to the subscription set. Idempotent.
+    public func enableModule(_ module: VioModule) {
+        guard !enabledModules.contains(module) else { return }
+        enabledModules.insert(module)
+    }
+
+    /// Remove a module from the subscription set. Idempotent.
+    public func disableModule(_ module: VioModule) {
+        enabledModules.remove(module)
+    }
+
+    /// Replace the entire subscription set in one call.
+    public func setEnabledModules(_ modules: Set<VioModule>) {
+        enabledModules = modules
+    }
+
     @Published public private(set) var isConfigured: Bool = false
     @Published public private(set) var isMarketAvailable: Bool = true  // If false, SDK should not be used
     @Published public private(set) var userCountryCode: String? = nil  // User's country code if provided

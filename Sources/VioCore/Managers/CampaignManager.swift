@@ -53,6 +53,24 @@ public class CampaignManager: ObservableObject {
     private var discoverCampaignsTaskApiKey: String?
     private var lastSuccessfulDiscoveryBroadcastId: String?
     private var lastSuccessfulDiscoveryApiKey: String?
+
+    // MARK: - Live placement events (Sprint 2026-04-28 PM)
+
+    /// Latest `serverTimestamp` we've applied per campaign_components row
+    /// id. Used to discard out-of-order placement events: if an event's
+    /// `serverTimestamp` is older than what we've already applied for
+    /// the same target, it's a stale retry from the worker (e.g. after
+    /// a transient broadcast failure that was retried by the outbox).
+    /// Reset to "now" on WS reconnect since the silent re-fetch
+    /// reseeds activeComponents from `GET /v2/mobile/campaigns/:id/components`.
+    private var lastPlacementEventTimestamps: [Int: Date] = [:]
+
+    /// Tracks whether the WS has ever opened in this CampaignManager
+    /// lifetime. Used to differentiate the initial `onConnectionStatusChanged(true)`
+    /// from a subsequent reconnect — the latter triggers a silent
+    /// `fetchAndApplyCampaignComponentsIfPossible()` so we reconcile
+    /// any state that drifted while we were offline.
+    private var hasEverConnectedWebSocket: Bool = false
     
     // Campaign endpoints from configuration
     private var campaignWebSocketBaseURL: String {
@@ -1226,25 +1244,61 @@ public class CampaignManager: ObservableObject {
             }
         }
         
-        webSocketManager?.onComponentStatusChanged = { [weak self] event in
+        // Placement live-update bindings (Sprint 2026-04-28 PM).
+        // These fire when the operator pauses, edits or rotates a
+        // placement in the dashboard — backend wraps the change in a
+        // db transaction with an outbox INSERT, and the worker ships
+        // the event here within ~500ms.
+        webSocketManager?.onPlacementStatusChanged = { [weak self] event in
             Task { @MainActor in
-                self?.handleComponentStatusChanged(event)
+                self?.handlePlacementStatusChanged(event)
             }
         }
-        
-        webSocketManager?.onComponentConfigUpdated = { [weak self] event in
+
+        webSocketManager?.onPlacementConfigUpdated = { [weak self] event in
             Task { @MainActor in
-                self?.handleComponentConfigUpdated(event)
+                self?.handlePlacementConfigUpdated(event)
             }
         }
-        
+
+        webSocketManager?.onPlacementActivationSwapped = { [weak self] event in
+            Task { @MainActor in
+                self?.handlePlacementActivationSwapped(event)
+            }
+        }
+
+        // Legacy bindings (onComponentStatusChanged / onComponentConfigUpdated)
+        // intentionally not wired — backend v2026-04-28 stopped emitting
+        // those wire types in favor of placement_*. The deprecated
+        // properties on CampaignWebSocketManager remain as source-compat
+        // shims for external integrations only; CampaignManager itself
+        // routes everything through the new placement handlers above.
+
         webSocketManager?.onConnectionStatusChanged = { [weak self] connected in
             Task { @MainActor in
-                self?.isConnected = connected
+                guard let self = self else { return }
+                self.isConnected = connected
                 if connected {
                     ComponentManager.shared.refreshActiveBannerFromCampaignManager()
+
+                    // Reconnect detection: if we'd already been online once
+                    // in this session and the connection just came back,
+                    // do a silent re-fetch of the components so we
+                    // reconcile any state changes the operator made
+                    // while we were offline. The user sees no flicker —
+                    // it's a background reconciliation.
+                    if self.hasEverConnectedWebSocket {
+                        VioLogger.debug("WS reconnected — silently re-fetching campaign components", component: "CampaignManager")
+                        // Reset sequencing — the GET response is the
+                        // new ground truth, and we don't want stale
+                        // outbox events arriving after to be discarded
+                        // because their timestamps look "old".
+                        self.lastPlacementEventTimestamps.removeAll()
+                        await self.fetchAndApplyCampaignComponentsIfPossible()
+                    }
+                    self.hasEverConnectedWebSocket = true
                 }
-                
+
                 // According to backend behavior:
                 // - If campaign is Ended: Backend sends campaign_ended immediately when connection opens
                 // - If campaign is Upcoming: No event sent, waits for campaign_started
@@ -1582,6 +1636,213 @@ public class CampaignManager: ObservableObject {
         }
     }
     
+    // MARK: - Placement live-update handlers (Sprint 2026-04-28 PM)
+    //
+    // These three replace the legacy `handleComponent*` methods above
+    // for the new wire types (`placement_*`). The legacy methods are
+    // kept as inert callbacks since the backend no longer emits the
+    // old wire names — kept only to avoid breaking external integrations
+    // that bound directly to the old callback names.
+    //
+    // Common pattern across the three:
+    //   1. Sequencing check (`serverTimestamp` vs `lastPlacementEventTimestamps`)
+    //      — discard out-of-order retries from the outbox worker.
+    //   2. Business-rule guards (campaign upcoming/ended/paused).
+    //   3. Mutate `activeComponents` in place (SwiftUI auto-renders).
+    //   4. Persist via `CacheManager.saveComponents` for cold-start.
+    //   5. Refresh the legacy `ComponentManager` banner (no-op for non-banner).
+
+    /// Discard out-of-order events. Returns true if the event is fresh
+    /// (>= last applied for this campaignComponentId) and should be
+    /// applied; false if it's a stale retry that we already saw a newer
+    /// timestamp for. Updates the high-water mark on `true`.
+    private func acceptPlacementEventTimestamp(_ rawTimestamp: String?, forCampaignComponentId id: Int) -> Bool {
+        guard let raw = rawTimestamp, !raw.isEmpty else {
+            // No timestamp → can't sequence → accept (fail-open).
+            return true
+        }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let parsed = formatter.date(from: raw)
+            ?? ISO8601DateFormatter().date(from: raw)
+        guard let timestamp = parsed else {
+            VioLogger.warning("Could not parse serverTimestamp '\(raw)' — applying anyway", component: "CampaignManager")
+            return true
+        }
+        if let last = lastPlacementEventTimestamps[id], timestamp <= last {
+            VioLogger.debug("Discarding stale placement event for cc=\(id) (event ts=\(raw) <= last=\(last))", component: "CampaignManager")
+            return false
+        }
+        lastPlacementEventTimestamps[id] = timestamp
+        return true
+    }
+
+    /// Returns true if the campaign is in a state where placement
+    /// activations are allowed (not upcoming, not ended, not paused).
+    /// Mirrors the guards in the legacy `handleComponentStatusChanged`.
+    private var canActivatePlacements: Bool {
+        if campaignState == .upcoming { return false }
+        if campaignState == .ended { return false }
+        if currentCampaign?.isPaused == true { return false }
+        if !isCampaignActive { return false }
+        return true
+    }
+
+    /// Decode a `[String: AnyCodable]` blob into `ComponentConfig`.
+    /// Mirrors the legacy converters at line 932/1032.
+    private func decodeComponentConfig(_ raw: [String: AnyCodable]?) -> ComponentConfig? {
+        guard let raw = raw else { return nil }
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: raw.mapValues { $0.value })
+            return try JSONDecoder().decode(ComponentConfig.self, from: jsonData)
+        } catch {
+            VioLogger.warning("Failed to decode ComponentConfig from placement event: \(error)", component: "CampaignManager")
+            return nil
+        }
+    }
+
+    private func handlePlacementStatusChanged(_ event: PlacementStatusChangedEvent) {
+        let rowId = event.campaignComponentId
+        let idStr = String(rowId)
+
+        guard acceptPlacementEventTimestamp(event.serverTimestamp, forCampaignComponentId: rowId) else { return }
+
+        // Activation guard — operator can't bring a placement up while
+        // the campaign is upcoming/ended/paused (mirrors legacy logic).
+        if event.status == "active" && !canActivatePlacements {
+            VioLogger.warning("Ignoring placement activation cc=\(rowId) — campaign not in active state", component: "CampaignManager")
+            return
+        }
+
+        if event.status == "active" {
+            if let index = activeComponents.firstIndex(where: { $0.id == idStr }) {
+                // Already in cache (was active before, status flipped through some
+                // race). Promote status field; everything else stays.
+                let existing = activeComponents[index]
+                let promoted = Component(
+                    id: existing.id,
+                    type: existing.type,
+                    name: existing.name,
+                    config: existing.config,
+                    status: "active",
+                    locationId: existing.locationId,
+                    sponsorId: existing.sponsorId,
+                    broadcastContext: existing.broadcastContext
+                )
+                activeComponents[index] = promoted
+                CacheManager.shared.saveComponents(activeComponents)
+                ComponentManager.shared.refreshActiveBannerFromCampaignManager()
+            } else {
+                // Unknown row coming back to life (typical pause→resume
+                // flow: row was removed from cache when paused). The
+                // event payload alone doesn't carry enough data to
+                // render — silent fetch to reseed activeComponents.
+                VioLogger.debug("placement_status_changed for unknown cc=\(rowId) — triggering silent re-fetch", component: "CampaignManager")
+                Task { await self.fetchAndApplyCampaignComponentsIfPossible() }
+            }
+        } else {
+            // status == 'inactive' (or anything non-'active'): drop the
+            // row from activeComponents. The component disappears from
+            // SwiftUI views with no animation — matches the "hard cut"
+            // UX agreed during planning.
+            activeComponents.removeAll { $0.id == idStr }
+            CacheManager.shared.saveComponents(activeComponents)
+            ComponentManager.shared.refreshActiveBannerFromCampaignManager()
+        }
+    }
+
+    private func handlePlacementConfigUpdated(_ event: PlacementConfigUpdatedEvent) {
+        let rowId = event.campaignComponentId
+        let idStr = String(rowId)
+
+        guard acceptPlacementEventTimestamp(event.serverTimestamp, forCampaignComponentId: rowId) else { return }
+
+        guard let index = activeComponents.firstIndex(where: { $0.id == idStr }) else {
+            // Operator edited a paused row. Backend filters that case
+            // (Phase 3 emits only when status='active'), so this
+            // branch implies the SDK's local state drifted — silent
+            // fetch to reconcile.
+            VioLogger.debug("placement_config_updated for unknown cc=\(rowId) — triggering silent re-fetch", component: "CampaignManager")
+            Task { await self.fetchAndApplyCampaignComponentsIfPossible() }
+            return
+        }
+
+        guard let newConfig = decodeComponentConfig(event.customConfig) else {
+            VioLogger.warning("placement_config_updated for cc=\(rowId) — config decode failed; keeping old config", component: "CampaignManager")
+            return
+        }
+
+        let existing = activeComponents[index]
+        let patched = Component(
+            id: existing.id,
+            type: existing.type,
+            name: existing.name,
+            config: newConfig,
+            status: existing.status,
+            locationId: existing.locationId,
+            sponsorId: existing.sponsorId,
+            broadcastContext: existing.broadcastContext
+        )
+        activeComponents[index] = patched
+        CacheManager.shared.saveComponents(activeComponents)
+
+        // The SDK views observe `activeComponents` and re-render. The
+        // `productIdsChanged` hint isn't consumed by CampaignManager
+        // — it surfaces in the event for views that want to flash a
+        // skeleton during the catalog reload (handled in the view layer).
+        VioLogger.success("Patched config for cc=\(rowId) (productIdsChanged=\(event.productIdsChanged))", component: "CampaignManager")
+    }
+
+    private func handlePlacementActivationSwapped(_ event: PlacementActivationSwappedEvent) {
+        guard acceptPlacementEventTimestamp(event.serverTimestamp, forCampaignComponentId: event.toCampaignComponentId) else { return }
+
+        // Activation guard for the new row. Mirrors handlePlacementStatusChanged.
+        if !canActivatePlacements {
+            VioLogger.warning("Ignoring placement_activation_swapped — campaign not in active state", component: "CampaignManager")
+            return
+        }
+
+        let fromIdStr = String(event.fromCampaignComponentId)
+        let toIdStr = String(event.toCampaignComponentId)
+
+        // Find the FROM component to inherit type/name/locationId — those
+        // don't change across a sponsor rotation (same placement template,
+        // same slot). If the FROM isn't in cache, fall back to a silent
+        // fetch so we don't end up with an orphaned activeComponents entry
+        // that's missing rendering metadata.
+        guard let fromIndex = activeComponents.firstIndex(where: { $0.id == fromIdStr }) else {
+            VioLogger.debug("placement_activation_swapped from unknown cc=\(event.fromCampaignComponentId) — triggering silent re-fetch", component: "CampaignManager")
+            Task { await self.fetchAndApplyCampaignComponentsIfPossible() }
+            return
+        }
+        let fromComponent = activeComponents[fromIndex]
+
+        // Build the new Component from the event's `newComponent` payload,
+        // inheriting type/name/locationId from the FROM since they're
+        // immutable across the swap (same app_placement).
+        let newConfig = decodeComponentConfig(event.newComponent.customConfig) ?? fromComponent.config
+        let newComponent = Component(
+            id: toIdStr,
+            type: fromComponent.type,
+            name: fromComponent.name,
+            config: newConfig,
+            status: event.newComponent.status,
+            locationId: fromComponent.locationId,
+            sponsorId: event.newComponent.sponsorId ?? event.toSponsorId,
+            broadcastContext: fromComponent.broadcastContext
+        )
+
+        // Apply the swap atomically in the local array — replace the
+        // FROM index in place so any view binding to a stable index
+        // doesn't flicker. SwiftUI re-renders; ProductService picks up
+        // the new sponsorId on the next loadProducts call.
+        activeComponents[fromIndex] = newComponent
+        CacheManager.shared.saveComponents(activeComponents)
+        ComponentManager.shared.refreshActiveBannerFromCampaignManager()
+
+        VioLogger.success("Swapped placement \(event.fromCampaignComponentId) → \(event.toCampaignComponentId) (sponsor \(event.fromSponsorId ?? -1) → \(event.toSponsorId ?? -1))", component: "CampaignManager")
+    }
+
     private func handleComponentConfigUpdated(_ event: ComponentConfigUpdatedEvent) {
         // Log which format we received
         if let componentId = event.componentId {
