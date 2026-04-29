@@ -171,6 +171,234 @@ extension CartManager {
         }
     }
 
+    // MARK: - Remove / update / clear (per-sponsor)
+
+    /// Removes an item from the sponsor's cart. The item must belong to
+    /// that sponsor's cart — the call is a no-op + warning when the item
+    /// id is not found in `cartsBySponsor[sponsorId]`.
+    public func removeItem(_ item: CartItem, fromSponsor sponsorId: Int) async {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else {
+            VioLogger.warning(
+                "removeItem(fromSponsor:\(sponsorId)) — no cart exists for that sponsor",
+                component: "CartModule"
+            )
+            return
+        }
+        guard sponsorCart.items.contains(where: { $0.id == item.id }) else {
+            VioLogger.warning(
+                "removeItem(fromSponsor:\(sponsorId)) — item \(item.id) not in this sponsor's cart",
+                component: "CartModule"
+            )
+            return
+        }
+        guard let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId) else {
+            VioLogger.warning(
+                "removeItem(fromSponsor:\(sponsorId)) skipped — no commerce key",
+                component: "CartModule"
+            )
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        var didSyncFromServer = false
+        if let cid = sponsorCart.cartId, !cid.isEmpty {
+            do {
+                logRequest(
+                    "sdk.cart.deleteItem (sponsor=\(sponsorId))",
+                    payload: ["cart_id": cid, "cart_item_id": item.id]
+                )
+                let dto = try await sponsorSdk.cart.deleteItem(
+                    cart_id: cid,
+                    cart_item_id: item.id
+                )
+                logResponse(
+                    "sdk.cart.deleteItem (sponsor=\(sponsorId))",
+                    payload: ["cartId": dto.cartId, "itemCount": dto.lineItems.count]
+                )
+                syncSponsorCart(&sponsorCart, from: dto)
+                cartsBySponsor[sponsorId] = sponsorCart
+                didSyncFromServer = true
+            } catch let error as SdkException {
+                errorMessage = error.description
+                logError("sdk.cart.deleteItem (sponsor=\(sponsorId))", error: error)
+                VioLogger.warning(
+                    "SDK.deleteItem(sponsor=\(sponsorId)) failed: \(error.description)",
+                    component: "CartModule"
+                )
+            } catch {
+                errorMessage = error.localizedDescription
+                logError("sdk.cart.deleteItem (sponsor=\(sponsorId))", error: error)
+                VioLogger.warning(
+                    "SDK.deleteItem(sponsor=\(sponsorId)) failed: \(error.localizedDescription)",
+                    component: "CartModule"
+                )
+            }
+        } else {
+            VioLogger.info(
+                "removeItem(fromSponsor:\(sponsorId)): skipped SDK call (no cartId yet)",
+                component: "CartModule"
+            )
+        }
+
+        if !didSyncFromServer {
+            // Local fallback: remove the item from the sponsor cart
+            // directly so the UI updates even when the SDK call failed.
+            sponsorCart.items.removeAll { $0.id == item.id }
+            sponsorCart.subtotal = sponsorCart.items.reduce(0.0) { total, it in
+                total + (it.price * Double(it.quantity))
+            }
+            cartsBySponsor[sponsorId] = sponsorCart
+        }
+        ToastManager.shared.showInfo("Removed \(item.title) from cart")
+    }
+
+    /// Updates the quantity for an item in the sponsor's cart. When
+    /// `newQuantity <= 0` the item is deleted (matches the legacy
+    /// `updateQuantity(for:to:)` semantics). No-op if the item or sponsor
+    /// cart is unknown.
+    public func updateQuantity(
+        for item: CartItem,
+        to newQuantity: Int,
+        fromSponsor sponsorId: Int
+    ) async {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else {
+            VioLogger.warning(
+                "updateQuantity(fromSponsor:\(sponsorId)) — no cart for that sponsor",
+                component: "CartModule"
+            )
+            return
+        }
+        guard sponsorCart.items.contains(where: { $0.id == item.id }) else {
+            VioLogger.warning(
+                "updateQuantity(fromSponsor:\(sponsorId)) — item \(item.id) not in this sponsor's cart",
+                component: "CartModule"
+            )
+            return
+        }
+        guard let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId) else {
+            VioLogger.warning(
+                "updateQuantity(fromSponsor:\(sponsorId)) skipped — no commerce key",
+                component: "CartModule"
+            )
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        var didSyncFromServer = false
+        if let cid = sponsorCart.cartId, !cid.isEmpty {
+            do {
+                let dto: CartDto
+                if newQuantity <= 0 {
+                    logRequest(
+                        "sdk.cart.deleteItem (sponsor=\(sponsorId))",
+                        payload: ["cart_id": cid, "cart_item_id": item.id]
+                    )
+                    dto = try await sponsorSdk.cart.deleteItem(
+                        cart_id: cid,
+                        cart_item_id: item.id
+                    )
+                } else {
+                    logRequest(
+                        "sdk.cart.updateItem (sponsor=\(sponsorId))",
+                        payload: [
+                            "cart_id": cid,
+                            "cart_item_id": item.id,
+                            "quantity": newQuantity
+                        ]
+                    )
+                    dto = try await sponsorSdk.cart.updateItem(
+                        cart_id: cid,
+                        cart_item_id: item.id,
+                        shipping_id: nil,
+                        quantity: newQuantity
+                    )
+                }
+                logResponse(
+                    "sdk.cart.update/deleteItem (sponsor=\(sponsorId))",
+                    payload: ["cartId": dto.cartId, "itemCount": dto.lineItems.count]
+                )
+                syncSponsorCart(&sponsorCart, from: dto)
+                cartsBySponsor[sponsorId] = sponsorCart
+                didSyncFromServer = true
+            } catch let error as SdkException {
+                errorMessage = error.description
+                logError("sdk.cart.update/deleteItem (sponsor=\(sponsorId))", error: error)
+            } catch {
+                errorMessage = error.localizedDescription
+                logError("sdk.cart.update/deleteItem (sponsor=\(sponsorId))", error: error)
+            }
+        }
+
+        if !didSyncFromServer {
+            // Local fallback: mutate the SponsorCart directly.
+            if newQuantity <= 0 {
+                sponsorCart.items.removeAll { $0.id == item.id }
+            } else if let idx = sponsorCart.items.firstIndex(where: { $0.id == item.id }) {
+                sponsorCart.items[idx].quantity = newQuantity
+            }
+            sponsorCart.subtotal = sponsorCart.items.reduce(0.0) { total, it in
+                total + (it.price * Double(it.quantity))
+            }
+            cartsBySponsor[sponsorId] = sponsorCart
+        }
+    }
+
+    /// Drops the entire cart for one sponsor, both server-side (best
+    /// effort) and locally. Other sponsors' carts are untouched.
+    public func clearCart(forSponsor sponsorId: Int) async {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else {
+            return  // nothing to clear
+        }
+        let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId)
+
+        if let cid = sponsorCart.cartId, !cid.isEmpty, let sdk = sponsorSdk {
+            do {
+                logRequest(
+                    "sdk.cart.delete (sponsor=\(sponsorId))",
+                    payload: ["cart_id": cid]
+                )
+                _ = try await sdk.cart.delete(cart_id: cid)
+                logResponse(
+                    "sdk.cart.delete (sponsor=\(sponsorId))",
+                    payload: ["cartId": cid]
+                )
+            } catch {
+                VioLogger.warning(
+                    "clearCart(sponsor=\(sponsorId)) — server delete failed; clearing locally only: \(error.localizedDescription)",
+                    component: "CartModule"
+                )
+            }
+        }
+
+        sponsorCart.cartId = nil
+        sponsorCart.checkoutId = nil
+        sponsorCart.items = []
+        sponsorCart.subtotal = 0
+        sponsorCart.shippingTotal = 0
+        sponsorCart.lastDiscountCode = nil
+        sponsorCart.lastDiscountId = nil
+        cartsBySponsor[sponsorId] = sponsorCart
+    }
+
+    /// Drops every per-sponsor cart in one shot. Useful after a checkout
+    /// completes successfully across all sponsors, or as a "reset all"
+    /// during error recovery. Iterates `cartsBySponsor` and calls
+    /// `clearCart(forSponsor:)` for each.
+    public func clearAllCarts() async {
+        let sponsorIds = Array(cartsBySponsor.keys)
+        for sponsorId in sponsorIds {
+            await clearCart(forSponsor: sponsorId)
+        }
+        // Drop empty entries so cartsBySponsor stays clean for observers.
+        cartsBySponsor = cartsBySponsor.filter { !$0.value.items.isEmpty || $0.value.cartId != nil }
+    }
+
     // MARK: - Aggregate readers
 
     /// Sum of `itemCount` across every SponsorCart. Useful for cart-badge
