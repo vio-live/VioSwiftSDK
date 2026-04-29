@@ -26,6 +26,13 @@ public struct VProductDetailOverlay: View {
     
     // MARK: - Properties
     private let product: Product
+    /// Sponsor that owns the active commerce context for this product
+    /// (multi-sponsor stores: comes from `productSponsorMap[product.id]`;
+    /// single-sponsor placements: comes from the active campaign component's
+    /// `sponsorId`). Propagated down to `VApplePayButton` →
+    /// `VApplePayConfirmationSheet` so the post-purchase sheet renders the
+    /// correct sponsor logo. Q4 (2026-04-30).
+    private let sponsorId: Int?
     private let onDismiss: (() -> Void)?
     private let onAddToCart: ((Product) -> Void)?
     
@@ -98,10 +105,12 @@ public struct VProductDetailOverlay: View {
     // MARK: - Initializer
     public init(
         product: Product,
+        sponsorId: Int? = nil,
         onDismiss: (() -> Void)? = nil,
         onAddToCart: ((Product) -> Void)? = nil
     ) {
         self.product = product
+        self.sponsorId = sponsorId
         self.onDismiss = onDismiss
         self.onAddToCart = onAddToCart
     }
@@ -691,6 +700,7 @@ public struct VProductDetailOverlay: View {
                 VApplePayButton(
                     product: product,
                     variant: selectedVariant,
+                    sponsorId: sponsorId,
                     onPaymentComplete: { dismiss() }
                 )
                 .environmentObject(cartManager)

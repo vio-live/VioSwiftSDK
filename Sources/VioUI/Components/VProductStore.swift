@@ -365,24 +365,36 @@ public struct VProductStore: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: VioSpacing.md) {
                 ForEach(products) { product in
-                    VProductCard(product: product)
+                    VProductCard(product: product, sponsorId: resolvedSponsorId(for: product.id))
                 }
             }
             .padding(.horizontal, VioSpacing.md)
             .padding(.vertical, VioSpacing.md)
         }
     }
-    
+
     private var listView: some View {
         ScrollView {
             LazyVStack(spacing: VioSpacing.md) {
                 ForEach(products) { product in
-                    VProductCard(product: product)
+                    VProductCard(product: product, sponsorId: resolvedSponsorId(for: product.id))
                 }
             }
             .padding(.horizontal, VioSpacing.md)
             .padding(.vertical, VioSpacing.md)
         }
+    }
+
+    /// Q4 (2026-04-30): resolve the sponsor that owns this product so the
+    /// cart / Apple Pay flow uses per-sponsor commerce credentials. Multi-
+    /// sponsor stores populate `viewModel.productSponsorMap` per item;
+    /// legacy single-sponsor placements fall back to the placement's
+    /// `sponsorId` (already set on `activeComponent` upstream).
+    private func resolvedSponsorId(for productId: Int) -> Int? {
+        if let mapped = viewModel.productSponsorMap[productId] {
+            return mapped
+        }
+        return activeComponent?.sponsorId
     }
     
     private var loadingView: some View {
