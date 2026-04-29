@@ -6,10 +6,40 @@ import VioDesignSystem
 import UIKit
 #endif
 
-/// Dynamic Offer Banner component that receives configuration from backend
+/// Dynamic Offer Banner component that receives configuration from backend.
+///
+/// Two ways to mount:
+///
+/// **Host-driven** — caller passes the config explicitly (used by hosts
+/// that resolve the banner from their own state, e.g. the demo's
+/// `componentManager.activeBanner` legacy path):
+/// ```swift
+/// VOfferBanner(config: bannerConfig)
+/// ```
+///
+/// **Campaign-driven (Sprint 2026-04-28 PM Phase 2)** — caller provides
+/// only the placement slot; the SDK resolves the active component via
+/// `CampaignManager.getActiveComponent(type:"offer_banner", locationId:)`
+/// and renders nothing when no operator binding exists. Live updates
+/// (pause/resume/config edit/sponsor swap) flow through the same
+/// placement_* WS events the rest of the placement system uses.
+/// ```swift
+/// VOfferBanner(locationId: "home_offer", onNavigateToStore: { … })
+/// ```
 public struct VOfferBanner: View {
-    let config: OfferBannerConfig
-    
+    /// Host-passed config (mode 1). Nil when in campaign-driven mode.
+    private let storedConfig: OfferBannerConfig?
+    /// Slot lookup keys (mode 2). Both nil when in host-driven mode.
+    private let resolvedComponentId: String?
+    private let resolvedLocationId: String?
+
+    /// Observed for campaign-driven mode — when activeComponents
+    /// changes (pause / resume / customConfig edit / sponsor swap)
+    /// the body re-evaluates and `effectiveConfig` picks up the new
+    /// shape. Harmless overhead in host-driven mode (no re-renders
+    /// triggered because effectiveConfig still returns storedConfig).
+    @ObservedObject private var campaignManager = CampaignManager.shared
+
     // Optional parameters to override config values
     let customDeeplink: String?
     let customHeight: CGFloat?
@@ -18,23 +48,51 @@ public struct VOfferBanner: View {
     let customBadgeFontSize: CGFloat?
     let customButtonFontSize: CGFloat?
     let onNavigateToStore: (() -> Void)? // Callback to navigate to VProductStore
-    
+
     @State private var timeRemaining: DateComponents?
     @State private var timer: Timer?
     @State private var isImageLoaded = false
     @State private var isLogoLoaded = false
     @State private var countdownEndDate: Date? // Store parsed date
     @State private var timerId: UUID = UUID() // Unique identifier for current timer
-    
+
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
-    
+
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
-    /// Initialize with full config (original method)
+
+    /// Resolved config — explicit one wins, then falls back to a
+    /// CampaignManager lookup by `(type, componentId, locationId)`.
+    /// Returns nil when no operator binding matches in campaign-driven
+    /// mode. The body uses this to short-circuit to EmptyView so the
+    /// helpers below can keep referencing `config` as a non-optional.
+    private var effectiveConfig: OfferBannerConfig? {
+        if let stored = storedConfig { return stored }
+        guard let component = campaignManager.getActiveComponent(
+            type: "offer_banner",
+            componentId: resolvedComponentId,
+            locationId: resolvedLocationId
+        ),
+              case .offerBanner(let cfg) = component.config else {
+            return nil
+        }
+        return cfg
+    }
+
+    /// Computed `config` for the helpers below. Force-unwraps
+    /// `effectiveConfig` — only safe because the body's outer Group
+    /// early-outs to EmptyView when effectiveConfig is nil, meaning
+    /// none of the helpers run while config could be missing.
+    private var config: OfferBannerConfig {
+        effectiveConfig ?? OfferBannerConfig.placeholder
+    }
+
+    /// Initialize with full config (original method) — host-driven mode.
     public init(config: OfferBannerConfig) {
-        self.config = config
+        self.storedConfig = config
+        self.resolvedComponentId = nil
+        self.resolvedLocationId = nil
         self.customDeeplink = nil
         self.customHeight = nil
         self.customTitleFontSize = nil
@@ -43,8 +101,8 @@ public struct VOfferBanner: View {
         self.customButtonFontSize = nil
         self.onNavigateToStore = nil
     }
-    
-    /// Initialize with config and optional custom parameters
+
+    /// Initialize with config and optional custom parameters — host-driven mode.
     public init(
         config: OfferBannerConfig,
         deeplink: String? = nil,
@@ -55,7 +113,9 @@ public struct VOfferBanner: View {
         buttonFontSize: CGFloat? = nil,
         onNavigateToStore: (() -> Void)? = nil
     ) {
-        self.config = config
+        self.storedConfig = config
+        self.resolvedComponentId = nil
+        self.resolvedLocationId = nil
         self.customDeeplink = deeplink
         self.customHeight = height
         self.customTitleFontSize = titleFontSize
@@ -64,8 +124,48 @@ public struct VOfferBanner: View {
         self.customButtonFontSize = buttonFontSize
         self.onNavigateToStore = onNavigateToStore
     }
+
+    /// Campaign-driven init — resolve the active offer_banner
+    /// component from CampaignManager via `(componentId, locationId)`.
+    /// Renders nothing until the operator binds a campaign_component
+    /// to the slot. Sprint 2026-04-28 PM Phase 2.
+    public init(
+        componentId: String? = nil,
+        locationId: String? = nil,
+        height: CGFloat? = nil,
+        onNavigateToStore: (() -> Void)? = nil
+    ) {
+        self.storedConfig = nil
+        self.resolvedComponentId = componentId
+        self.resolvedLocationId = locationId
+        self.customDeeplink = nil
+        self.customHeight = height
+        self.customTitleFontSize = nil
+        self.customSubtitleFontSize = nil
+        self.customBadgeFontSize = nil
+        self.customButtonFontSize = nil
+        self.onNavigateToStore = onNavigateToStore
+    }
     
     public var body: some View {
+        // Campaign-driven mode renders nothing until the operator binds
+        // an offer_banner component to the requested slot. Host-driven
+        // mode never hits this branch because storedConfig is non-nil.
+        Group {
+            if effectiveConfig != nil {
+                bannerContent
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    /// The actual banner content — extracted so the outer body can
+    /// short-circuit to EmptyView when no config resolves. All helpers
+    /// reference `self.config` (computed) which falls back to a safe
+    /// placeholder when nil; that fallback never actually renders
+    /// because this view isn't constructed in the nil case.
+    private var bannerContent: some View {
         ZStack {
             // Background layer - debe estar primero y ocupar todo el espacio
             backgroundLayer
@@ -75,57 +175,68 @@ public struct VOfferBanner: View {
             // Content in two columns (same layout as hardcoded banner)
             // Solo mostrar contenido cuando la imagen esté cargada
             if isImageLoaded {
+                // Banner has a dark image + gradient overlay regardless
+                // of the system color scheme, so text must be white in
+                // both light and dark mode. Using `adaptiveColors.surface`
+                // here was a bug — `surface` is dark in dark mode, which
+                // made the title disappear against the dark overlay.
+                // Matches the hardcoded OfferBannerView's `.white` calls.
                 HStack(alignment: .center, spacing: 16) {
                     // Left column: Logo, title, subtitle, countdown
                     VStack(alignment: .leading, spacing: 4) {
                         // Logo
                         logoImageView
-                        
+
                         // Title - always show if configuration exists
                         Text(config.title)
                             .font(.system(size: customTitleFontSize ?? 24, weight: .bold))
-                            .foregroundColor(adaptiveColors.surface)
-                        
+                            .foregroundColor(.white)
+
                         // Subtitle
                         if let subtitle = config.subtitle {
                             Text(subtitle)
                                 .font(.system(size: customSubtitleFontSize ?? 11, weight: .regular))
-                                .foregroundColor(adaptiveColors.surface.opacity(0.9))
+                                .foregroundColor(Color.white.opacity(0.9))
                         }
-                        
+
                         // Countdown (analog style like hardcoded banner)
                         if let remaining = timeRemaining {
                             analogCountdown(timeRemaining: remaining)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Right column: Discount badge + Button (centered vertically)
                     VStack(spacing: 8) {
-                        // Discount badge
+                        // Discount badge — dark capsule + white text,
+                        // matches the hardcoded TV2Theme.Colors.background
+                        // (dark) used by OfferBannerView.
                         Text(config.discountBadgeText)
                             .font(.system(size: customBadgeFontSize ?? 18, weight: .bold))
-                            .foregroundColor(adaptiveColors.surface)
+                            .foregroundColor(.white)
                             .padding(.horizontal, 20)
                             .padding(.vertical, 8)
                             .background(
                                 Capsule()
-                                    .fill(adaptiveColors.textPrimary.opacity(0.8))
+                                    .fill(Color.black.opacity(0.7))
                             )
-                        
-                        // Button
+
+                        // Button — text + arrow always white over the
+                        // colored capsule (resolved via `buttonColor`,
+                        // which prioritizes operator override > sponsor
+                        // primary > Color.purple legacy fallback).
                         Button(action: {
                             handleCTAAction()
                         }) {
                             HStack(spacing: 6) {
                                 Text(config.ctaText)
                                     .font(.system(size: customButtonFontSize ?? 12, weight: .semibold))
-                                    .foregroundColor(adaptiveColors.surface)
-                                
+                                    .foregroundColor(.white)
+
                                 Image(systemName: "arrow.right")
                                     .font(.system(size: (customButtonFontSize ?? 12) - 1, weight: .semibold))
-                                    .foregroundColor(adaptiveColors.surface)
+                                    .foregroundColor(.white)
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -198,11 +309,34 @@ public struct VOfferBanner: View {
     }
     
     // MARK: - Computed Properties
-    
+
+    /// Resolved CTA button color. Priority:
+    ///   1. Operator's `customConfig.buttonColor` (if set + valid hex)
+    ///   2. Placement's sponsor `primaryColor` (campaign-driven mode only)
+    ///   3. Brand fallback `Color.purple` (legacy default)
+    ///
+    /// Mirrors the dashboard's BrandColorPicker fallback behavior so the
+    /// preview and the SDK render match when the operator leaves
+    /// buttonColor unset and instead relies on the sponsor's brand color.
     private var buttonColor: Color {
-        if let colorString = config.buttonColor {
-            return Color(hex: colorString) ?? Color.purple
+        // 1. Operator override
+        if let colorString = config.buttonColor,
+           !colorString.isEmpty,
+           let parsed = Color(hex: colorString) {
+            return parsed
         }
+        // 2. Sponsor primary color (campaign-driven mode)
+        if let component = campaignManager.getActiveComponent(
+                type: "offer_banner",
+                componentId: resolvedComponentId,
+                locationId: resolvedLocationId
+            ),
+           let sponsorId = component.sponsorId,
+           let sponsorPrimary = VioConfiguration.shared.sponsor(withId: sponsorId)?.primaryColor,
+           let parsed = Color(hex: sponsorPrimary) {
+            return parsed
+        }
+        // 3. Brand fallback
         return Color.purple
     }
     
@@ -220,32 +354,79 @@ public struct VOfferBanner: View {
     }
     
     // MARK: - Logo Image View
-    
-    private var logoImageView: some View {
-        let logoFullURL = buildFullURL(from: config.logoUrl)
-        return LoadedImage(
-            url: URL(string: logoFullURL),
-            placeholder: AnyView(
-                Rectangle()
-                    .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                    .frame(height: 16)
+
+    /// Resolved logo URL — the operator's `customConfig.logoUrl`
+    /// wins, but when empty/absent the SDK falls back to the
+    /// placement's sponsor logo (`sponsor.logoUrl` resolved by the
+    /// active component's sponsorId via VioConfiguration). That way
+    /// operators don't have to upload a logo at all in the common
+    /// case where the banner brands a known sponsor — same UX
+    /// pattern as `showSponsorLogo` on Carousel/Spotlight/Store.
+    private var resolvedLogoUrl: String {
+        if !config.logoUrl.isEmpty { return config.logoUrl }
+        // Campaign-driven mode: pull the placement's sponsor.
+        if let component = campaignManager.getActiveComponent(
+                type: "offer_banner",
+                componentId: resolvedComponentId,
+                locationId: resolvedLocationId
             ),
-            errorView: AnyView(
-                // Si falla la carga del logo, mostrar un placeholder visible
-                Rectangle()
-                    .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
-                    .frame(height: 16)
-                    .overlay(
-                        Image(systemName: "photo")
-                            .font(.system(size: 10))
-                            .foregroundColor(adaptiveColors.textSecondary.opacity(0.5))
+            let sponsorId = component.sponsorId,
+            let sponsorLogo = VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl,
+            !sponsorLogo.isEmpty {
+            return sponsorLogo
+        }
+        // Host-driven mode + no campaign sponsor → empty (renders
+        // the photo placeholder; operator can fix by setting a
+        // logoUrl in customConfig).
+        return ""
+    }
+
+    private var logoImageView: some View {
+        let logoUrl = resolvedLogoUrl
+        // SVG-capable rendering when the URL is a vector asset (sponsor
+        // logos often are). Falls back to the legacy LoadedImage path
+        // for raster URLs / when the resolution returns empty.
+        //
+        // Both branches align the logo to the LEADING edge so it sits
+        // at the left of the banner's content column (matching the
+        // hardcoded OfferBannerView). The SVG branch passes
+        // `alignment: .leading` to VRemoteImage which translates to
+        // CSS `justify-content: flex-start` inside the embedded
+        // WKWebView. The raster branch uses an HStack + Spacer to
+        // pin the LoadedImage to the leading edge — `.scaledToFit()`
+        // keeps the natural aspect ratio. Width is capped at 120pt
+        // to prevent the SVG WebView from stretching the parent
+        // VStack horizontally beyond what the title needs.
+        return HStack(spacing: 0) {
+            if logoUrl.lowercased().hasSuffix(".svg") {
+                VRemoteImage(urlString: logoUrl, height: 16, alignment: .leading)
+                    .frame(maxWidth: 120, alignment: .leading)
+                    .onAppear { isLogoLoaded = true }
+            } else {
+                let logoFullURL = buildFullURL(from: logoUrl)
+                LoadedImage(
+                    url: URL(string: logoFullURL),
+                    placeholder: AnyView(
+                        Rectangle()
+                            .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
+                            .frame(width: 80, height: 16)
+                    ),
+                    errorView: AnyView(
+                        Rectangle()
+                            .fill(adaptiveColors.surfaceSecondary.opacity(0.3))
+                            .frame(width: 80, height: 16)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(adaptiveColors.textSecondary.opacity(0.5))
+                            )
                     )
-            )
-        )
-        .aspectRatio(contentMode: .fit)
-        .frame(height: 16)
-        .onAppear {
-            isLogoLoaded = true
+                )
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 16)
+                .onAppear { isLogoLoaded = true }
+            }
+            Spacer(minLength: 0)
         }
     }
     
@@ -306,12 +487,22 @@ public struct VOfferBanner: View {
                     }
             }
             
-            // Dark overlay for readability (solo cuando imagen está cargada)
+            // Dark overlay for readability (solo cuando imagen está cargada).
+            //
+            // Always BLACK (not `adaptiveColors.textPrimary`, which flips
+            // to light in dark mode and made the overlay washed out).
+            // Matches the hardcoded OfferBannerView line-for-line:
+            //   LinearGradient(colors: [black @ 0.4, black @ 0.2],
+            //                  startPoint: .leading, endPoint: .trailing)
+            // Operator's `overlayOpacity` (default 0.4) controls only the
+            // left-side opacity; the right side fades to half that for
+            // depth.
             if isImageLoaded {
+                let opacityLeft = config.overlayOpacity ?? 0.4
                 LinearGradient(
                     colors: [
-                        adaptiveColors.textPrimary.opacity(config.overlayOpacity ?? 0.4),
-                        adaptiveColors.textPrimary.opacity((config.overlayOpacity ?? 0.4) * 0.5)
+                        Color.black.opacity(opacityLeft),
+                        Color.black.opacity(opacityLeft * 0.5)
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
@@ -910,39 +1101,39 @@ public struct VOfferBannerContainer: View {
     }
 }
 
-/// Countdown Unit Component (same style as hardcoded banner)
+/// Countdown Unit Component (same style as hardcoded banner).
+///
+/// Always renders white over a translucent white background — banner
+/// has a dark image overlay regardless of system color scheme, so
+/// using `.white` directly (instead of `adaptiveColors.surface`) keeps
+/// the digits legible in both light and dark mode. Matches the
+/// hardcoded `CountdownUnit` in Demo/tv2demo's OfferBanner.swift.
 struct CountdownUnit: View {
     let value: Int
     let label: String
-    
-    @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
-    
-    private var adaptiveColors: AdaptiveColors {
-        VioColors.adaptive(for: colorScheme)
-    }
-    
+
     var body: some View {
         VStack(spacing: 1) {
             // Digits
             Text(String(format: "%02d", value))
                 .font(.system(size: 13, weight: .bold))
-                .foregroundColor(adaptiveColors.surface)
+                .foregroundColor(.white)
                 .frame(minWidth: 24)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 5)
                 .background(
                     RoundedRectangle(cornerRadius: VioBorderRadius.small)
-                        .fill(adaptiveColors.surface.opacity(0.15))
+                        .fill(Color.white.opacity(0.15))
                         .overlay(
                             RoundedRectangle(cornerRadius: VioBorderRadius.small)
-                                .stroke(adaptiveColors.surface.opacity(0.3), lineWidth: 1)
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
                         )
                 )
-            
+
             // Label
             Text(label)
                 .font(.system(size: 7, weight: .medium))
-                .foregroundColor(adaptiveColors.surface.opacity(0.85))
+                .foregroundColor(Color.white.opacity(0.85))
         }
     }
 }

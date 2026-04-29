@@ -372,6 +372,7 @@ internal struct SdkBootstrapResponse: Codable {
         let id: Int
         let name: String
         let logoUrl: String?
+        let avatarUrl: String?
         let primaryColor: String?
         let secondaryColor: String?
         let commerce: CommerceBlock?
@@ -693,6 +694,16 @@ public struct Component: Codable, Identifiable {
     /// `campaign_components.sponsor_id`. Nil for templates / WS events that
     /// haven't been multi-sponsor-migrated yet → falls back to primary.
     public let sponsorId: Int?
+    /// `campaign_components.id` (numeric row PK) — the unique identifier
+    /// for live updates. The `id` field above is the **template** uuid
+    /// for backward-compat with `getActiveComponent(componentId:)`, but
+    /// the WS placement_* events key off `campaignComponentId` because
+    /// two rows can share a template across different placements (e.g.
+    /// the same product_carousel template in `home_top` and
+    /// `match_pre_kickoff` slots). Sourced from the GET response field
+    /// of the same name and from the wire payload of every placement_*
+    /// event. Nil only for legacy code paths that pre-date 2026-04-28.
+    public let campaignComponentId: Int?
     public let broadcastContext: BroadcastContext?  // Optional: Broadcast context for context-aware components
 
     public init(
@@ -703,6 +714,7 @@ public struct Component: Codable, Identifiable {
         status: String? = nil,
         locationId: String? = nil,
         sponsorId: Int? = nil,
+        campaignComponentId: Int? = nil,
         broadcastContext: BroadcastContext? = nil
     ) {
         self.id = id
@@ -712,6 +724,7 @@ public struct Component: Codable, Identifiable {
         self.status = status
         self.locationId = locationId
         self.sponsorId = sponsorId
+        self.campaignComponentId = campaignComponentId
         self.broadcastContext = broadcastContext
     }
     
@@ -727,7 +740,7 @@ public struct Component: Codable, Identifiable {
     init(from response: ComponentResponse) throws {
         // Use componentId as the id (it's the template ID)
         self.id = response.componentId
-        
+
         // Get type and name from nested component, or use defaults
         guard let componentData = response.component else {
             throw DecodingError.keyNotFound(
@@ -735,11 +748,11 @@ public struct Component: Codable, Identifiable {
                 DecodingError.Context(codingPath: [], debugDescription: "Component data is missing")
             )
         }
-        
+
         self.type = componentData.type
         self.name = componentData.name
         self.status = response.status
-        
+
         // Use customConfig if available, otherwise use component.config
         let configToUse: [String: AnyCodable]
         if let customConfig = response.customConfig, !customConfig.isEmpty {
@@ -747,18 +760,21 @@ public struct Component: Codable, Identifiable {
         } else {
             configToUse = componentData.config
         }
-        
+
         // Convert [String: AnyCodable] to JSON Data and decode as ComponentConfig
         let jsonData = try JSONSerialization.data(withJSONObject: configToUse.mapValues { $0.value })
         self.config = try JSONDecoder().decode(ComponentConfig.self, from: jsonData)
-        
+
         // Decode broadcastContext from response if available
         self.broadcastContext = response.broadcastContext
         self.locationId = nil
         self.sponsorId = nil
+        // Legacy v1 path doesn't surface campaignComponentId — `response.id`
+        // is the row PK, capture it.
+        self.campaignComponentId = response.id
     }
-    
-    /// Decode from JSON (for WebSocket events)
+
+    /// Decode from JSON (for WebSocket events + v2 GET response)
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -769,6 +785,7 @@ public struct Component: Codable, Identifiable {
         status = try container.decodeIfPresent(String.self, forKey: .status)
         locationId = try container.decodeIfPresent(String.self, forKey: .locationId)
         sponsorId = try container.decodeIfPresent(Int.self, forKey: .sponsorId)
+        campaignComponentId = try container.decodeIfPresent(Int.self, forKey: .campaignComponentId)
         // Try broadcastContext first, fallback to matchContext for backward compatibility
         if let broadcastContext = try? container.decodeIfPresent(BroadcastContext.self, forKey: .broadcastContext) {
             self.broadcastContext = broadcastContext
@@ -776,25 +793,29 @@ public struct Component: Codable, Identifiable {
             self.broadcastContext = try container.decodeIfPresent(BroadcastContext.self, forKey: .matchContext)
         }
     }
-    
+
     /// Encode to JSON (for WebSocket events)
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(id, forKey: .id)
         try container.encode(type, forKey: .type)
         try container.encode(name, forKey: .name)
         try container.encode(config, forKey: .config)
         try container.encodeIfPresent(status, forKey: .status)
+        try container.encodeIfPresent(locationId, forKey: .locationId)
+        try container.encodeIfPresent(sponsorId, forKey: .sponsorId)
+        try container.encodeIfPresent(campaignComponentId, forKey: .campaignComponentId)
         try container.encodeIfPresent(broadcastContext, forKey: .broadcastContext)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case id
         case type
         case name
         case locationId
         case sponsorId
+        case campaignComponentId
         case config
         case status
         case broadcastContext
@@ -1042,6 +1063,98 @@ public struct ComponentConfigUpdatedEvent: Codable {
 }
 
 
+
+// MARK: - Placement Events (live WS — Sprint 2026-04-28 PM)
+//
+// These three event models match the wire payload shape emitted by the
+// outbox worker (server/events/worker.ts) — flat fields under the
+// envelope, no `data` wrapper. They replace the legacy
+// `ComponentStatusChangedEvent` / `ComponentConfigUpdatedEvent` shapes
+// for placement-scoped events; the legacy types are kept around as
+// dead types for any inert code that still references them but no
+// backend handler emits the legacy wire names anymore (Phase 3 of the
+// live-updates sprint).
+
+/// Operator paused or resumed a placement binding.
+///
+/// Hard cut on the SDK side — no animation. `inactive` makes the
+/// component disappear; `active` brings it back. Visibility is the only
+/// thing that changes; config + products are unchanged.
+public struct PlacementStatusChangedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let campaignComponentId: Int
+    /// Mirrors `campaign_components.status` — `'active' | 'inactive'`.
+    public let status: String
+}
+
+/// Operator changed customConfig (productIds, title, layout, autoPlay,
+/// interval, showSponsorLogo, etc.) and/or the placement's sponsor.
+/// The SDK applies the new config + sponsor in place. If
+/// `productIdsChanged == true`, the carousel/banner shows a brief
+/// skeleton while reloading the catalog; otherwise the swap is
+/// silent. When `sponsorId` differs from the SDK's cached value,
+/// ProductService routes to the new sponsor's commerce key on the
+/// next product load.
+public struct PlacementConfigUpdatedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let campaignComponentId: Int
+    /// New customConfig blob (already merged with template defaults
+    /// server-side; the SDK can decode straight into `ComponentConfig`).
+    public let customConfig: [String: AnyCodable]?
+    /// Hint: did the productIds array (order or contents) change? When
+    /// true, the SDK refreshes the catalog (skeleton flash); when false
+    /// it patches in place (no flicker for title/layout-only edits).
+    public let productIdsChanged: Bool
+    /// Current sponsor of the row (after the update). Use this to
+    /// update Component.sponsorId so per-sponsor commerce key routing
+    /// stays consistent. Optional only for backward compatibility with
+    /// older backends that pre-date the in-place sponsor-swap support.
+    public let sponsorId: Int?
+    /// True when the operator actually changed the sponsor (vs. just
+    /// edited customConfig). The SDK uses this to decide whether to
+    /// re-render the header sponsor logo.
+    public let sponsorChanged: Bool?
+}
+
+/// Multi-sponsor rotation: within a single (campaignId, appPlacementId),
+/// the active campaign_components row swapped from A → B atomically at
+/// the DB layer. One event, two component IDs so the SDK can replace
+/// the active component cleanly without an intermediate "no active row"
+/// state.
+public struct PlacementActivationSwappedEvent: Codable {
+    public let type: String
+    public let module: String?
+    public let serverTimestamp: String?
+    public let campaignId: Int
+    public let appPlacementId: Int
+    public let fromCampaignComponentId: Int
+    public let toCampaignComponentId: Int
+    public let fromSponsorId: Int?
+    public let toSponsorId: Int?
+    /// Full new component shape so the SDK can render without a
+    /// follow-up GET. Mirrors `campaign_components` row + linked sponsor.
+    public let newComponent: NewComponentData
+
+    public struct NewComponentData: Codable {
+        public let id: Int
+        /// Template type id (e.g. uuid of the canonical product_carousel
+        /// template). May be null when the SDK can resolve the type
+        /// from its cached `app_placements` table — the activation
+        /// payload is intentionally light to keep the wire small.
+        public let componentTypeId: String?
+        public let sponsorId: Int?
+        public let customConfig: [String: AnyCodable]?
+        public let status: String
+    }
+}
 
 // MARK: - Cart Intent (WebSocket + push — canonical `vio_payload` or legacy flat)
 

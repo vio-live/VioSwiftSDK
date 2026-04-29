@@ -17,16 +17,12 @@ public enum VioPlacementManifestUploader {
 
     public struct Response: Decodable, Sendable {
         public let clientAppId: Int
-        public let components: [PersistedComponent]
         public let locations: [PersistedLocation]
+        /// Count of locations that were soft-deprecated server-side because
+        /// they were absent from this manifest payload. Sync semantics —
+        /// the manifest is the source of truth.
+        public let deprecatedCount: Int?
         public let warnings: [Warning]?
-
-        public struct PersistedComponent: Decodable, Sendable {
-            public let type: String
-            public let componentId: String
-            public let templateName: String?
-            public let appComponentId: Int
-        }
 
         public struct PersistedLocation: Decodable, Sendable {
             public let id: Int
@@ -56,12 +52,11 @@ public enum VioPlacementManifestUploader {
     public static func upload(baseURL: String, apiKey: String) async throws -> Response {
         let registry = VioPlacementRegistry.shared
         let payload = registry.manifestPayload()
-        let components = (payload["components"] as? [Any]) ?? []
         let locations = (payload["locations"] as? [Any]) ?? []
-        if components.isEmpty && locations.isEmpty {
+        if locations.isEmpty {
             // Nothing to upload — short-circuit instead of POSTing an empty
             // body that the backend rejects with 400.
-            throw UploadError.skipped(reason: "registry empty (no components or locations declared)")
+            throw UploadError.skipped(reason: "registry empty (no locations declared)")
         }
         guard !apiKey.isEmpty else { throw UploadError.missingApiKey }
 
@@ -87,6 +82,16 @@ public enum VioPlacementManifestUploader {
         }
 
         let decoder = JSONDecoder()
-        return try decoder.decode(Response.self, from: data)
+        let decoded = try decoder.decode(Response.self, from: data)
+
+        // Surface warnings so a typo (e.g. empty locationId) isn't silent.
+        if let warnings = decoded.warnings, !warnings.isEmpty {
+            for w in warnings {
+                print("⚠️ [VioPlacementManifest] \(w.kind): \(w.detail)")
+            }
+        }
+        print("🧩 [VioPlacementManifest] uploaded → locations=\(decoded.locations.count) deprecated=\(decoded.deprecatedCount ?? 0) warnings=\(decoded.warnings?.count ?? 0)")
+
+        return decoded
     }
 }

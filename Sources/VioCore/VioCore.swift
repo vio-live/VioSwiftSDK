@@ -57,25 +57,30 @@ public enum VioRuntime {
 
     // MARK: - Placement registry (manifest upload)
 
-    /// Register a placement component the partner app implements. Call this
-    /// once at app boot for each component the SDK should know about. The
-    /// manifest endpoint upserts the underlying `app_components` row(s) so
-    /// the operator dashboard's "Add placement" picker only ever offers
-    /// components this app actually has implementations for.
+    /// Register a slot location this app's layout exposes. Call once per
+    /// slot at app boot.
     ///
-    /// Idempotent — re-registering the same `componentType` is a no-op.
-    @MainActor
-    public static func registerPlacementComponent<T: VioPlacementComponent>(_ type: T.Type) {
-        VioPlacementRegistry.shared.register(type)
-    }
-
-    /// Register a placement slot location the partner's layout exposes. Call
-    /// this once at app boot for each slot. The dashboard's location picker
-    /// reads from these so an operator can never bind a `campaign_components`
-    /// instance to a slot the dev's code doesn't actually render to.
+    /// At cold-start the SDK uploads the registered locations to
+    /// `POST /v2/mobile/components/manifest`. The dashboard's
+    /// `/apps/:id` "Add from library" form lists these as the available
+    /// locationIds when an operator/admin creates a named app placement.
+    /// The operator can never bind a placement to a slot the dev hasn't
+    /// declared here.
     ///
-    /// Idempotent — re-registering the same `id` updates the displayName
-    /// (matches backend `INSERT ... ON CONFLICT DO UPDATE`).
+    /// Sync-semantic: locations not in a subsequent manifest payload are
+    /// soft-deprecated server-side. Re-registering an existing id clears
+    /// the deprecated flag.
+    ///
+    /// Example:
+    /// ```swift
+    /// Vio.registerPlacementLocation(VioPlacementLocation(
+    ///     id: "home_top",
+    ///     displayName: "Home — Top"
+    /// ))
+    /// ```
+    ///
+    /// Idempotent — re-registering the same `id` updates the
+    /// `displayName` (matches backend `INSERT ... ON CONFLICT DO UPDATE`).
     @MainActor
     public static func registerPlacementLocation(_ location: VioPlacementLocation) {
         VioPlacementRegistry.shared.registerLocation(location)

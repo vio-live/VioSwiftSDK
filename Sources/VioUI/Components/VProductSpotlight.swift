@@ -9,19 +9,20 @@ import UIKit
 
 /// Auto-configured Product Spotlight component
 /// Automatically loads configuration from active campaign
-/// 
+///
 /// **Usage:**
 /// ```swift
-/// // Basic usage - uses first product_spotlight component from backend
-/// VProductSpotlight()
+/// // Slot-aware (post-2026-04-28 placements model — recommended)
+/// VProductSpotlight(locationId: "home_top")
 ///
-/// // Specific component ID - uses a specific product_spotlight component
+/// // Backwards-compat: pick by componentId or first matching
+/// VProductSpotlight()
 /// VProductSpotlight(componentId: "product-spotlight-1")
-/// VProductSpotlight(componentId: "product-spotlight-2")
 /// ```
 ///
 /// **Parameters:**
 /// - `componentId: String?` - Optional component ID to identify a specific component. If `nil`, uses the first matching component.
+/// - `locationId: String?` - Optional placement slot identifier (e.g. `"home_top"`). Resolves the active component for the slot via `getActiveComponent(type:locationId:)` so the same template can power multiple slots in one campaign.
 /// - `variant: VProductCard.Variant?` - Optional card variant override. Options: `.grid`, `.list`, `.hero`, `.minimal`. If `nil`, uses `.hero` (default).
 /// - `showAddToCartButton: Bool` - Whether to show the "Add to Cart" button in hero variant. Default: `true`. Button only shows if product has no variants.
 ///
@@ -52,61 +53,80 @@ import UIKit
 public struct VProductSpotlight: View {
     
     // MARK: - Properties
-    
+
     /// Optional component ID to identify a specific component
     /// If nil, uses the first matching component from the campaign
     private let componentId: String?
-    
+
+    /// Optional placement slot identifier (e.g. `"home_top"`,
+    /// `"match_pre_kickoff"`). When provided, resolves the active
+    /// component via `getActiveComponent(type:locationId:)` so the
+    /// same `product_spotlight` template can be bound to multiple
+    /// slots in one campaign without colliding on the template id.
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    private let locationId: String?
+
     /// Optional card variant override for demo/testing
     /// If nil, uses .hero (default)
     private let variant: VProductCard.Variant?
-    
+
     /// Whether to show the "Add to Cart" button in hero variant
     /// Default: true. Button only shows if product has no variants.
     private let showAddToCartButton: Bool
-    
+
     /// Whether to show sponsor badge
     private let showSponsor: Bool
-    
+
     /// Sponsor badge position: "topRight", "topLeft", "bottomRight", "bottomLeft"
     /// Default: "topRight"
     private let sponsorPosition: String
-    
+
     @ObservedObject private var campaignManager = CampaignManager.shared
     @StateObject private var viewModel = VProductSpotlightViewModel()
-    
+
     @SwiftUI.Environment(\.colorScheme) private var colorScheme: SwiftUI.ColorScheme
     @EnvironmentObject private var cartManager: CartManager
-    
+
     @State private var showingProductDetail: Product?
-    
+
     // Cache parsed config values - only recalculated when config changes
     @State private var cachedProductId: String?
     @State private var cachedHighlightText: String?
+    @State private var cachedTitle: String?
+    @State private var cachedShowSponsorLogo: Bool = false
+    @State private var cachedLayout: String?
     @State private var currentConfigId: String?
-    
+
     // Computed colors based on current color scheme
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
+
     // MARK: - Initializer
-    
-    public init(componentId: String? = nil, variant: VProductCard.Variant? = nil, showAddToCartButton: Bool = true, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+
+    public init(
+        componentId: String? = nil,
+        locationId: String? = nil,
+        variant: VProductCard.Variant? = nil,
+        showAddToCartButton: Bool = true,
+        showSponsor: Bool = false,
+        sponsorPosition: String? = nil
+    ) {
         self.componentId = componentId
+        self.locationId = locationId
         self.variant = variant
         self.showAddToCartButton = showAddToCartButton
         self.showSponsor = showSponsor
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
-    
+
     // MARK: - Computed Properties
-    
+
     /// Get active product spotlight component from campaign
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_spotlight", componentId: componentId)
+        campaignManager.getActiveComponent(type: "product_spotlight", componentId: componentId, locationId: locationId)
     }
-    
+
     /// Extract ProductSpotlightConfig from component
     private var config: ProductSpotlightConfig? {
         guard let component = activeComponent,
@@ -115,24 +135,49 @@ public struct VProductSpotlight: View {
         }
         return config
     }
-    
+
+    /// Resolve the operator's `layout` choice to a `VProductCard.Variant`.
+    /// Falls back to the call-site `variant` parameter if the operator
+    /// didn't pick a layout, then to `.hero` (legacy default) if neither
+    /// is set.
+    private var effectiveVariant: VProductCard.Variant? {
+        // Call-site override wins (e.g. `VProductSpotlight(variant: .list)`).
+        if let v = variant { return v }
+        // Otherwise honor the operator's customConfig.layout.
+        switch (cachedLayout ?? "").lowercased() {
+        case "list":    return .list
+        case "minimal": return .minimal
+        case "grid":    return .grid
+        case "hero":    return .hero
+        default:        return nil  // → falls into the customHeroLayout path below
+        }
+    }
+
     /// Update cached config when config changes
     private func updateCachedConfigIfNeeded() {
         guard let config = config else {
             if cachedProductId != nil {
                 cachedProductId = nil
                 cachedHighlightText = nil
+                cachedTitle = nil
+                cachedShowSponsorLogo = false
+                cachedLayout = nil
                 currentConfigId = nil
             }
             return
         }
-        
-        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")"
-        
-        // Only recalculate if config actually changed
+
+        // Include the new operator-controllable fields in the cache
+        // identity so changes to title / showSponsorLogo / layout trigger
+        // a re-render path (matches the carousel pattern).
+        let newConfigId = "\(config.productId)-\(config.highlightText ?? "")-\(config.title ?? "")-\(config.showSponsorLogo)-\(config.layout ?? "")"
+
         if currentConfigId != newConfigId {
             cachedProductId = config.productId
             cachedHighlightText = config.highlightText
+            cachedTitle = config.title
+            cachedShowSponsorLogo = config.showSponsorLogo
+            cachedLayout = config.layout
             currentConfigId = newConfigId
         }
     }
@@ -143,20 +188,28 @@ public struct VProductSpotlight: View {
         guard VioConfiguration.shared.shouldUseSDK else {
             return false
         }
-        
+
+        // Hide-on-failure: after a non-recoverable load error, fall
+        // through to EmptyView until a config change / WS event
+        // resets the flag and triggers a fresh load. Sprint 2026-04-28
+        // PM Phase 2 polish.
+        if viewModel.loadFailed && viewModel.product == nil {
+            return false
+        }
+
         // Check campaign state
         let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             // No campaign configured - show component (legacy behavior)
             return true
         }
-        
+
         // Campaign must be active and not paused
         guard campaignManager.isCampaignActive,
               campaignManager.currentCampaign?.isPaused != true else {
             return false
         }
-        
+
         // Component must exist and be active
         return activeComponent?.isActive == true && config != nil
     }
@@ -249,17 +302,64 @@ public struct VProductSpotlight: View {
     
     // MARK: - Content Views
     
+    /// Header strip with optional title text + sponsor logo. Both come
+    /// from the placement's customConfig — operator-controllable via
+    /// the dashboard:
+    ///
+    ///   `title`             → "Producto destacado", "Featured", etc.
+    ///                         Empty/nil → hide.
+    ///   `showSponsorLogo`   → bool. true → resolve sponsor.logoUrl by
+    ///                         the placement's sponsorId and render
+    ///                         right-aligned. SVG logos route through
+    ///                         `VRemoteImage`/`VSVGWebView` so vector
+    ///                         brand assets render without an extra dep.
+    ///
+    /// Renders nothing when both opts are off (zero overhead, no extra
+    /// padding, no spacer block) — preserving the legacy spotlight
+    /// layout bit-for-bit for apps that haven't filled in the new
+    /// fields yet.
+    ///
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    @ViewBuilder
+    private var placementHeader: some View {
+        let title = (cachedTitle ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let showLogo = cachedShowSponsorLogo
+        let sponsorLogoUrl: String? = {
+            guard showLogo, let sponsorId = activeComponent?.sponsorId else { return nil }
+            return VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl
+        }()
+        if !title.isEmpty || sponsorLogoUrl != nil {
+            HStack {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(adaptiveColors.textPrimary)
+                }
+                Spacer()
+                if let url = sponsorLogoUrl {
+                    VRemoteImage(urlString: url, height: 20)
+                }
+            }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.bottom, VioSpacing.sm)
+        }
+    }
+
     /// Main spotlight content view with product card and highlight badge
     private func spotlightContentView(product: Product, highlightText: String?) -> some View {
         let currentLogoUrl = campaignLogoUrl
         let shouldShowBadge = shouldShowSponsorBadge
         let position = sponsorPosition.isEmpty ? "topRight" : sponsorPosition
-        
+
         // Determine if badge should be above or below content
         let isTopPosition = position == "topRight" || position == "topLeft"
         let isRightPosition = position == "topRight" || position == "bottomRight"
-        
+
         return VStack(spacing: 0) {
+            // Operator-controlled header (title + sponsor logo). Opt-in
+            // via customConfig; renders nothing when both fields are off.
+            placementHeader
+
             // Badge container above content (if top position)
             if shouldShowBadge, let logoUrl = currentLogoUrl, isTopPosition {
                 sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
@@ -267,7 +367,7 @@ public struct VProductSpotlight: View {
             
             VStack(spacing: VioSpacing.md) {
                 // Highlight badge (if provided) - only show for hero variant
-                if let highlightText = highlightText, !highlightText.isEmpty, variant == nil || variant == .hero {
+                if let highlightText = highlightText, !highlightText.isEmpty, effectiveVariant == nil || effectiveVariant == .hero {
                     Text(highlightText)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(adaptiveColors.surface)
@@ -280,15 +380,17 @@ public struct VProductSpotlight: View {
                         .padding(.horizontal, VioSpacing.md)
                 }
                 
-                // Use custom hero layout if hero variant, otherwise use VProductCard
-                if variant == nil || variant == .hero {
+                // Resolve variant: call-site override wins, then operator's
+                // customConfig.layout, then fall back to the legacy big
+                // hero card (`customHeroLayout`).
+                let resolvedVariant = effectiveVariant
+                if resolvedVariant == nil || resolvedVariant == .hero {
                     customHeroLayout(product: product)
                         .padding(.horizontal, VioSpacing.md)
                 } else {
-                    // For other variants, use VProductCard directly
                     VProductCard(
                         product: product,
-                        variant: variant!,
+                        variant: resolvedVariant!,
                         showBrand: VioConfiguration.shared.uiConfiguration.showProductBrands,
                         showDescription: VioConfiguration.shared.uiConfiguration.showProductDescriptions,
                         showProductDetail: true
@@ -477,9 +579,27 @@ public struct VProductSpotlight: View {
     }
     
     // MARK: - Skeleton View
-    
-    /// Skeleton loader shown while product is loading
+
+    /// Skeleton loader shown while product is loading.
+    ///
+    /// Variant-aware so the skeleton matches the card's natural
+    /// height. Critical for non-hero layouts: the parent ZStack sizes
+    /// itself to the tallest child, so a hero-sized skeleton (~600pt
+    /// image + content) makes the whole spotlight section eat half
+    /// the screen even when the actual layout is `.list` (~90pt).
+    @ViewBuilder
     private var skeletonView: some View {
+        let resolvedVariant = effectiveVariant
+        if resolvedVariant == nil || resolvedVariant == .hero {
+            heroSkeletonView
+        } else {
+            compactSkeletonView
+        }
+    }
+
+    /// Hero-sized skeleton — the legacy big-card layout. Matches
+    /// `customHeroLayout` proportions (300pt image + content).
+    private var heroSkeletonView: some View {
         VStack(spacing: VioSpacing.md) {
             // Highlight badge skeleton
             RoundedRectangle(cornerRadius: VioBorderRadius.circle)
@@ -550,7 +670,45 @@ public struct VProductSpotlight: View {
         }
         .padding(.vertical, VioSpacing.md)
     }
-    
+
+    /// Compact skeleton — matches `VProductCard.listLayout`
+    /// proportions (70x70 image + 3 lines of text). Used when the
+    /// operator picked `.list`, `.minimal`, or `.grid` so the
+    /// spotlight section sizes to the actual card height instead of
+    /// reserving the hero skeleton's ~600pt.
+    private var compactSkeletonView: some View {
+        HStack(alignment: .center, spacing: VioSpacing.sm) {
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                .frame(width: 70, height: 70)
+                .shimmerEffect()
+
+            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(width: 60, height: 10)
+                    .shimmerEffect()
+
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(height: 14)
+                    .shimmerEffect()
+
+                RoundedRectangle(cornerRadius: VioBorderRadius.small)
+                    .fill(adaptiveColors.surfaceSecondary.opacity(0.6))
+                    .frame(width: 80, height: 14)
+                    .shimmerEffect()
+            }
+
+            Spacer()
+        }
+        .padding(VioSpacing.sm)
+        .background(adaptiveColors.surface)
+        .cornerRadius(VioBorderRadius.small)
+        .vioCardShadow(for: colorScheme)
+        .padding(.horizontal, VioSpacing.md)
+    }
+
     // MARK: - Error & Empty States
     
     private var errorView: some View {
@@ -617,15 +775,23 @@ public struct VProductSpotlight: View {
               let productId = Int(productIdString) else {
             return
         }
-        
+
         let currency = VioConfiguration.shared.marketConfiguration.currencyCode
         let country = VioConfiguration.shared.marketConfiguration.countryCode
-        
+        // Multi-sponsor commerce key routing: pull the placement's
+        // sponsor from the active component so ProductService routes to
+        // the right Commerce GraphQL apiKey (XXL's, Elkjøp's, etc.).
+        // Without this, secondary-sponsor placements always queried the
+        // primary sponsor's catalog and "found 0 rows" for any product
+        // the primary doesn't sell. Mirrors VProductCarousel.loadProducts.
+        let sponsorId = activeComponent?.sponsorId
+
         Task {
             await viewModel.loadProduct(
                 productId: productId,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
         }
     }
@@ -640,33 +806,46 @@ private class VProductSpotlightViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
-    
-    func loadProduct(productId: Int, currency: String, country: String) async {
+    /// Hide-on-failure flag — set when load throws a non-recoverable
+    /// error. View's `shouldShow` falls through to EmptyView so the
+    /// placement disappears instead of showing a stuck skeleton.
+    /// Reset on every load attempt.
+    @Published var loadFailed: Bool = false
+
+    func loadProduct(productId: Int, currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
             isLoading = false
             return
         }
-        
+
         guard !isLoading else { return }
-        
+
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
-        
+        loadFailed = false
+
         do {
-            // Use ProductService to load product
+            // Use ProductService to load product. sponsorId routes to
+            // the per-sponsor commerce client (XXL's apiKey for an XXL
+            // placement, etc.) — required for multi-sponsor placements
+            // where the product lives in a sponsor's catalog the
+            // primary doesn't share.
             product = try await ProductService.shared.loadProduct(
                 productId: productId,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
-            
+
         } catch ProductServiceError.productNotFound(let id) {
             errorMessage = "Product not found"
+            loadFailed = true
             VioLogger.warning("Product not found for ID: \(id) - Currency: \(currency), Country: \(country)", component: "VProductSpotlight")
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = "Invalid configuration"
+            loadFailed = true
             VioLogger.error("Invalid configuration: \(message)", component: "VProductSpotlight")
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
@@ -675,13 +854,15 @@ private class VProductSpotlightViewModel: ObservableObject {
                 VioLogger.warning("Market not available", component: "VProductSpotlight")
             } else {
                 errorMessage = error.message
+                loadFailed = true
                 VioLogger.error("Error loading product: \(error.message)", component: "VProductSpotlight")
             }
         } catch {
             errorMessage = "Failed to load product"
+            loadFailed = true
             VioLogger.error("Unexpected error: \(error.localizedDescription)", component: "VProductSpotlight")
         }
-        
+
         isLoading = false
     }
 }

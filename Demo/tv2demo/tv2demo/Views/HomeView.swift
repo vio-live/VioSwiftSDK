@@ -48,64 +48,100 @@ struct HomeView: View {
                                 title: "Direkte",
                                 items: filteredContent.filter { $0.isLive }
                             )
-                            
+
+                            // Featured product spotlight slot (sits just
+                            // below the Direkte rail on the Home tab).
+                            // Renders only when an operator has bound a
+                            // campaign_component to the `home_spotlight`
+                            // placement in the dashboard. Sprint 2026-04-28
+                            // PM polish parity with VProductCarousel.
+                            VProductSpotlight(locationId: "home_spotlight")
+                                .padding(.top, TV2Theme.Spacing.md)
+
                             // Recent Content Section
                             contentSection(
                                 title: "Nylig",
                                 items: filteredContent.filter { !$0.isLive }
                             )
                             
-                            // Offer Banner Section
-                            VStack(spacing: TV2Theme.Spacing.md) {
-                                NavigationLink(destination: ProductsGridView()
-                                    .environmentObject(cartManager)
-                                    .environmentObject(checkoutDraft)
-                                ) {
-                                    OfferBannerView()
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                                
-                                // Dynamic Offer Banner (from backend)
-                                if let bannerConfig = componentManager.activeBanner {
-                                    VOfferBanner(config: bannerConfig)
-                                }
+                            // Offer Banner Section — campaign-driven only.
+                            //
+                            // VOfferBanner(locationId: "home_offer") renders
+                            // nothing until an operator binds an offer_banner
+                            // campaign_component to the slot via the
+                            // dashboard. Title / subtitle / countdown / badge
+                            // / CTA / deeplink / sponsor logo all flow from
+                            // customConfig + sponsor.logoUrl in the v2 GET
+                            // response. Live updates via
+                            // placement_status_changed +
+                            // placement_config_updated WS events
+                            // (pause/resume + edit fields from dashboard,
+                            // SDK reflects in <1s).
+                            //
+                            // The NavigationLink wrap gives Path A3 hybrid:
+                            // when the operator sets `customConfig.deeplinkUrl`
+                            // or `deeplinkAction` the SDK calls the in-app
+                            // callback first; only when no callback is
+                            // provided does it fall back to
+                            // `UIApplication.shared.open(deeplinkUrl)`.
+                            //
+                            // The hardcoded `OfferBannerView()` and the
+                            // legacy `componentManager.activeBanner` path
+                            // were retired here (sprint 2026-04-28 PM
+                            // Phase 2 close-out — both replaced by the
+                            // locationId-driven render above).
+                            NavigationLink(destination: ProductsGridView()
+                                .environmentObject(cartManager)
+                                .environmentObject(checkoutDraft)
+                            ) {
+                                VOfferBanner(locationId: "home_offer")
                             }
+                            .buttonStyle(PlainButtonStyle())
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             .padding(.top, TV2Theme.Spacing.lg)
                             
-                            // Products Section - Ukens tilbud
-                            VStack(alignment: .leading, spacing: TV2Theme.Spacing.md) {
-                                // Custom header with logo
-                                HStack {
-                                    Text("Ukens tilbud")
-                                        .font(TV2Theme.Typography.title)
-                                        .foregroundColor(TV2Theme.Colors.textPrimary)
-                                    
-                                    Spacer()
-                                    
-                                    Image("logo")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(height: 20)
-                                }
-                                .padding(.horizontal, TV2Theme.Spacing.md)
-                                
-                                // Products carousel — resolved by locationId from the
-                                // operator's placement on Campaign 36 (dashboard → Components → Add).
-                                // Replaces the previous hardcoded componentId so a campaign
-                                // change in the dashboard takes effect without rebuilding the app.
-                                VProductCarousel(locationId: "home_top", layout: "compact")
-                                //VProductSlider(
-                                    //title: "",
-                                    //layout: .cards,
-                                    //maxItems: 6,
-                                    //currency: cartManager.currency,
-                                    //country: cartManager.country
-                                //)
-                                //.environmentObject(cartManager)
+                            // Products Section.
+                            //
+                            // Header (title + sponsor logo) is now rendered BY the carousel
+                            // when the operator turns on `customConfig.title` and/or
+                            // `customConfig.showSponsorLogo` in the dashboard placement
+                            // form. Removes the previously hardcoded "Ukens tilbud" Text
+                            // + Image("logo") wrapper — host app no longer dictates the
+                            // label, the active campaign does.
+                            VProductCarousel(locationId: "home_top", layout: "compact")
+                                .padding(.top, TV2Theme.Spacing.lg)
+
+                            // Single-product banner slot. Sprint
+                            // 2026-04-28 PM Phase 2 — operator binds
+                            // a `product_banner` template here from
+                            // the dashboard, picks layout preset
+                            // (compact / standard / large), brand
+                            // colors, optional sponsor-logo overlay.
+                            // Renders nothing until bound. Wrapped in
+                            // a NavigationLink → ProductsGridView so
+                            // tapping the banner falls back to the
+                            // in-app catalog when the operator hasn't
+                            // configured a deeplink (matches the
+                            // offer-banner pattern above).
+                            NavigationLink(destination: ProductsGridView()
+                                .environmentObject(cartManager)
+                                .environmentObject(checkoutDraft)
+                            ) {
+                                VProductBanner(locationId: "home_product_banner")
                             }
+                            .buttonStyle(PlainButtonStyle())
                             .padding(.top, TV2Theme.Spacing.lg)
-                            .padding(.bottom, TV2Theme.Spacing.xl)
+
+                            // Multi-sponsor product store. Sprint
+                            // 2026-04-28 PM Phase 2 — operator
+                            // curates products across sponsors via
+                            // the dashboard's MultiSponsorProductPicker.
+                            // Each tap opens VProductDetailOverlay
+                            // (one at a time via SwiftUI @State).
+                            // Renders nothing until bound.
+                            VProductStore(locationId: "home_store")
+                                .padding(.top, TV2Theme.Spacing.lg)
+                                .padding(.bottom, TV2Theme.Spacing.xl)
                         }
                     }
                     

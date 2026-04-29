@@ -2,69 +2,77 @@
 //  TV2PlacementRegistration.swift
 //  tv2demo
 //
-//  Demo-side declarations for the placement self-service registry.
+//  Demo-side slot registration for the placement system (post 2026-04-27
+//  pivot). The SDK declares ONLY the slot locations the app's UI exposes;
+//  named app_placements (template + name + locationId) are created by the
+//  operator/admin in the dashboard `/apps/:id` "Add from library" form.
 //
-//  Each conforming type below maps to a canonical components.type row on the
-//  backend (rows with is_template = true). The 5 currently-shipped templates
-//  are: product_carousel, product_spotlight, product_banner, product_store,
-//  offer_banner, banner, countdown.
-//
-//  When tv2demoApp.init runs `TV2PlacementRegistration.registerAll()`, the
-//  SDK registry is populated. On the next `VioSession.start()` (triggered by
-//  the demo's existing `discoverCampaigns` call), the manifest endpoint is
-//  POSTed and the backend upserts the corresponding app_components +
-//  app_component_locations rows for client_app_id = 18 (TV2 demo apiKey).
-//
-//  The dashboard's "Add placement" picker (Campaign 36 → Components → Add)
-//  then auto-populates with these locations and component types — the
-//  operator can bind a placement instance without a Vio admin in the loop.
+//  Cold-start flow:
+//    1. tv2demoApp.init runs `TV2PlacementRegistration.registerAll()` →
+//       VioPlacementRegistry stores the locations.
+//    2. CampaignManager.fetchAndApplySdkBootstrapNow runs the manifest
+//       upload → POST /v2/mobile/components/manifest with `locations[]`.
+//    3. Backend upserts app_component_locations and soft-deprecates any
+//       location not in the new payload.
+//    4. Operator goes to dashboard `/apps/18` → Placements → "Add from
+//       library" and picks template + name + locationId from this list.
 //
 
 import Foundation
 import VioCore
 
-/// Carousel for shoppable products. Multi-product, max 8 to keep the UI tight.
-struct TV2ProductCarouselPlacement: VioPlacementComponent {
-    static var componentType: String { "product_carousel" }
-    static var productMode: VioProductBindingMode { .multiple }
-    static var maxProducts: Int? { 8 }
-}
-
-/// Single-product spotlight (hero treatment).
-struct TV2ProductSpotlightPlacement: VioPlacementComponent {
-    static var componentType: String { "product_spotlight" }
-    static var productMode: VioProductBindingMode { .single }
-}
-
-/// Banner (single product, lower density than spotlight).
-struct TV2ProductBannerPlacement: VioPlacementComponent {
-    static var componentType: String { "product_banner" }
-    static var productMode: VioProductBindingMode { .single }
-}
-
 enum TV2PlacementRegistration {
 
-    /// Call once at app boot from `tv2demoApp.init`. The order here is the
-    /// order the SDK serializes into the manifest payload (sorted
-    /// alphabetically by type / id once they hit the registry, so the actual
-    /// payload is stable across runs).
+    /// Call once at app boot from `tv2demoApp.init`. **Rule for the dev**:
+    /// every slot id registered here MUST be rendered by a placement view
+    /// somewhere in the layout (`VProductCarousel(locationId: ...)`, etc).
+    /// Otherwise the dashboard offers an operator a slot the app doesn't
+    /// actually render to — operator creates a placement, nothing happens.
+    ///
+    /// To add a new slot:
+    ///   1. Add a `registerPlacementLocation(...)` call here.
+    ///   2. Render the matching placement view in the SwiftUI layout.
+    ///   3. Cold-start the app — the manifest endpoint upserts the slot.
+    ///   4. Tell the operator/admin the slot is available.
     @MainActor
     static func registerAll() {
-        // Component types this demo's iOS code knows how to render.
-        VioRuntime.registerPlacementComponent(TV2ProductCarouselPlacement.self)
-        VioRuntime.registerPlacementComponent(TV2ProductSpotlightPlacement.self)
-        VioRuntime.registerPlacementComponent(TV2ProductBannerPlacement.self)
+        // Rendered by HomeView.swift  → VProductCarousel(locationId: "home_top", layout: "compact")
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",          displayName: "Home — Top"))
 
-        // Slot locations the demo's layout exposes. The dashboard picker only
-        // ever shows these — the operator can't bind a placement to a slot
-        // the dev hasn't declared.
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_top",         displayName: "Home — Top"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_below_video", displayName: "Home — Below video"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_sidebar",    displayName: "Match — Sidebar"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff",displayName: "Match — Pre-kickoff"))
-        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "casting_overlay",  displayName: "Casting overlay"))
+        // Rendered by HomeView.swift  → VProductSpotlight(locationId: "home_spotlight")
+        // Featured product (single-product hero) right below the "Direkte" rail
+        // on the Home tab. Renders nothing until an operator binds a campaign
+        // component — pure layout-friendly placeholder.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_spotlight",    displayName: "Home — Featured product"))
+
+        // Rendered by HomeView.swift  → VOfferBanner(locationId: "home_offer")
+        // Promo banner with countdown + sponsor logo + CTA deeplink.
+        // Replaces both the previously hardcoded `OfferBannerView()` and
+        // the legacy `componentManager.activeBanner` path (both retired
+        // 2026-04-29 once the dynamic flow validated end-to-end).
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_offer",        displayName: "Home — Offer banner (promo with countdown)"))
+
+        // Rendered by HomeView.swift  → VProductBanner(locationId: "home_product_banner")
+        // Single-product banner with bg image + CTA + optional sponsor
+        // logo overlay. Layout preset (compact / standard / large)
+        // adjusts height + font sizes from the dashboard. Mounted
+        // below the carousel to give the operator a separate slot
+        // from `home_offer` (offer_banner = countdown promo,
+        // product_banner = single-product feature). Sprint 2026-04-28
+        // PM Phase 2.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_product_banner", displayName: "Home — Product banner (single product)"))
+
+        // Rendered by HomeView.swift  → VProductStore(locationId: "home_store")
+        // Multi-sponsor product grid (Phase 2). Operator curates
+        // products from any campaign sponsor; tap opens detail
+        // modal (one at a time). Lives at the bottom of the Home
+        // tab as a "shop" section.
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_store",         displayName: "Home — Multi-sponsor product store"))
+
+        // Rendered by MatchDetailView.swift  → VProductCarousel(locationId: "match_pre_kickoff", layout: "compact")
+        VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "match_pre_kickoff", displayName: "Match — Pre-kickoff"))
 
         let registry = VioPlacementRegistry.shared
-        print("🧩 [TV2Demo] Placement registry seeded — components=\(registry.registeredComponents.count) locations=\(registry.registeredLocations.count)")
+        print("🧩 [TV2Demo] Slot registry seeded — locations=\(registry.registeredLocations.count)")
     }
 }

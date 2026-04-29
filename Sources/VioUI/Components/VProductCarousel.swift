@@ -68,25 +68,32 @@ public struct VProductCarousel: View {
         let autoPlayInterval: TimeInterval
         let shouldAutoPlay: Bool
         let layout: String // "compact", "full", or "horizontal"
+        let title: String?           // Optional header title from operator's customConfig
+        let showSponsorLogo: Bool    // Optional flag to render the placement's sponsor logo in the header
         let configId: String // Used to detect config changes
-        
+
         init(config: ProductCarouselConfig, layoutOverride: String? = nil) {
             // Cache converted product IDs (String → Int)
             // Empty array means "load all products from channel"
             self.productIds = config.productIds.compactMap { Int($0) }
-            
+
             // Cache auto-play interval conversion (milliseconds → seconds)
             self.autoPlayInterval = Double(config.interval) / 1000.0
             self.shouldAutoPlay = config.autoPlay
-            
+
             // Use layout override if provided, otherwise use layout from config (default to "full")
             self.layout = layoutOverride ?? config.layout ?? "full"
-            
+
+            // Optional header opt-ins (default to off; operator turns them
+            // on per placement via the dashboard's customConfig fields).
+            self.title = config.title
+            self.showSponsorLogo = config.showSponsorLogo
+
             // Create unique identifier for this config (detects changes)
             // Use "all" when productIds is empty to make it clearer
             // Must match the format in updateCachedConfigIfNeeded()
             let productIdsString = config.productIds.isEmpty ? "all" : config.productIds.joined(separator: "-")
-            self.configId = "\(productIdsString)-\(config.autoPlay)-\(config.interval)-\(self.layout)"
+            self.configId = "\(productIdsString)-\(config.autoPlay)-\(config.interval)-\(self.layout)-\(config.title ?? "")-\(config.showSponsorLogo)"
         }
     }
     
@@ -212,19 +219,29 @@ public struct VProductCarousel: View {
         guard VioConfiguration.shared.shouldUseSDK else {
             return false
         }
-        
+
+        // Hide-on-failure: when the product fetch failed and we have no
+        // cached products to render, fall through to EmptyView instead
+        // of showing a perpetual skeleton or an error CTA. Operator
+        // fixes the binding via dashboard → next config change resets
+        // the flag and the next loadProducts attempts again.
+        // Sprint 2026-04-28 PM Phase 2 polish.
+        if viewModel.loadFailed && viewModel.products.isEmpty {
+            return false
+        }
+
         // Check campaign state
         let campaignId = CampaignManager.shared.currentCampaign?.id ?? 0
         guard campaignId > 0 else {
             return config != nil
         }
-        
+
         // Campaign must be active and not paused
         guard campaignManager.isCampaignActive,
               campaignManager.currentCampaign?.isPaused != true else {
             return false
         }
-        
+
         // Component must exist and be active
         // Also check if config can be extracted (component might exist but config decoding failed)
         return activeComponent?.isActive == true && config != nil
@@ -303,21 +320,30 @@ public struct VProductCarousel: View {
             skeletonView
                 .opacity(isLoading ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.3), value: isLoading)
-            
+
             // Content with badge container
             VStack(spacing: 0) {
+                // Optional config-driven header (title + sponsor logo).
+                // Both are opt-in via the placement's customConfig in the
+                // dashboard — if the operator doesn't set them, no header
+                // renders and the carousel sits without a label (current
+                // legacy behavior preserved).
+                placementHeader
+                    .opacity(isLoading ? 0.0 : 1.0)
+                    .animation(.easeInOut(duration: 0.3), value: isLoading)
+
                 // Badge container above carousel (if top position)
                 if shouldShowBadge, let logoUrl = currentLogoUrl, isTopPosition {
                     sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
                         .opacity(isLoading ? 0.0 : 1.0)
                         .animation(.easeInOut(duration: 0.3), value: isLoading)
                 }
-                
+
                 // Carousel content
                 carouselContent
                     .opacity(isLoading ? 0.0 : 1.0)
                     .animation(.easeInOut(duration: 0.3), value: isLoading)
-                
+
                 // Badge container below carousel (if bottom position)
                 if shouldShowBadge, let logoUrl = currentLogoUrl, !isTopPosition {
                     sponsorBadgeContainer(logoUrl: logoUrl, isRightPosition: isRightPosition)
@@ -325,6 +351,48 @@ public struct VProductCarousel: View {
                         .animation(.easeInOut(duration: 0.3), value: isLoading)
                 }
             }
+        }
+    }
+
+    /// Header strip with optional title text + sponsor logo. Both come from
+    /// the placement's config — operator-controllable via the dashboard's
+    /// customConfig fields:
+    ///
+    ///   `title`             → "Ukens tilbud", "Featured", etc. Empty/nil → hide.
+    ///   `showSponsorLogo`   → bool. true → resolve sponsor.logoUrl by sponsorId
+    ///                                        and render right-aligned.
+    ///
+    /// Renders nothing when both opts are off (zero overhead, no extra
+    /// padding, no spacer block). Replaces the host app's hand-rolled
+    /// "Ukens tilbud" Text + Image("logo") wrapper around the carousel.
+    @ViewBuilder
+    private var placementHeader: some View {
+        let title = (cachedConfig?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let showLogo = cachedConfig?.showSponsorLogo == true
+        // Render the operator-uploaded **logoUrl** (the official brand logo
+        // — what the dashboard's "Logo" field accepts). Format-agnostic:
+        // VRemoteImage routes raster (PNG/JPEG) through AsyncImage and
+        // vector (.svg) through a WKWebView fallback so SVG logos render
+        // without adding a third-party dep. AvatarUrl is reserved for
+        // surfaces that explicitly want the square mark (cards, badges).
+        let sponsorLogoUrl: String? = {
+            guard showLogo, let sponsorId = activeComponent?.sponsorId else { return nil }
+            return VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl
+        }()
+        if !title.isEmpty || sponsorLogoUrl != nil {
+            HStack {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(adaptiveColors.textPrimary)
+                }
+                Spacer()
+                if let url = sponsorLogoUrl {
+                    VRemoteImage(urlString: url, height: 20)
+                }
+            }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.bottom, VioSpacing.sm)
         }
     }
     
@@ -1282,8 +1350,15 @@ class VProductCarouselViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
     @Published var isMarketUnavailable: Bool = false
+    /// Hide-on-failure flag — set true after a non-recoverable load
+    /// error (auth failure, network outage, etc.). Combined with
+    /// `products.isEmpty` it lets the view render EmptyView instead
+    /// of a perpetual skeleton or an error CTA. Reset to false at the
+    /// start of every load so any config change / WS event triggers a
+    /// fresh attempt automatically.
+    @Published var loadFailed: Bool = false
     @Published var currentIndex: Int = 0 // Move currentIndex to ViewModel for safe Timer access
-    
+
     func loadProducts(productIds: [Int], currency: String, country: String, sponsorId: Int? = nil) async {
         guard VioConfiguration.shared.shouldUseSDK else {
             isMarketUnavailable = true
@@ -1296,6 +1371,7 @@ class VProductCarouselViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         isMarketUnavailable = false
+        loadFailed = false  // Fresh attempt — clear stale failure flag
 
         // Determine if we should load all products or filtered
         let idsToUse: [Int]? = productIds.isEmpty ? nil : productIds
@@ -1311,26 +1387,30 @@ class VProductCarouselViewModel: ObservableObject {
                 country: country,
                 sponsorId: sponsorId
             )
-            
+
             if products.isEmpty {
                 // No products found - will show empty state
             }
-            
+
         } catch ProductServiceError.invalidConfiguration(let message) {
             errorMessage = message
+            loadFailed = true
         } catch ProductServiceError.sdkError(let error) {
             if error.code == "NOT_FOUND" || error.status == 404 {
                 isMarketUnavailable = true
                 errorMessage = nil
             } else {
                 errorMessage = error.message
+                loadFailed = true
             }
         } catch ProductServiceError.networkError(let error) {
             errorMessage = error.localizedDescription
+            loadFailed = true
         } catch {
             errorMessage = error.localizedDescription
+            loadFailed = true
         }
-        
+
         isLoading = false
     }
 }
@@ -1387,4 +1467,9 @@ private struct ShimmerEffectModifier: ViewModifier {
             }
     }
 }
+
+// `VRemoteImage` (format-agnostic remote image with SVG fallback) lives
+// in its own file (`VRemoteImage.swift`) — extracted so VProductSpotlight
+// and other placement views can render sponsor logos without
+// duplicating the WKWebView fallback.
 

@@ -2,8 +2,14 @@ import Foundation
 import VioCore
 
 /// Configuration for Offer Banner component
+///
+/// `logoUrl` is **optional** post-Sprint-2026-04-28 PM Phase 2: when
+/// empty/missing, VOfferBanner auto-resolves the placement's sponsor
+/// logo via `VioConfiguration.sponsor(withId:).logoUrl`. The operator
+/// only fills in `logoUrl` when they want to override the sponsor
+/// branding for a specific banner (e.g. a co-branded promo).
 public struct OfferBannerConfig: Codable, Equatable {
-    public let logoUrl: String
+    public let logoUrl: String  // empty string treated as "use sponsor logo"
     public let title: String
     public let subtitle: String?
     public let backgroundImageUrl: String?  // Optional: can use backgroundColor instead
@@ -25,7 +31,7 @@ public struct OfferBannerConfig: Codable, Equatable {
     }
     
     public init(
-        logoUrl: String,
+        logoUrl: String = "",
         title: String,
         subtitle: String? = nil,
         backgroundImageUrl: String? = nil,
@@ -56,8 +62,10 @@ public struct OfferBannerConfig: Codable, Equatable {
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        logoUrl = try container.decode(String.self, forKey: .logoUrl)
+
+        // Optional: empty string = SDK falls back to sponsor.logoUrl
+        // resolved by the placement's sponsorId.
+        logoUrl = try container.decodeIfPresent(String.self, forKey: .logoUrl) ?? ""
         title = try container.decode(String.self, forKey: .title)
         subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle)
         backgroundImageUrl = try container.decodeIfPresent(String.self, forKey: .backgroundImageUrl)
@@ -77,7 +85,7 @@ public struct OfferBannerConfig: Codable, Equatable {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
+
         try container.encode(logoUrl, forKey: .logoUrl)
         try container.encode(title, forKey: .title)
         try container.encodeIfPresent(subtitle, forKey: .subtitle)
@@ -92,6 +100,28 @@ public struct OfferBannerConfig: Codable, Equatable {
         try container.encodeIfPresent(deeplinkUrl, forKey: .deeplinkUrl)
         try container.encodeIfPresent(deeplinkAction, forKey: .deeplinkAction)
     }
+
+    /// Sentinel used by `VOfferBanner.config` (computed) when the
+    /// body's outer Group has already short-circuited to EmptyView —
+    /// the helpers technically reference `config` but the view itself
+    /// isn't being rendered, so the placeholder values never reach the
+    /// screen. Kept as a single static so the same allocation is
+    /// reused on every read.
+    public static let placeholder = OfferBannerConfig(
+        logoUrl: "",
+        title: "",
+        subtitle: nil,
+        backgroundImageUrl: nil,
+        backgroundColor: nil,
+        countdownEndDate: "",
+        discountBadgeText: "",
+        ctaText: "",
+        ctaLink: nil,
+        overlayOpacity: nil,
+        buttonColor: nil,
+        deeplinkUrl: nil,
+        deeplinkAction: nil
+    )
 }
 
 /// Component Response Models
@@ -257,6 +287,52 @@ public struct BannerConfig: Codable {
 public struct ProductSpotlightConfig: Codable {
     public let productId: String
     public let highlightText: String?
+    /// Operator-controllable header strip rendered above the product card.
+    /// Same opt-in pattern as `ProductCarouselConfig.title` —
+    /// empty/nil hides the header entirely so existing apps that
+    /// haven't filled it in keep their legacy layout untouched.
+    public let title: String?
+    /// When true, resolve `sponsor.logoUrl` (by the placement's
+    /// `sponsorId`) and render it right-aligned in the header. Format-
+    /// agnostic — SVG sponsor logos route through `VSVGWebView` so
+    /// the brand asset shows up without an extra dep.
+    public let showSponsorLogo: Bool
+    /// Layout override picked by the operator from the dashboard.
+    /// Maps onto `VProductCard.Variant`:
+    ///   "hero"    → .hero    (default — large featured card)
+    ///   "list"    → .list    (horizontal compact, image left)
+    ///   "minimal" → .minimal (smallest, suggestion style)
+    ///   "grid"    → .grid    (vertical compact)
+    /// Empty/nil falls back to the SwiftUI call-site override or to
+    /// `.hero` so existing host apps keep the legacy big card.
+    public let layout: String?
+
+    public init(
+        productId: String,
+        highlightText: String? = nil,
+        title: String? = nil,
+        showSponsorLogo: Bool = false,
+        layout: String? = nil
+    ) {
+        self.productId = productId
+        self.highlightText = highlightText
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
+        self.layout = layout
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case productId, highlightText, title, showSponsorLogo, layout
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        productId = try c.decode(String.self, forKey: .productId)
+        highlightText = try c.decodeIfPresent(String.self, forKey: .highlightText)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
+        layout = try c.decodeIfPresent(String.self, forKey: .layout)
+    }
 }
 
 /// Countdown Config
@@ -321,35 +397,52 @@ public struct ProductCarouselConfig: Codable, Equatable {
     public let autoPlay: Bool
     public let interval: Int  // milliseconds
     public let layout: String?  // "compact", "full", or "horizontal" (default: "full")
-    
-    public init(productIds: [String] = [], autoPlay: Bool = false, interval: Int = 3000, layout: String? = nil) {
+    /// Optional header title above the carousel ("Ukens tilbud", "Featured",
+    /// etc). Operator sets via `customConfig.title` in the dashboard. When
+    /// nil/empty, no header renders.
+    public let title: String?
+    /// Render the sponsor's logo next to the header title. Sponsor logoUrl
+    /// is resolved at runtime from the active component's `sponsor` block
+    /// (no need to embed image URLs in the config). Default false.
+    public let showSponsorLogo: Bool
+
+    public init(productIds: [String] = [], autoPlay: Bool = false, interval: Int = 3000, layout: String? = nil, title: String? = nil, showSponsorLogo: Bool = false) {
         self.productIds = productIds
         self.autoPlay = autoPlay
         self.interval = interval
         self.layout = layout
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
+
         // productIds is optional, defaults to empty array (loads all products)
         self.productIds = try container.decodeIfPresent([String].self, forKey: .productIds) ?? []
-        
+
         // autoPlay is optional, defaults to false if not present
         self.autoPlay = try container.decodeIfPresent(Bool.self, forKey: .autoPlay) ?? false
-        
+
         // interval is optional, defaults to 3000ms if not present
         self.interval = try container.decodeIfPresent(Int.self, forKey: .interval) ?? 3000
-        
+
         // layout is optional
         self.layout = try container.decodeIfPresent(String.self, forKey: .layout)
+
+        // Header opt-ins (both default to off; operator turns them on per
+        // placement in the dashboard's customConfig).
+        self.title = try container.decodeIfPresent(String.self, forKey: .title)
+        self.showSponsorLogo = try container.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case productIds
         case autoPlay
         case interval
         case layout
+        case title
+        case showSponsorLogo
     }
 }
 
@@ -362,7 +455,7 @@ public struct ProductBannerConfig: Codable {
     public let ctaText: String
     public let ctaLink: String?
     public let deeplink: String?
-    
+
     // Optional styling properties
     public let titleColor: String?
     public let subtitleColor: String?
@@ -377,7 +470,30 @@ public struct ProductBannerConfig: Codable {
     public let buttonFontSize: Int?
     public let textAlignment: String?  // "left", "center", "right"
     public let contentVerticalAlignment: String?  // "top", "center", "bottom"
-    
+
+    /// Operator-controllable: when true, the banner overlays the
+    /// placement's sponsor logo (resolved by `sponsorId` →
+    /// `VioConfiguration.sponsor(withId:).logoUrl`) on the top-right
+    /// corner of the banner image. Format-agnostic via `VRemoteImage`
+    /// (PNG/JPEG/SVG). Banner already has its own `title` visual, so
+    /// the polish skips the separate "header strip" pattern used by
+    /// Carousel/Spotlight and only exposes this single opt-in.
+    public let showSponsorLogo: Bool
+
+    /// Layout preset that adjusts banner height + font sizes in one
+    /// pick instead of forcing the operator to tune each granular
+    /// field. Sprint 2026-04-28 PM Phase 2 polish.
+    ///
+    ///   "compact"  → height 120pt, title 12pt, subtitle 9pt, button 12pt
+    ///   "standard" → height 200pt, title 14pt, subtitle 10pt, button 14pt (legacy default)
+    ///   "large"    → height 280pt, title 18pt, subtitle 12pt, button 16pt
+    ///
+    /// When `layout` is set, the preset wins UNLESS the operator also
+    /// provided an explicit `bannerHeight` / `titleFontSize` / etc.
+    /// — those fine-grained overrides keep their priority. Empty/nil
+    /// → use legacy defaults (back-compat for existing rows).
+    public let layout: String?
+
     public init(
         productId: String,
         backgroundImageUrl: String,
@@ -398,7 +514,9 @@ public struct ProductBannerConfig: Codable {
         subtitleFontSize: Int? = nil,
         buttonFontSize: Int? = nil,
         textAlignment: String? = nil,
-        contentVerticalAlignment: String? = nil
+        contentVerticalAlignment: String? = nil,
+        showSponsorLogo: Bool = false,
+        layout: String? = nil
     ) {
         self.productId = productId
         self.backgroundImageUrl = backgroundImageUrl
@@ -420,21 +538,117 @@ public struct ProductBannerConfig: Codable {
         self.buttonFontSize = buttonFontSize
         self.textAlignment = textAlignment
         self.contentVerticalAlignment = contentVerticalAlignment
+        self.showSponsorLogo = showSponsorLogo
+        self.layout = layout
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case productId, backgroundImageUrl, title, subtitle, ctaText, ctaLink, deeplink
+        case titleColor, subtitleColor, buttonBackgroundColor, buttonTextColor
+        case backgroundColor, overlayOpacity, bannerHeight, bannerHeightRatio
+        case titleFontSize, subtitleFontSize, buttonFontSize
+        case textAlignment, contentVerticalAlignment
+        case showSponsorLogo, layout
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        productId = try c.decode(String.self, forKey: .productId)
+        backgroundImageUrl = try c.decode(String.self, forKey: .backgroundImageUrl)
+        title = try c.decode(String.self, forKey: .title)
+        subtitle = try c.decodeIfPresent(String.self, forKey: .subtitle)
+        ctaText = try c.decode(String.self, forKey: .ctaText)
+        ctaLink = try c.decodeIfPresent(String.self, forKey: .ctaLink)
+        deeplink = try c.decodeIfPresent(String.self, forKey: .deeplink)
+        titleColor = try c.decodeIfPresent(String.self, forKey: .titleColor)
+        subtitleColor = try c.decodeIfPresent(String.self, forKey: .subtitleColor)
+        buttonBackgroundColor = try c.decodeIfPresent(String.self, forKey: .buttonBackgroundColor)
+        buttonTextColor = try c.decodeIfPresent(String.self, forKey: .buttonTextColor)
+        backgroundColor = try c.decodeIfPresent(String.self, forKey: .backgroundColor)
+        overlayOpacity = try c.decodeIfPresent(Double.self, forKey: .overlayOpacity)
+        bannerHeight = try c.decodeIfPresent(Int.self, forKey: .bannerHeight)
+        bannerHeightRatio = try c.decodeIfPresent(Double.self, forKey: .bannerHeightRatio)
+        titleFontSize = try c.decodeIfPresent(Int.self, forKey: .titleFontSize)
+        subtitleFontSize = try c.decodeIfPresent(Int.self, forKey: .subtitleFontSize)
+        buttonFontSize = try c.decodeIfPresent(Int.self, forKey: .buttonFontSize)
+        textAlignment = try c.decodeIfPresent(String.self, forKey: .textAlignment)
+        contentVerticalAlignment = try c.decodeIfPresent(String.self, forKey: .contentVerticalAlignment)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
+        layout = try c.decodeIfPresent(String.self, forKey: .layout)
+    }
+}
+
+/// One product entry in a multi-sponsor `ProductStoreConfig.products`
+/// list. Each entry carries its own sponsor so the SDK routes the
+/// product fetch through the right per-sponsor commerce key — the
+/// store can showcase products from XXL, Elkjøp, Torshov, etc. all in
+/// the same grid. Sprint 2026-04-28 PM Phase 2.
+public struct ProductStoreEntry: Codable, Equatable {
+    public let productId: String
+    public let sponsorId: Int
+
+    public init(productId: String, sponsorId: Int) {
+        self.productId = productId
+        self.sponsorId = sponsorId
     }
 }
 
 /// Product Store Config
 public struct ProductStoreConfig: Codable {
     public let mode: String  // "all" or "filtered"
+    /// Legacy single-sponsor list — every productId fetched through
+    /// the placement's `sponsorId` (campaign_components.sponsor_id).
+    /// Kept for back-compat. New rows use `products` (multi-sponsor).
     public let productIds: [String]?
+    /// Multi-sponsor product list. Each entry pairs a productId with
+    /// the sponsor that owns it; the SDK loads each product through
+    /// that sponsor's commerce credentials so a single store can
+    /// surface SKUs from multiple sponsors at once. When set, takes
+    /// priority over `productIds`. Operator builds this via the
+    /// dashboard's MultiSponsorProductPicker.
+    public let products: [ProductStoreEntry]?
     public let displayType: String  // "grid" or "list"
     public let columns: Int
-    
-    public init(mode: String, productIds: [String]? = nil, displayType: String = "grid", columns: Int = 2) {
+    /// Operator-controllable: free text rendered above the grid.
+    /// Empty/nil hides the header band entirely (legacy behavior
+    /// preserved for hosts that haven't filled it in).
+    public let title: String?
+    /// When true, resolves `sponsor.logoUrl` (by the placement's
+    /// `sponsorId`) and renders it right-aligned in the header
+    /// alongside `title`. SVG-capable via shared `VRemoteImage`.
+    public let showSponsorLogo: Bool
+
+    public init(
+        mode: String,
+        productIds: [String]? = nil,
+        products: [ProductStoreEntry]? = nil,
+        displayType: String = "grid",
+        columns: Int = 2,
+        title: String? = nil,
+        showSponsorLogo: Bool = false
+    ) {
         self.mode = mode
         self.productIds = productIds
+        self.products = products
         self.displayType = displayType
         self.columns = columns
+        self.title = title
+        self.showSponsorLogo = showSponsorLogo
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, productIds, products, displayType, columns, title, showSponsorLogo
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try c.decode(String.self, forKey: .mode)
+        productIds = try c.decodeIfPresent([String].self, forKey: .productIds)
+        products = try c.decodeIfPresent([ProductStoreEntry].self, forKey: .products)
+        displayType = try c.decodeIfPresent(String.self, forKey: .displayType) ?? "grid"
+        columns = try c.decodeIfPresent(Int.self, forKey: .columns) ?? 2
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        showSponsorLogo = try c.decodeIfPresent(Bool.self, forKey: .showSponsorLogo) ?? false
     }
 }
 

@@ -90,6 +90,14 @@ public struct VProductSlider: View {
     private let preferredCountry: String?
     private let showSponsor: Bool
     private let sponsorPosition: String
+    /// Optional sponsor logo URL rendered right-aligned in the
+    /// header next to `title`. Format-agnostic (PNG/JPEG/SVG) via
+    /// VRemoteImage. Slider is host-app-driven (manual products),
+    /// so the host passes the URL directly — no
+    /// `getActiveComponent`-style lookup like the campaign-driven
+    /// views (Carousel/Spotlight/Banner/Store) do. Sprint 2026-04-28
+    /// PM polish parity (lightweight variant).
+    private let sponsorLogoUrl: String?
     
     // ViewModel for automatic product loading
     @StateObject private var viewModel = VProductSliderViewModel()
@@ -118,7 +126,8 @@ public struct VProductSlider: View {
         currency: String? = nil,
         country: String? = nil,
         showSponsor: Bool = false,
-        sponsorPosition: String? = nil
+        sponsorPosition: String? = nil,
+        sponsorLogoUrl: String? = nil
     ) {
         self.title = title
         self.manualProducts = products
@@ -132,6 +141,7 @@ public struct VProductSlider: View {
         self.preferredCurrency = currency
         self.preferredCountry = country
         self.showSponsor = showSponsor
+        self.sponsorLogoUrl = sponsorLogoUrl
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
     
@@ -407,16 +417,26 @@ public struct VProductSlider: View {
             Text(title)
                 .font(VioTypography.headline)
                 .foregroundColor(VioColors.textPrimary)
-            
+
             Spacer()
-            
+
+            // Optional sponsor logo right-aligned next to title.
+            // Host-app supplies the URL directly via init —
+            // VProductSlider is manual (host owns the data flow), so
+            // no campaign-driven lookup. SVG-capable via VRemoteImage.
+            if let sponsorLogoUrl = sponsorLogoUrl, !sponsorLogoUrl.isEmpty {
+                VRemoteImage(urlString: sponsorLogoUrl, height: 20)
+                    .frame(maxWidth: 80)
+                    .padding(.trailing, showSeeAll ? VioSpacing.xs : 0)
+            }
+
             if showSeeAll {
                 Button(action: { onSeeAllTap?() }) {
                     HStack(spacing: VioSpacing.xs) {
                         Text(VLocalizedString(VioTranslationKey.continueButton.rawValue))
                             .font(VioTypography.callout)
                             .foregroundColor(VioColors.primary)
-                        
+
                         Image(systemName: "arrow.right")
                             .font(.caption)
                             .foregroundColor(VioColors.primary)

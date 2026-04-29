@@ -37,13 +37,27 @@ public struct VProductBanner: View {
             // Build full URL (cache this)
             let fullImageURL = Self.buildFullURL(from: config.backgroundImageUrl)
             self.imageURL = URL(string: fullImageURL)
-            
-            // Cache clamped sizes
-            self.bannerHeight = CGFloat(Self.getClampedSize(config.bannerHeight, min: 150, max: 400, default: 200))
-            // Smaller title and subtitle, slightly larger button
-            self.titleFontSize = CGFloat(Self.getClampedSize(config.titleFontSize, min: 10, max: 18, default: 14))
-            self.subtitleFontSize = CGFloat(Self.getClampedSize(config.subtitleFontSize, min: 8, max: 12, default: 10))
-            self.buttonFontSize = CGFloat(Self.getClampedSize(config.buttonFontSize, min: 12, max: 16, default: 14))
+
+            // Layout preset → defaults for height + font sizes. Each
+            // preset is a one-pick UX shortcut; granular fields
+            // (`bannerHeight`, `titleFontSize`, etc.) still win when
+            // explicitly set so existing rows aren't disturbed.
+            // Sprint 2026-04-28 PM Phase 2.
+            let preset: (height: Int, title: Int, subtitle: Int, button: Int) = {
+                switch config.layout?.lowercased() {
+                case "compact": return (height: 120, title: 12, subtitle: 9,  button: 12)
+                case "large":   return (height: 280, title: 18, subtitle: 12, button: 16)
+                default:        return (height: 200, title: 14, subtitle: 10, button: 14) // "standard" / nil → legacy default
+                }
+            }()
+
+            // Cache clamped sizes — granular config wins over preset
+            // (the operator's explicit fontSize/bannerHeight beats the
+            // shortcut value).
+            self.bannerHeight = CGFloat(Self.getClampedSize(config.bannerHeight, min: 100, max: 400, default: preset.height))
+            self.titleFontSize = CGFloat(Self.getClampedSize(config.titleFontSize, min: 10, max: 22, default: preset.title))
+            self.subtitleFontSize = CGFloat(Self.getClampedSize(config.subtitleFontSize, min: 8, max: 16, default: preset.subtitle))
+            self.buttonFontSize = CGFloat(Self.getClampedSize(config.buttonFontSize, min: 10, max: 18, default: preset.button))
             
             // Cache parsed colors - use adaptive colors as defaults
             let defaultTextColor = adaptiveColors.textPrimary
@@ -92,8 +106,9 @@ public struct VProductBanner: View {
                 self.contentVerticalAlignment = .bottom
             }
             
-            // Create unique identifier for this config (detects changes)
-            self.configId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)"
+            // Create unique identifier for this config (detects changes).
+            // Includes layout so switching presets re-derives heights/fonts.
+            self.configId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")"
         }
         
         /// Build full URL from relative path (static helper)
@@ -209,7 +224,15 @@ public struct VProductBanner: View {
     /// Optional component ID to identify a specific component
     /// If nil, uses the first matching component from the campaign
     private let componentId: String?
-    
+
+    /// Optional placement slot identifier (e.g. `"home_banner"`).
+    /// When provided, resolves the active component via
+    /// `getActiveComponent(type:componentId:locationId:)` so the
+    /// same `product_banner` template can power multiple slots in
+    /// one campaign without colliding on the template id.
+    /// Sprint 2026-04-28 PM polish parity with VProductCarousel.
+    private let locationId: String?
+
     /// Whether to show sponsor badge
     private let showSponsor: Bool
     
@@ -232,21 +255,22 @@ public struct VProductBanner: View {
     
     // MARK: - Initializer
     
-    public init(componentId: String? = nil, showSponsor: Bool = false, sponsorPosition: String? = nil) {
+    public init(componentId: String? = nil, locationId: String? = nil, showSponsor: Bool = false, sponsorPosition: String? = nil) {
         self.componentId = componentId
+        self.locationId = locationId
         self.showSponsor = showSponsor
         self.sponsorPosition = sponsorPosition ?? "topRight"
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var adaptiveColors: AdaptiveColors {
         VioColors.adaptive(for: colorScheme)
     }
-    
+
     /// Get active product banner component from campaign
     private var activeComponent: Component? {
-        campaignManager.getActiveComponent(type: "product_banner", componentId: componentId)
+        campaignManager.getActiveComponent(type: "product_banner", componentId: componentId, locationId: locationId)
     }
     
     /// Extract ProductBannerConfig from component
@@ -272,7 +296,7 @@ public struct VProductBanner: View {
             return
         }
         
-        let newConfigId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)"
+        let newConfigId = "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")"
         
         // Only recalculate if config actually changed
         if currentConfigId != newConfigId {
@@ -326,7 +350,7 @@ public struct VProductBanner: View {
         // If we have cached styling and config hasn't changed, use it
         if let cached = cachedStyling,
            let configId = currentConfigId,
-           configId == "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)" {
+           configId == "\(config.productId)-\(config.backgroundImageUrl)-\(config.title)-\(config.layout ?? "")" {
             return cached
         }
         
@@ -615,6 +639,23 @@ public struct VProductBanner: View {
             .frame(maxWidth: .infinity)
             .clipped()
             .cornerRadius(VioBorderRadius.large)
+            // Operator-controllable sponsor-logo overlay (top-right
+            // corner). Banner already has its own visible title +
+            // subtitle, so the polish skips the separate header strip
+            // pattern (Carousel/Spotlight) and just stamps the
+            // sponsor logo onto the banner image when the operator
+            // turns `showSponsorLogo` on. Format-agnostic via
+            // VRemoteImage (SVG via VSVGWebView fallback).
+            .overlay(alignment: .topTrailing) {
+                if config.showSponsorLogo,
+                   let sponsorId = activeComponent?.sponsorId,
+                   let logoUrl = VioConfiguration.shared.sponsor(withId: sponsorId)?.logoUrl,
+                   !logoUrl.isEmpty {
+                    VRemoteImage(urlString: logoUrl, height: 24)
+                        .frame(maxWidth: 80)
+                        .padding(VioSpacing.sm)
+                }
+            }
             .padding(.horizontal, VioSpacing.md)
             .onTapGesture {
                 // Tap anywhere on banner to show product detail
@@ -706,23 +747,30 @@ public struct VProductBanner: View {
     @MainActor
     private func loadProduct(productId: String) async {
         guard !isLoadingProduct else { return }
-        
+
         isLoadingProduct = true
-        
+
         // Get currency and country from CartManager
         let currency = cartManager.currency
         let country = cartManager.country
-        
+        // Multi-sponsor commerce key routing: route the GraphQL query
+        // to the placement's sponsor's apiKey so banners bound to
+        // secondary sponsors don't get "product not found" against
+        // the primary's catalog. Mirrors VProductCarousel /
+        // VProductSpotlight.
+        let sponsorId = activeComponent?.sponsorId
+
         do {
             guard let productIdInt = Int(productId) else {
                 isLoadingProduct = false
                 return
             }
-            
+
             let product = try await ProductService.shared.loadProduct(
                 productId: productIdInt,
                 currency: currency,
-                country: country
+                country: country,
+                sponsorId: sponsorId
             )
             
             // Track product viewed
