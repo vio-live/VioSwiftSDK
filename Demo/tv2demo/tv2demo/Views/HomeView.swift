@@ -64,70 +64,39 @@ struct HomeView: View {
                                 items: filteredContent.filter { !$0.isLive }
                             )
                             
-                            // Offer Banner Section
+                            // Offer Banner Section — campaign-driven only.
                             //
-                            // Two banners during the migration window
-                            // (Sprint 2026-04-28 PM Phase 2):
+                            // VOfferBanner(locationId: "home_offer") renders
+                            // nothing until an operator binds an offer_banner
+                            // campaign_component to the slot via the
+                            // dashboard. Title / subtitle / countdown / badge
+                            // / CTA / deeplink / sponsor logo all flow from
+                            // customConfig + sponsor.logoUrl in the v2 GET
+                            // response. Live updates via
+                            // placement_status_changed +
+                            // placement_config_updated WS events
+                            // (pause/resume + edit fields from dashboard,
+                            // SDK reflects in <1s).
                             //
-                            //   1. OfferBannerView() — hardcoded host-app
-                            //      banner with the in-app NavigationLink to
-                            //      ProductsGridView. Stays for side-by-side
-                            //      comparison while the dynamic version is
-                            //      validated. Gets removed in a follow-up
-                            //      commit once the dynamic flow is signed off.
+                            // The NavigationLink wrap gives Path A3 hybrid:
+                            // when the operator sets `customConfig.deeplinkUrl`
+                            // or `deeplinkAction` the SDK calls the in-app
+                            // callback first; only when no callback is
+                            // provided does it fall back to
+                            // `UIApplication.shared.open(deeplinkUrl)`.
                             //
-                            //   2. VOfferBanner(locationId: "home_offer") —
-                            //      campaign-driven. Renders nothing until
-                            //      an operator binds an offer_banner
-                            //      campaign_component to the slot via the
-                            //      dashboard. Title/subtitle/countdown/CTA/
-                            //      deeplink/sponsor logo all flow from
-                            //      customConfig + sponsor.logoUrl in the
-                            //      v2 GET response. Live updates via
-                            //      placement_status_changed +
-                            //      placement_config_updated WS events
-                            //      (pause/resume + edit countdown end date
-                            //      / badge / CTA from dashboard, SDK
-                            //      reflects in <1s).
-                            //
-                            //      `onNavigateToStore` provides the in-app
-                            //      callback (Path A3 hybrid). When the
-                            //      operator sets `customConfig.deeplinkUrl`
-                            //      or `deeplinkAction`, the SDK calls this
-                            //      callback first; only when no callback is
-                            //      provided does it fall back to
-                            //      `UIApplication.shared.open(deeplinkUrl)`.
-                            //      Routing the callback to ProductsGridView
-                            //      gives the same behavior the hardcoded
-                            //      NavigationLink had.
-                            VStack(spacing: TV2Theme.Spacing.md) {
-                                NavigationLink(destination: ProductsGridView()
-                                    .environmentObject(cartManager)
-                                    .environmentObject(checkoutDraft)
-                                ) {
-                                    OfferBannerView()
-                                }
-                                .buttonStyle(PlainButtonStyle())
-
-                                // Campaign-driven dynamic banner —
-                                // resolves config via locationId.
-                                NavigationLink(destination: ProductsGridView()
-                                    .environmentObject(cartManager)
-                                    .environmentObject(checkoutDraft)
-                                ) {
-                                    VOfferBanner(locationId: "home_offer")
-                                }
-                                .buttonStyle(PlainButtonStyle())
-
-                                // Legacy: dynamic banner sourced from the
-                                // pre-placement-system path
-                                // (componentManager.activeBanner). Kept
-                                // for now; will be retired once the
-                                // locationId-driven flow above replaces it.
-                                if let bannerConfig = componentManager.activeBanner {
-                                    VOfferBanner(config: bannerConfig)
-                                }
+                            // The hardcoded `OfferBannerView()` and the
+                            // legacy `componentManager.activeBanner` path
+                            // were retired here (sprint 2026-04-28 PM
+                            // Phase 2 close-out — both replaced by the
+                            // locationId-driven render above).
+                            NavigationLink(destination: ProductsGridView()
+                                .environmentObject(cartManager)
+                                .environmentObject(checkoutDraft)
+                            ) {
+                                VOfferBanner(locationId: "home_offer")
                             }
+                            .buttonStyle(PlainButtonStyle())
                             .padding(.horizontal, TV2Theme.Spacing.md)
                             .padding(.top, TV2Theme.Spacing.lg)
                             

@@ -46,11 +46,10 @@ enum TV2PlacementRegistration {
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_spotlight",    displayName: "Home — Featured product"))
 
         // Rendered by HomeView.swift  → VOfferBanner(locationId: "home_offer")
-        // Promo banner with countdown + sponsor logo + CTA deeplink. Sits
-        // directly below the hardcoded OfferBannerView during the
-        // migration window so an operator can A/B compare the dynamic
-        // version against the legacy hardcoded one. The hardcoded view
-        // gets removed once the dynamic flow is validated end-to-end.
+        // Promo banner with countdown + sponsor logo + CTA deeplink.
+        // Replaces both the previously hardcoded `OfferBannerView()` and
+        // the legacy `componentManager.activeBanner` path (both retired
+        // 2026-04-29 once the dynamic flow validated end-to-end).
         VioRuntime.registerPlacementLocation(VioPlacementLocation(id: "home_offer",        displayName: "Home — Offer banner (promo with countdown)"))
 
         // Rendered by HomeView.swift  → VProductBanner(locationId: "home_product_banner")
