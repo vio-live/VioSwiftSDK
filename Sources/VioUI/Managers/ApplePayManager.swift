@@ -126,6 +126,31 @@ public final class ApplePayManager: NSObject, ObservableObject {
     public var capturedContact: PKContact?
     private var pendingPublishableKey: String?
     private var pendingCartManager: CartManager?
+    /// Q4 L3 (2026-04-30): when set, the active payment is for a specific
+    /// sponsor's cart in `cartsBySponsor[sponsorId]`. All SDK calls
+    /// (cart.getById, payment.stripeIntent, payment.applePayInit,
+    /// payment.applePayConfirm, checkout.create) get routed through that
+    /// sponsor's commerce_api_key via `CommerceSdkClientProvider
+    /// .client(forSponsorId:)` instead of the cartManager's global SDK.
+    /// Nil means legacy single-cart flow (preserves back-compat).
+    private var pendingSponsorId: Int?
+
+    /// Q4 L3 (2026-04-30): resolves the SDK client to use for the active
+    /// payment. When `pendingSponsorId` is set, returns the sponsor's
+    /// per-channel client; otherwise falls back to `cartManager.sdk`
+    /// (legacy single-cart). Used by `pay`, `tokenizeAndConfirm`,
+    /// `resolveBackendStripeKey`, `extractStripeKeyFromApplePayInit`.
+    private func sdkForActivePayment(_ cartManager: CartManager) -> CartManagingSDK {
+        if let sid = pendingSponsorId,
+           let sponsorSdk = try? CommerceSdkClientProvider.shared.client(
+               forSponsorId: sid,
+               configuration: VioConfiguration.shared
+           ),
+           CommerceSdkClientProvider.shared.activeSponsorId == sid {
+            return sponsorSdk
+        }
+        return cartManager.sdk
+    }
 
     public func pay(
         product: Product? = nil,
@@ -133,31 +158,63 @@ public final class ApplePayManager: NSObject, ObservableObject {
         productName: String? = nil,
         amount: Double? = nil,
         checkoutId: String? = nil,
+        sponsorId: Int? = nil,
         cartManager: CartManager
     ) async {
         self.isProcessing = true
         self.paymentResult = nil
         self.pendingCartManager = cartManager
+        // Q4 L3 (2026-04-30): when sponsorId is set, every SDK call
+        // below routes through this sponsor's commerce_api_key via
+        // sdkForActivePayment(_:). Nil = legacy single-cart flow.
+        self.pendingSponsorId = sponsorId
         guard await cartManager.ensurePaymentRuntimeReady(component: "ApplePayManager") else {
             paymentResult = .failure("Cart is not ready. Please try again.")
             isProcessing = false
             return
         }
 
+        // Add product locally if provided. In sponsor-aware mode, route
+        // through the sponsor-aware overload so the item lands in
+        // `cartsBySponsor[sponsorId]` instead of the legacy items array.
         if let p = product {
-            await cartManager.addProduct(p, variant: variant, quantity: 1)
+            if let sid = sponsorId {
+                await cartManager.addProduct(p, variant: variant, quantity: 1, sponsorId: sid)
+            } else {
+                await cartManager.addProduct(p, variant: variant, quantity: 1)
+            }
         }
 
-        guard let currentCartId = cartManager.cartId, !currentCartId.isEmpty else {
+        // Resolve the active cart id: sponsor's cart when sponsorId set,
+        // legacy `cartManager.cartId` otherwise.
+        let activeCartId: String?
+        if let sid = sponsorId {
+            activeCartId = cartManager.sponsorCart(forSponsorId: sid)?.cartId
+        } else {
+            activeCartId = cartManager.cartId
+        }
+        guard let currentCartId = activeCartId, !currentCartId.isEmpty else {
+            VioLogger.warning(
+                "Apple Pay: missing cartId (sponsorId=\(sponsorId.map(String.init) ?? "-"))",
+                component: "ApplePayManager"
+            )
             paymentResult = .failure("Cart is not ready. Please try again.")
             isProcessing = false
             return
         }
 
+        // Sync cart from server. In sponsor mode we already trust the
+        // SponsorCart state (kept in sync by addProduct/removeItem/
+        // updateQuantity in CartModule+SponsorCart.swift), so we skip
+        // the legacy `cartManager.sync(from:)` which would overwrite
+        // global state with this sponsor's cart only.
         do {
             cartManager.syncSdkCredentials()
-            let serverCart = try await cartManager.sdk.cart.getById(cart_id: currentCartId)
-            cartManager.sync(from: serverCart)
+            let activeSdk = sdkForActivePayment(cartManager)
+            let serverCart = try await activeSdk.cart.getById(cart_id: currentCartId)
+            if sponsorId == nil {
+                cartManager.sync(from: serverCart)
+            }
         } catch {
             VioLogger.error(
                 "Apple Pay: failed to sync cart before checkout: \(error.localizedDescription)",
@@ -167,10 +224,16 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return
         }
 
-        let resolvedCheckoutId = checkoutId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Resolve checkoutId: explicit param > sponsor cart's checkoutId >
+        // newly created (per-sponsor or legacy depending on sponsorId).
+        let sponsorCachedCheckoutId = sponsorId.flatMap { cartManager.sponsorCart(forSponsorId: $0)?.checkoutId }
+        let resolvedCheckoutId = (checkoutId ?? sponsorCachedCheckoutId)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let selectedCheckoutId: String?
         if let resolvedCheckoutId, !resolvedCheckoutId.isEmpty {
             selectedCheckoutId = resolvedCheckoutId
+        } else if let sid = sponsorId {
+            selectedCheckoutId = await cartManager.createCheckout(forSponsor: sid)
         } else {
             selectedCheckoutId = await cartManager.createCheckout()
         }
@@ -314,10 +377,12 @@ public final class ApplePayManager: NSObject, ObservableObject {
         do {
             cartManager.syncSdkCredentials()
             VioLogger.debug(
-                "applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil)",
+                "applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil) sponsorId=\(pendingSponsorId.map(String.init) ?? "-")",
                 component: logComponent
             )
-            let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
+            // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+            let activeSdk = sdkForActivePayment(cartManager)
+            let confirmDto = try await activeSdk.payment.applePayConfirm(
                 checkoutId: finalId,
                 applePayToken: stripeToken,
                 email: capturedContact?.emailAddress,
@@ -419,9 +484,11 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return keyFromInit
         }
 
+        // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+        let activeSdk = sdkForActivePayment(cartManager)
         for mode in VioRuntimeRetryPolicy.applePayStripeIntentReturnEphemeralKeyModes {
             do {
-                let intent = try await cartManager.sdk.payment.stripeIntent(
+                let intent = try await activeSdk.payment.stripeIntent(
                     checkoutId: checkoutId,
                     returnEphemeralKey: mode
                 )
@@ -444,7 +511,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         cartManager: CartManager
     ) async -> String? {
         do {
-            let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: checkoutId)
+            // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+            let activeSdk = sdkForActivePayment(cartManager)
+            let initDto = try await activeSdk.payment.applePayInit(checkoutId: checkoutId)
             let backendValue = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
             if isValidAppleMerchantIdentifier(backendValue) {
                 merchantIdentifier = backendValue

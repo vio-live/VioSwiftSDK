@@ -349,6 +349,67 @@ extension CartManager {
         }
     }
 
+    /// Creates a Reachu Commerce Checkout for the sponsor's cart and
+    /// stores the resulting `checkoutId` on the SponsorCart in
+    /// `cartsBySponsor[sponsorId]`. Required before Apple Pay confirm —
+    /// `sdk.payment.applePayConfirm(checkoutId:)` and
+    /// `sdk.payment.stripeIntent(checkoutId:)` both need a checkoutId
+    /// scoped to the same channel (the one matching the sponsor's
+    /// commerce_api_key). Q4 L3 (2026-04-30) — analogous to the legacy
+    /// `createCheckout()` but uses the sponsor's SDK client + sponsor cart id.
+    @discardableResult
+    public func createCheckout(forSponsor sponsorId: Int) async -> String? {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else {
+            VioLogger.warning(
+                "createCheckout(forSponsor:\(sponsorId)) — no cart for that sponsor",
+                component: "CartModule"
+            )
+            return nil
+        }
+        guard let cid = sponsorCart.cartId, !cid.isEmpty else {
+            VioLogger.warning(
+                "createCheckout(forSponsor:\(sponsorId)) — sponsor cart has no cartId yet",
+                component: "CartModule"
+            )
+            return nil
+        }
+        guard let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId) else {
+            return nil
+        }
+
+        VioLogger.debug(
+            "createCheckout(forSponsor:\(sponsorId)) START cartId=\(cid)",
+            component: "CartModule"
+        )
+        do {
+            logRequest(
+                "sdk.checkout.create (sponsor=\(sponsorId))",
+                payload: ["cart_id": cid]
+            )
+            let dto = try await sponsorSdk.checkout.create(cart_id: cid)
+            let chkId = extractCheckoutId(dto)
+            sponsorCart.checkoutId = chkId
+            cartsBySponsor[sponsorId] = sponsorCart
+            logResponse(
+                "sdk.checkout.create (sponsor=\(sponsorId))",
+                payload: ["checkoutId": chkId as Any]
+            )
+            VioLogger.success(
+                "createCheckout(forSponsor:\(sponsorId)) OK checkoutId=\(chkId ?? "nil")",
+                component: "CartModule"
+            )
+            return chkId
+        } catch {
+            let msg = (error as? SdkException)?.description ?? error.localizedDescription
+            logError("sdk.checkout.create (sponsor=\(sponsorId))", error: error)
+            VioLogger.error(
+                "createCheckout(forSponsor:\(sponsorId)) FAIL: \(msg)",
+                component: "CartModule"
+            )
+            return nil
+        }
+    }
+
     /// Drops the entire cart for one sponsor, both server-side (best
     /// effort) and locally. Other sponsors' carts are untouched.
     public func clearCart(forSponsor sponsorId: Int) async {
