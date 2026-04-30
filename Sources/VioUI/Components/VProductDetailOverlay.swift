@@ -744,9 +744,27 @@ public struct VProductDetailOverlay: View {
             source: "product_detail"
         )
         
-        // Add to cart 
+        // Add to cart — Q4 L3 (2026-04-30): when the caller supplied a
+        // `sponsorId` (multi-sponsor stores via VProductStore →
+        // VProductCard → here), route through the sponsor-aware overload
+        // so the item lands in `cartsBySponsor[sponsorId]` instead of the
+        // legacy single-cart `items` array. That's what flips
+        // `VCheckoutOverlay` into multi-sponsor dual-mode + activates
+        // the per-sponsor Apple Pay flow. Without this, all items would
+        // pile into the primary's legacy cart and Stripe / Klarna / Vipps
+        // would render (legacy path), which is the bug we hit during
+        // the 2026-04-30 smoke (zero `cart_intents` rows, wrong channel).
         Task {
-            await cartManager.addProduct(product, variant: selectedVariant, quantity: quantity)
+            if let sid = sponsorId {
+                await cartManager.addProduct(
+                    product,
+                    variant: selectedVariant,
+                    quantity: quantity,
+                    sponsorId: sid
+                )
+            } else {
+                await cartManager.addProduct(product, variant: selectedVariant, quantity: quantity)
+            }
             
             // Show quick success animation then close modal
             await MainActor.run {
