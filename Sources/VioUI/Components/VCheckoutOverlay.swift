@@ -203,6 +203,118 @@ public struct VCheckoutOverlay: View {
         self.userZip = userZip
     }
 
+    // MARK: - Q4 L3 — Multi-sponsor mode
+
+    /// True when the user has items from more than one sponsor (or any
+    /// items in `cartsBySponsor` at all — Q4 L3 multi-sponsor flow). The
+    /// body switches between `mainContent` (legacy single-cart) and
+    /// `multiSponsorContent` based on this.
+    ///
+    /// Empty `cartsBySponsor` ⇒ legacy flow (preserves single-sponsor
+    /// stores + back-compat with hosts that never adopted multi-sponsor).
+    private var isMultiSponsorMode: Bool {
+        !cartManager.cartsBySponsor.isEmpty
+    }
+
+    /// Multi-sponsor checkout: one section per sponsor cart, each with its
+    /// own Apple Pay button. Apple-Pay-only this sprint (UX decision in
+    /// PR #11) — Klarna / Vipps / Stripe stay in the legacy flow only.
+    @ViewBuilder
+    private var multiSponsorContent: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: VioSpacing.lg) {
+                    multiSponsorHeader
+
+                    ForEach(orderedSponsorCarts) { sponsorCart in
+                        SponsorCheckoutSection(
+                            sponsorCart: sponsorCart,
+                            onPaymentComplete: {
+                                // After clearCart the cart is gone from
+                                // cartsBySponsor; SwiftUI re-renders
+                                // without this section. If it was the
+                                // last sponsor, body switches back to
+                                // mainContent (legacy flow / empty cart).
+                                if cartManager.cartsBySponsor.isEmpty {
+                                    cartManager.isCheckoutPresented = false
+                                }
+                            }
+                        )
+                        .environmentObject(cartManager)
+                    }
+
+                    multiSponsorFooter
+                }
+                .padding(VioSpacing.md)
+            }
+            .background(VioColors.background)
+            .navigationTitle(VLocalizedString(VioTranslationKey.cart.rawValue))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        cartManager.isCheckoutPresented = false
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(VioColors.textSecondary)
+                            .font(.system(size: 22))
+                    }
+                }
+            }
+            #endif
+        }
+    }
+
+    /// Sponsor carts ordered by subtotal descending — biggest carts on
+    /// top so the user sees the highest-value purchases first.
+    private var orderedSponsorCarts: [CartManager.SponsorCart] {
+        cartManager.cartsBySponsor.values.sorted { $0.subtotal > $1.subtotal }
+    }
+
+    @ViewBuilder
+    private var multiSponsorHeader: some View {
+        let sponsorCount = cartManager.cartsBySponsor.count
+        let itemCount = cartManager.itemCountAcrossSponsors
+        VStack(alignment: .leading, spacing: VioSpacing.xs) {
+            Text("\(itemCount) varer fra \(sponsorCount) butikker")
+                .font(VioTypography.title2)
+                .foregroundColor(VioColors.textPrimary)
+            Text("Hver butikk betales separat med Apple Pay")
+                .font(VioTypography.caption1)
+                .foregroundColor(VioColors.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var multiSponsorFooter: some View {
+        let total = cartManager.totalAcrossSponsors + cartManager.shippingTotalAcrossSponsors
+        let firstCurrency = cartManager.cartsBySponsor.values.first?.currency ?? cartManager.currency
+        VStack(spacing: VioSpacing.sm) {
+            Divider().background(Color.white.opacity(0.1))
+            HStack {
+                Text("Totalt på tvers av butikker")
+                    .font(VioTypography.body)
+                    .foregroundColor(VioColors.textSecondary)
+                Spacer()
+                Text(formatTotal(total, code: firstCurrency))
+                    .font(VioTypography.headline.weight(.bold))
+                    .foregroundColor(VioColors.textPrimary)
+            }
+        }
+        .padding(.horizontal, VioSpacing.md)
+        .padding(.vertical, VioSpacing.sm)
+    }
+
+    private func formatTotal(_ value: Double, code: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = code
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: value)) ?? "\(code) \(value)"
+    }
+
     // MARK: - Main Content
     private var mainContent: some View {
         NavigationView {
@@ -315,7 +427,17 @@ public struct VCheckoutOverlay: View {
         if !VioConfiguration.shared.shouldUseSDK || !CampaignManager.shared.isCampaignActive {
             EmptyView()
         } else {
-            mainContent
+            // Q4 L3 dual-mode: when at least one SponsorCart exists, render
+            // the multi-sponsor checkout (N sections, Apple-Pay-per-sponsor).
+            // Otherwise fall through to the legacy single-cart flow — no
+            // visual change for hosts that haven't adopted multi-sponsor.
+            Group {
+                if isMultiSponsorMode {
+                    multiSponsorContent
+                } else {
+                    mainContent
+                }
+            }
             .onAppear {
                 VioLogger.debug("onAppear triggered", component: "VCheckoutOverlay")
                 syncSelectedMarket()
