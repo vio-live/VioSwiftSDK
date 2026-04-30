@@ -2,6 +2,68 @@ import Foundation
 import VioCore
 import VioDesignSystem
 
+// MARK: - 🚧 Q4 L3 — PAUSED 2026-04-30 PM
+//
+// Status: paused mid-flight. Multi-sponsor cart UI (B1+B2) renders
+// correctly and `cartsBySponsor` is populated correctly. Apple Pay flow
+// **fails at applePayConfirm** with `[object Object]` from Commerce
+// backend when routed through the sponsor's commerce_api_key (B4).
+//
+// KNOWN ISSUE — needs Commerce-side investigation before resuming:
+//
+//   1. Pre-B4 behavior (commit 8584e0d): Apple Pay confirm always used
+//      cartManager.sdk (primary's apiKey = Elkjøp). Commerce returned
+//      success and an order was created, BUT Stripe never received a
+//      charge (suggesting Commerce processed against a primary-channel
+//      cart that didn't actually contain the multi-sponsor items).
+//
+//   2. Post-B4 behavior (commit 3cf9a74): Apple Pay confirm uses the
+//      sponsor's apiKey (e.g. XXL = KCXF10Y…). Commerce returns 500
+//      "Payment Apple Pay not confirmed: [object Object]" — the
+//      sponsor's channel doesn't process the charge end-to-end.
+//
+// Suspected root cause (needs verification with Alan / Commerce team):
+//
+//   - Sponsor channels (XXL #7, Torshov #4) may have the Apple Pay
+//     flag enabled in Commerce dashboard but **lack a Stripe Connect
+//     account linked**. Apple Pay flag and Stripe Connect linking are
+//     two separate config items in Commerce; only the latter is what
+//     `ConfirmPaymentApplePay.run` server-side actually exercises.
+//   - Alternative: the merchant identifier `merchant.live.vio` may
+//     not be approved on the sponsor's Stripe Connect account in the
+//     Apple/Stripe setup.
+//   - Alternative: products of XXL/Torshov may not exist in the
+//     sponsor's own Reachu catalog (only in Elkjøp's primary catalog
+//     where they are cross-listed for multi-sponsor stores).
+//
+// Path forward (NOT IMPLEMENTED YET — decision pending):
+//
+//   Path A — wait for Commerce config: each sponsor channel gets
+//     Stripe Connect activated; B4 stays as-is and works.
+//   Path B — rollback B4 routing: cart per-sponsor for UI only, Apple
+//     Pay confirm always via primary aggregator (Vio merchant on Elkjøp's
+//     Stripe Connect). Requires all multi-sponsor products to be
+//     listed in primary's Reachu catalog. Server-side split to each
+//     sponsor's account is Commerce's responsibility.
+//   Path C — hybrid: per-sponsor cart creation but applePayConfirm
+//     via primary apiKey targeting the sponsor's checkoutId. Likely
+//     rejected by Commerce as cross-channel confirm.
+//
+// Last commits in this branch:
+//   8584e0d  feat(q4-l3 B3): connect VProductDetailOverlay.addToCart
+//            to sponsor-aware overload  ← LAST PARTIALLY-WORKING POINT
+//   af12b84  feat(q4-l3 B2): VCheckoutOverlay dual-mode
+//   9b0f67b  feat(q4-l3 B1): SponsorCheckoutSection
+//   5c3c110  feat(q4-l3 A3): remove/update/clear per-sponsor
+//   ff5eeb7  feat(q4-l3 A2): addProduct(sponsorId:) overload
+//   e947030  feat(q4-l3 A1): SponsorCart struct + cartsBySponsor
+//   3cf9a74  fix(q4-l3 B4): route Apple Pay through sponsor SDK
+//            ← RESULTS IN [object Object] FROM COMMERCE
+//
+// To resume: confirm with Alan whether sponsor channels can process
+// applePayConfirm independently. If yes → keep B4. If no → revert B4
+// and implement Path B (cart unified at primary, UI multi-sponsor only).
+
 // MARK: - Q4 Layer 3: per-sponsor cart routing
 //
 // This file lives next to `CartModule.swift` but stays compartmentalised so
