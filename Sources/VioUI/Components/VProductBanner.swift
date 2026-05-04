@@ -427,6 +427,7 @@ public struct VProductBanner: View {
         .sheet(item: $showingProductDetail) { product in
             VProductDetailOverlay(
                 product: product,
+                sponsorId: activeComponent?.sponsorId,
                 onDismiss: {
                     showingProductDetail = nil
                 }

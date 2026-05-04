@@ -12,24 +12,27 @@ public struct VApplePayButton: View {
     let productName: String
     let productImageUrl: String?
     let amount: Double
+    let sponsorId: Int?
     let onPaymentComplete: (() -> Void)?
- 
+
     @EnvironmentObject private var cartManager: CartManager
     @ObservedObject private var applePayManager = ApplePayManager.shared
     @State private var showConfirmation = false
     @State private var showError = false
     @State private var errorMessage = ""
- 
+
     public init(
         product: Product? = nil,
         variant: Variant? = nil,
         productName: String? = nil,
         productImageUrl: String? = nil,
         amount: Double? = nil,
+        sponsorId: Int? = nil,
         onPaymentComplete: (() -> Void)? = nil
     ) {
         self.product = product
         self.variant = variant
+        self.sponsorId = sponsorId
         
         // Resolve product name
         let resolvedProductName: String
@@ -106,7 +109,8 @@ public struct VApplePayButton: View {
                 productImageUrl: productImageUrl,
                 amount: amount,
                 currencyCode: cartManager.currency,
-                contact: applePayManager.capturedContact
+                contact: applePayManager.capturedContact,
+                sponsorId: sponsorId
             ) {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
@@ -194,12 +198,18 @@ private extension View {
 
 #else
 
-/// Placeholder on non‑iOS platforms (Apple Pay is iOS-only).
+/// Placeholder on non‑iOS platforms (Apple Pay is iOS-only). The full set of
+/// parameters mirrors the iOS branch — including the Q4 (2026-04-30)
+/// `product`, `variant`, and `sponsorId` — so call sites don't need
+/// `#if os(iOS)` guards just to switch parameter shapes.
 public struct VApplePayButton: View {
     public init(
-        productName: String,
+        product: Product? = nil,
+        variant: Variant? = nil,
+        productName: String? = nil,
         productImageUrl: String? = nil,
-        amount: Double,
+        amount: Double? = nil,
+        sponsorId: Int? = nil,
         onPaymentComplete: (() -> Void)? = nil
     ) {}
 

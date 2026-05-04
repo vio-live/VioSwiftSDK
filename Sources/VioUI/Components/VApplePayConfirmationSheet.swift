@@ -12,18 +12,23 @@ public struct VApplePayConfirmationSheet: View {
     let amount: Double
     let currencyCode: String
     let contact: PKContact?
+    let sponsorId: Int?
     let onDismiss: () -> Void
 
-    /// The sponsor that owns this purchase, resolved from the Commerce
-    /// SDK client provider's `activeSponsorId` — set when `ProductService`
-    /// (or any other path) opened a per-sponsor SDK client. The apiKey in
-    /// use is our single source of truth for who is being transacted with.
+    /// The sponsor that owns this purchase. Q4 (2026-04-30): callers now
+    /// pass `sponsorId` explicitly through the call chain
+    /// (VProductCard/Banner/Carousel/Spotlight → VProductDetailOverlay →
+    /// VApplePayButton → this sheet). The previous global lookup
+    /// (`CommerceSdkClientProvider.activeSponsorId`) is kept only as a
+    /// last-resort fallback for legacy callsites that haven't yet been
+    /// migrated; new callsites should always supply `sponsorId`.
     ///
-    /// No fallback chain by design: if the active sponsor can't be resolved
-    /// to a logo, the sheet renders without one (instead of showing a
-    /// misleading campaign-level or host-app brand).
+    /// No fallback to campaign-level or host-app brand by design: if the
+    /// resolved sponsor has no logo, the sheet renders without one
+    /// (instead of showing the wrong brand).
     private var sponsorLogoUrl: String? {
-        guard let id = CommerceSdkClientProvider.shared.activeSponsorId,
+        let resolvedId = sponsorId ?? CommerceSdkClientProvider.shared.activeSponsorId
+        guard let id = resolvedId,
               let logo = VioConfiguration.shared.sponsor(withId: id)?.logoUrl,
               !logo.isEmpty else {
             return nil
@@ -37,6 +42,7 @@ public struct VApplePayConfirmationSheet: View {
         amount: Double,
         currencyCode: String,
         contact: PKContact?,
+        sponsorId: Int? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self.productName = productName
@@ -44,6 +50,7 @@ public struct VApplePayConfirmationSheet: View {
         self.amount = amount
         self.currencyCode = currencyCode
         self.contact = contact
+        self.sponsorId = sponsorId
         self.onDismiss = onDismiss
     }
 

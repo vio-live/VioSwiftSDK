@@ -40,6 +40,12 @@ public struct VProductCard: View {
     
     // MARK: - Properties
     private let product: Product
+    /// Sponsor associated with this product. Forwarded to
+    /// `VProductDetailOverlay` (and from there to Apple Pay) so the cart
+    /// flow uses the correct per-sponsor commerce credentials. Defaults to
+    /// nil when the host doesn't supply one — the overlay then falls back
+    /// to the legacy `CommerceSdkClientProvider.activeSponsorId`. Q4 (2026-04-30).
+    private let sponsorId: Int?
     private let variant: Variant
     private let showBrand: Bool
     private let showDescription: Bool
@@ -70,6 +76,7 @@ public struct VProductCard: View {
         showBrand: Bool = VioConfiguration.shared.uiConfiguration.showProductBrands,
         showDescription: Bool = VioConfiguration.shared.uiConfiguration.showProductDescriptions,
         showProductDetail: Bool = true,
+        sponsorId: Int? = nil,
         onTap: (() -> Void)? = nil,
         onAddToCart: (() -> Void)? = nil,
         imageBackgroundColor: Color? = nil  // Optional background color for product images (default: nil)
@@ -79,6 +86,7 @@ public struct VProductCard: View {
         self.showBrand = showBrand
         self.showDescription = showDescription
         self.showProductDetail = showProductDetail
+        self.sponsorId = sponsorId
         self.onTap = onTap
         self.onAddToCart = onAddToCart
         self.imageBackgroundColor = imageBackgroundColor
@@ -103,6 +111,7 @@ public struct VProductCard: View {
         .sheet(isPresented: $showingProductDetail) {
             VProductDetailOverlay(
                 product: product,
+                sponsorId: sponsorId,
                 onDismiss: {
                     showingProductDetail = false
                 }
