@@ -199,6 +199,14 @@ extension CartManager {
             )
             syncSponsorCart(&sponsorCart, from: dto)
             cartsBySponsor[sponsorId] = sponsorCart
+            // Q4 L3 B6 (2026-05-04): auto-select first available shipping
+            // for items without one. Legacy VCheckoutOverlay has a UI
+            // (`shippingOptionsSelectionView`) for the user to pick;
+            // SponsorCheckoutSection doesn't expose one yet, so we
+            // server-select to keep the cart checkout-ready. Without
+            // shipping_id per line item, Commerce's `applePayConfirm`
+            // returns the generic `[object Object]` error.
+            await autoSelectFirstShipping(forSponsor: sponsorId, sdk: sponsorSdk)
             ToastManager.shared.showSuccess("Added \(product.title) to cart")
         } catch let error as SdkException {
             errorMessage = error.description
@@ -702,6 +710,70 @@ extension CartManager {
             total + (item.shippingAmount ?? 0.0)
         }
         sponsorCart.shippingCurrency = mapped.first(where: { $0.shippingCurrency != nil })?.shippingCurrency ?? cart.currency
+    }
+
+    /// Q4 L3 B6 (2026-05-04): auto-selects the first available shipping
+    /// option for every item in this sponsor's cart that doesn't have
+    /// `shipping_id` set yet. Called from
+    /// `addProduct(_:variant:quantity:sponsorId:)` after the addItem
+    /// sync so the cart is immediately checkout-ready (Commerce's
+    /// `applePayConfirm` rejects carts whose line items lack
+    /// `shipping_id` with the generic `[object Object]` error).
+    ///
+    /// Mirrors the user's manual selection in legacy
+    /// `VCheckoutOverlay.shippingOptionsSelectionView`. The
+    /// `SponsorCheckoutSection` (Q4 L3 B1) doesn't expose a picker yet,
+    /// so we pick the first option (typically the cheapest / default
+    /// standard shipping). A future iteration can add a picker UI to
+    /// let the user choose explicitly.
+    ///
+    /// Best-effort: failures here are logged but don't block the flow —
+    /// the user can still attempt checkout, and Commerce will return
+    /// the same `[object Object]` error if shipping is still missing.
+    internal func autoSelectFirstShipping(
+        forSponsor sponsorId: Int,
+        sdk: CartManagingSDK
+    ) async {
+        guard var sponsorCart = cartsBySponsor[sponsorId],
+              let cid = sponsorCart.cartId,
+              !cid.isEmpty else { return }
+
+        for item in sponsorCart.items {
+            // Skip items that already have shipping selected, or items
+            // with no available shipping options (e.g. digital goods).
+            if let existing = item.shippingId, !existing.isEmpty { continue }
+            guard let firstOption = item.availableShippings.first,
+                  !firstOption.id.isEmpty else { continue }
+
+            do {
+                logRequest(
+                    "sdk.cart.updateItem (sponsor=\(sponsorId), shipping auto-select)",
+                    payload: [
+                        "cart_id": cid,
+                        "cart_item_id": item.id,
+                        "shipping_id": firstOption.id
+                    ]
+                )
+                let dto = try await sdk.cart.updateItem(
+                    cart_id: cid,
+                    cart_item_id: item.id,
+                    shipping_id: firstOption.id,
+                    quantity: nil
+                )
+                syncSponsorCart(&sponsorCart, from: dto)
+                cartsBySponsor[sponsorId] = sponsorCart
+                VioLogger.info(
+                    "Auto-selected shipping=\(firstOption.id) (\(firstOption.name)) for item \(item.id) sponsor=\(sponsorId)",
+                    component: "CartModule"
+                )
+            } catch {
+                VioLogger.warning(
+                    "Auto-select shipping FAILED for item \(item.id) sponsor=\(sponsorId): \(error.localizedDescription)",
+                    component: "CartModule"
+                )
+                // Continue with next item — best-effort.
+            }
+        }
     }
 
     /// Local fallback when the Reachu addItem/updateItem call throws.
