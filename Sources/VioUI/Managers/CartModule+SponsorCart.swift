@@ -199,14 +199,14 @@ extension CartManager {
             )
             syncSponsorCart(&sponsorCart, from: dto)
             cartsBySponsor[sponsorId] = sponsorCart
-            // Q4 L3 B6 (2026-05-04): auto-select first available shipping
-            // for items without one. Legacy VCheckoutOverlay has a UI
-            // (`shippingOptionsSelectionView`) for the user to pick;
-            // SponsorCheckoutSection doesn't expose one yet, so we
-            // server-select to keep the cart checkout-ready. Without
-            // shipping_id per line item, Commerce's `applePayConfirm`
-            // returns the generic `[object Object]` error.
-            await autoSelectFirstShipping(forSponsor: sponsorId, sdk: sponsorSdk)
+            // Q4 L3 B7 (2026-05-04): the shipping selection happens
+            // dynamically inside the Apple Pay sheet via PKPayment
+            // delegates `didSelectShippingContact` + `didSelectShippingMethod`
+            // (see ApplePayManager). The auto-select-first hack from
+            // B6 was reverted because `cart.updateItem(shipping_id:,
+            // quantity: nil)` returned items with subtotal=0 — picking
+            // shipping via the Apple Pay native picker (matching the
+            // develop legacy UX) is the right path.
             ToastManager.shared.showSuccess("Added \(product.title) to cart")
         } catch let error as SdkException {
             errorMessage = error.description
