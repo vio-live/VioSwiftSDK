@@ -266,12 +266,28 @@ public struct SponsorCheckoutSection: View {
         //
         // The amount we hand the button is `subtotal + shipping` —
         // matches what the sheet shows and what Apple Pay will charge.
+        //
+        // `lineItems` (Q4 L3 Fase C polish, 2026-05-04) carries the real
+        // cart contents into the post-payment confirmation sheet so it
+        // renders the actual quantities — fixes the bug where a 2-unit
+        // purchase showed as "1 stk" while Apple Pay charged 2 and
+        // Commerce received an order for 2.
         let totalAmount = sponsorCart.subtotal + sponsorCart.shippingTotal
+        let confirmationLineItems: [ApplePayLineItem] = sponsorCart.items.map { item in
+            ApplePayLineItem(
+                title: item.title,
+                imageUrl: item.imageUrl,
+                quantity: item.quantity,
+                unitPrice: item.price,
+                currencyCode: item.currency
+            )
+        }
         VApplePayButton(
             productName: payButtonLabel,
             productImageUrl: sponsorCart.items.first?.imageUrl,
             amount: totalAmount,
             sponsorId: sponsorCart.sponsorId,
+            lineItems: confirmationLineItems,
             onPaymentComplete: {
                 Task {
                     await cartManager.clearCart(forSponsor: sponsorCart.sponsorId)
