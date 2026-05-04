@@ -208,12 +208,38 @@ public final class ApplePayManager: NSObject, ObservableObject {
         // updateQuantity in CartModule+SponsorCart.swift), so we skip
         // the legacy `cartManager.sync(from:)` which would overwrite
         // global state with this sponsor's cart only.
+        //
+        // Q4 L3 B5 (2026-05-04): in sponsor mode we DO sync the cart's
+        // `currency` + `country` into `cartManager` so the
+        // `PKPaymentRequest.countryCode` + `currencyCode` (later in
+        // this method) match the channel where the cart lives.
+        // Without this, Stripe Connect of the sponsor could reject the
+        // charge because the PaymentRequest country/currency don't
+        // match the cart's. For NO/NOK markets specifically: the
+        // sponsor cart is created with `currency: "NOK"` and
+        // `shippingCountry: "NO"`; if `cartManager.country` was still
+        // at default "US" (when no legacy cart was created yet), the
+        // PaymentRequest would go out as US/USD against an NO/NOK
+        // cart → channel mismatch → Commerce returns `[object Object]`.
+        // We do NOT sync items / cartTotal / cartId because those are
+        // legacy state read by the cart UI; full sync would corrupt
+        // them with only this sponsor's items.
         do {
             cartManager.syncSdkCredentials()
             let activeSdk = sdkForActivePayment(cartManager)
             let serverCart = try await activeSdk.cart.getById(cart_id: currentCartId)
             if sponsorId == nil {
                 cartManager.sync(from: serverCart)
+            } else {
+                cartManager.currency = serverCart.currency
+                if let serverCountry = serverCart.shippingCountry,
+                   !serverCountry.isEmpty {
+                    cartManager.country = serverCountry
+                }
+                VioLogger.debug(
+                    "Apple Pay (sponsor=\(sponsorId.map(String.init) ?? "-")): synced country=\(cartManager.country) currency=\(cartManager.currency) from sponsor cart",
+                    component: "ApplePayManager"
+                )
             }
         } catch {
             VioLogger.error(
