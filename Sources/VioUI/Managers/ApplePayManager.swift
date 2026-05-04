@@ -126,6 +126,31 @@ public final class ApplePayManager: NSObject, ObservableObject {
     public var capturedContact: PKContact?
     private var pendingPublishableKey: String?
     private var pendingCartManager: CartManager?
+    /// Q4 L3 (2026-04-30): when set, the active payment is for a specific
+    /// sponsor's cart in `cartsBySponsor[sponsorId]`. All SDK calls
+    /// (cart.getById, payment.stripeIntent, payment.applePayInit,
+    /// payment.applePayConfirm, checkout.create) get routed through that
+    /// sponsor's commerce_api_key via `CommerceSdkClientProvider
+    /// .client(forSponsorId:)` instead of the cartManager's global SDK.
+    /// Nil means legacy single-cart flow (preserves back-compat).
+    private var pendingSponsorId: Int?
+
+    /// Q4 L3 (2026-04-30): resolves the SDK client to use for the active
+    /// payment. When `pendingSponsorId` is set, returns the sponsor's
+    /// per-channel client; otherwise falls back to `cartManager.sdk`
+    /// (legacy single-cart). Used by `pay`, `tokenizeAndConfirm`,
+    /// `resolveBackendStripeKey`, `extractStripeKeyFromApplePayInit`.
+    private func sdkForActivePayment(_ cartManager: CartManager) -> CartManagingSDK {
+        if let sid = pendingSponsorId,
+           let sponsorSdk = try? CommerceSdkClientProvider.shared.client(
+               forSponsorId: sid,
+               configuration: VioConfiguration.shared
+           ),
+           CommerceSdkClientProvider.shared.activeSponsorId == sid {
+            return sponsorSdk
+        }
+        return cartManager.sdk
+    }
 
     public func pay(
         product: Product? = nil,
@@ -133,31 +158,89 @@ public final class ApplePayManager: NSObject, ObservableObject {
         productName: String? = nil,
         amount: Double? = nil,
         checkoutId: String? = nil,
+        sponsorId: Int? = nil,
         cartManager: CartManager
     ) async {
         self.isProcessing = true
         self.paymentResult = nil
         self.pendingCartManager = cartManager
+        // Q4 L3 (2026-04-30): when sponsorId is set, every SDK call
+        // below routes through this sponsor's commerce_api_key via
+        // sdkForActivePayment(_:). Nil = legacy single-cart flow.
+        self.pendingSponsorId = sponsorId
         guard await cartManager.ensurePaymentRuntimeReady(component: "ApplePayManager") else {
             paymentResult = .failure("Cart is not ready. Please try again.")
             isProcessing = false
             return
         }
 
+        // Add product locally if provided. In sponsor-aware mode, route
+        // through the sponsor-aware overload so the item lands in
+        // `cartsBySponsor[sponsorId]` instead of the legacy items array.
         if let p = product {
-            await cartManager.addProduct(p, variant: variant, quantity: 1)
+            if let sid = sponsorId {
+                await cartManager.addProduct(p, variant: variant, quantity: 1, sponsorId: sid)
+            } else {
+                await cartManager.addProduct(p, variant: variant, quantity: 1)
+            }
         }
 
-        guard let currentCartId = cartManager.cartId, !currentCartId.isEmpty else {
+        // Resolve the active cart id: sponsor's cart when sponsorId set,
+        // legacy `cartManager.cartId` otherwise.
+        let activeCartId: String?
+        if let sid = sponsorId {
+            activeCartId = cartManager.sponsorCart(forSponsorId: sid)?.cartId
+        } else {
+            activeCartId = cartManager.cartId
+        }
+        guard let currentCartId = activeCartId, !currentCartId.isEmpty else {
+            VioLogger.warning(
+                "Apple Pay: missing cartId (sponsorId=\(sponsorId.map(String.init) ?? "-"))",
+                component: "ApplePayManager"
+            )
             paymentResult = .failure("Cart is not ready. Please try again.")
             isProcessing = false
             return
         }
 
+        // Sync cart from server. In sponsor mode we already trust the
+        // SponsorCart state (kept in sync by addProduct/removeItem/
+        // updateQuantity in CartModule+SponsorCart.swift), so we skip
+        // the legacy `cartManager.sync(from:)` which would overwrite
+        // global state with this sponsor's cart only.
+        //
+        // Q4 L3 B5 (2026-05-04): in sponsor mode we DO sync the cart's
+        // `currency` + `country` into `cartManager` so the
+        // `PKPaymentRequest.countryCode` + `currencyCode` (later in
+        // this method) match the channel where the cart lives.
+        // Without this, Stripe Connect of the sponsor could reject the
+        // charge because the PaymentRequest country/currency don't
+        // match the cart's. For NO/NOK markets specifically: the
+        // sponsor cart is created with `currency: "NOK"` and
+        // `shippingCountry: "NO"`; if `cartManager.country` was still
+        // at default "US" (when no legacy cart was created yet), the
+        // PaymentRequest would go out as US/USD against an NO/NOK
+        // cart → channel mismatch → Commerce returns `[object Object]`.
+        // We do NOT sync items / cartTotal / cartId because those are
+        // legacy state read by the cart UI; full sync would corrupt
+        // them with only this sponsor's items.
         do {
             cartManager.syncSdkCredentials()
-            let serverCart = try await cartManager.sdk.cart.getById(cart_id: currentCartId)
-            cartManager.sync(from: serverCart)
+            let activeSdk = sdkForActivePayment(cartManager)
+            let serverCart = try await activeSdk.cart.getById(cart_id: currentCartId)
+            if sponsorId == nil {
+                cartManager.sync(from: serverCart)
+            } else {
+                cartManager.currency = serverCart.currency
+                if let serverCountry = serverCart.shippingCountry,
+                   !serverCountry.isEmpty {
+                    cartManager.country = serverCountry
+                }
+                VioLogger.debug(
+                    "Apple Pay (sponsor=\(sponsorId.map(String.init) ?? "-")): synced country=\(cartManager.country) currency=\(cartManager.currency) from sponsor cart",
+                    component: "ApplePayManager"
+                )
+            }
         } catch {
             VioLogger.error(
                 "Apple Pay: failed to sync cart before checkout: \(error.localizedDescription)",
@@ -167,10 +250,16 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return
         }
 
-        let resolvedCheckoutId = checkoutId?.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Resolve checkoutId: explicit param > sponsor cart's checkoutId >
+        // newly created (per-sponsor or legacy depending on sponsorId).
+        let sponsorCachedCheckoutId = sponsorId.flatMap { cartManager.sponsorCart(forSponsorId: $0)?.checkoutId }
+        let resolvedCheckoutId = (checkoutId ?? sponsorCachedCheckoutId)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         let selectedCheckoutId: String?
         if let resolvedCheckoutId, !resolvedCheckoutId.isEmpty {
             selectedCheckoutId = resolvedCheckoutId
+        } else if let sid = sponsorId {
+            selectedCheckoutId = await cartManager.createCheckout(forSponsor: sid)
         } else {
             selectedCheckoutId = await cartManager.createCheckout()
         }
@@ -314,10 +403,12 @@ public final class ApplePayManager: NSObject, ObservableObject {
         do {
             cartManager.syncSdkCredentials()
             VioLogger.debug(
-                "applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil)",
+                "applePayConfirm request checkoutId=\(finalId) token=\(maskedToken(stripeToken)) shippingPresent=\(shippingAddressInput != nil) sponsorId=\(pendingSponsorId.map(String.init) ?? "-")",
                 component: logComponent
             )
-            let confirmDto = try await cartManager.sdk.payment.applePayConfirm(
+            // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+            let activeSdk = sdkForActivePayment(cartManager)
+            let confirmDto = try await activeSdk.payment.applePayConfirm(
                 checkoutId: finalId,
                 applePayToken: stripeToken,
                 email: capturedContact?.emailAddress,
@@ -419,9 +510,11 @@ public final class ApplePayManager: NSObject, ObservableObject {
             return keyFromInit
         }
 
+        // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+        let activeSdk = sdkForActivePayment(cartManager)
         for mode in VioRuntimeRetryPolicy.applePayStripeIntentReturnEphemeralKeyModes {
             do {
-                let intent = try await cartManager.sdk.payment.stripeIntent(
+                let intent = try await activeSdk.payment.stripeIntent(
                     checkoutId: checkoutId,
                     returnEphemeralKey: mode
                 )
@@ -444,7 +537,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         cartManager: CartManager
     ) async -> String? {
         do {
-            let initDto = try await cartManager.sdk.payment.applePayInit(checkoutId: checkoutId)
+            // Q4 L3: route through sponsor's SDK when pendingSponsorId set.
+            let activeSdk = sdkForActivePayment(cartManager)
+            let initDto = try await activeSdk.payment.applePayInit(checkoutId: checkoutId)
             let backendValue = initDto.gatewayMerchantId.trimmingCharacters(in: .whitespacesAndNewlines)
             if isValidAppleMerchantIdentifier(backendValue) {
                 merchantIdentifier = backendValue
@@ -463,14 +558,55 @@ public final class ApplePayManager: NSObject, ObservableObject {
     }
     
     // MARK: - Summary Item Helpers
-    
+
+    /// Q4 L3 B7 (2026-05-04): returns the items + shippingTotal to use
+    /// for the active Apple Pay session. In sponsor mode (`pendingSponsorId`
+    /// set), reads from `cartsBySponsor[sid]`. Otherwise falls back to
+    /// the legacy single-cart `cartManager.items`. Used by
+    /// `buildSummaryItems` and the shipping delegates so they all
+    /// stay in sync about which cart is "active".
+    private func activeCartContextForPayment(
+        _ cartManager: CartManager
+    ) -> (items: [CartManager.CartItem], shippingTotal: Double, currency: String) {
+        if let sid = pendingSponsorId,
+           let sponsorCart = cartManager.cartsBySponsor[sid] {
+            return (
+                items: sponsorCart.items,
+                shippingTotal: sponsorCart.shippingTotal,
+                currency: sponsorCart.currency
+            )
+        }
+        return (
+            items: cartManager.items,
+            shippingTotal: cartManager.shippingTotal,
+            currency: cartManager.currency
+        )
+    }
+
     private func buildSummaryItems(
         cartManager: CartManager,
         standaloneProductName: String? = nil,
         standaloneAmount: Double? = nil
     ) -> [PKPaymentSummaryItem] {
-        let merchantName = VioConfiguration.shared.brandConfiguration.name
-        if cartManager.items.isEmpty,
+        // Q4 L3 B8 (2026-05-04): in sponsor mode, the Apple Pay "Pay X"
+        // label should reflect the sponsor that owns the items being
+        // paid. Without this, every charge would show "Pay Vio" (or
+        // "Pay Elkjøp" pre-B8 when the default was hardcoded), which is
+        // confusing when the user added a product from XXL or Torshov.
+        // Resolution order: sponsor name (sponsor mode) → brand
+        // configuration name (legacy) → "Vio" fallback.
+        let merchantName: String = {
+            if let sid = pendingSponsorId,
+               let sponsorName = VioConfiguration.shared.sponsor(withId: sid)?.name,
+               !sponsorName.isEmpty {
+                return sponsorName
+            }
+            return VioConfiguration.shared.brandConfiguration.name
+        }()
+        // Q4 L3 B7: branch on the active context (sponsor cart vs legacy).
+        let context = activeCartContextForPayment(cartManager)
+
+        if context.items.isEmpty,
             let standaloneProductName,
             let standaloneAmount
         {
@@ -482,24 +618,32 @@ public final class ApplePayManager: NSObject, ObservableObject {
         }
 
         var summaryItems: [PKPaymentSummaryItem] = []
-        
+
         // Add items
-        for item in cartManager.items {
+        var subtotal: Double = 0
+        for item in context.items {
             let label = "\(item.quantity)x \(item.title)"
-            let amount = NSDecimalNumber(value: item.price * Double(item.quantity))
-            summaryItems.append(PKPaymentSummaryItem(label: label, amount: amount))
+            let lineAmount = item.price * Double(item.quantity)
+            subtotal += lineAmount
+            summaryItems.append(PKPaymentSummaryItem(label: label, amount: NSDecimalNumber(value: lineAmount)))
         }
-        
+
         // Add shipping if selected
-        let shippingTotal = cartManager.shippingTotal
+        let shippingTotal = context.shippingTotal
         if shippingTotal > 0 {
             summaryItems.append(PKPaymentSummaryItem(label: "Shipping", amount: NSDecimalNumber(value: shippingTotal)))
         }
-        
-        // Add grand total
-        let total = NSDecimalNumber(value: cartManager.cartTotal + shippingTotal)
-        summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: total, type: .final))
-        
+
+        // Add grand total — sponsor mode uses sum of items; legacy still
+        // uses cartManager.cartTotal for back-compat.
+        let total: Double
+        if pendingSponsorId != nil {
+            total = subtotal + shippingTotal
+        } else {
+            total = cartManager.cartTotal + shippingTotal
+        }
+        summaryItems.append(PKPaymentSummaryItem(label: merchantName, amount: NSDecimalNumber(value: total), type: .final))
+
         return summaryItems
     }
 }
@@ -516,26 +660,48 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
                 completion(PKPaymentRequestShippingContactUpdate(errors: nil, paymentSummaryItems: [], shippingMethods: []))
                 return
             }
-            
+
+            // Q4 L3 B7: branch on sponsor mode for cart country update.
+            // In sponsor mode, the cart for this session lives in
+            // `cartsBySponsor[sid]` and is operated through the sponsor's
+            // SDK. Otherwise, fall back to the legacy `cartManager.sdk` +
+            // `cartManager.cartId`.
             // 1. Update cart country to get regional shipping options
             if let countryCode = contact.postalAddress?.isoCountryCode {
-                VioLogger.debug("Shipping address changed to \(countryCode); updating cart", component: "ApplePayManager")
-                _ = try? await cartManager.sdk.cart.update(cart_id: cartManager.cartId ?? "", shipping_country: countryCode)
-                _ = await cartManager.refreshShippingOptions()
+                VioLogger.debug("Shipping address changed to \(countryCode); updating cart (sponsorId=\(pendingSponsorId.map(String.init) ?? "-"))", component: "ApplePayManager")
+                if let sid = pendingSponsorId,
+                   let sponsorCart = cartManager.cartsBySponsor[sid],
+                   let cid = sponsorCart.cartId,
+                   !cid.isEmpty {
+                    let activeSdk = sdkForActivePayment(cartManager)
+                    _ = try? await activeSdk.cart.update(cart_id: cid, shipping_country: countryCode)
+                    // Sponsor mode doesn't use legacy `refreshShippingOptions`
+                    // (which targets `cartManager.cartId`); the sponsor cart
+                    // already has fresh availableShippings from the previous
+                    // sync. After the country update, future selections of
+                    // shipping method via `didSelectShippingMethod` will hit
+                    // the sponsor's SDK with the new country in effect.
+                } else {
+                    _ = try? await cartManager.sdk.cart.update(cart_id: cartManager.cartId ?? "", shipping_country: countryCode)
+                    _ = await cartManager.refreshShippingOptions()
+                }
             }
-            
-            // 2. Fetch shipping methods from the first item (Vio currently handles shipping per item)
-            // For Apple Pay, we present the options of the first item as the available methods for the whole order
-            let shippingMethods: [PKShippingMethod] = cartManager.items.first?.availableShippings.map { option in
+
+            // 2. Fetch shipping methods from the first item of the active
+            // cart context (sponsor or legacy). Vio handles shipping per
+            // item but for Apple Pay we present the options of the first
+            // item as the available methods for the whole order.
+            let context = activeCartContextForPayment(cartManager)
+            let shippingMethods: [PKShippingMethod] = context.items.first?.availableShippings.map { option in
                 let method = PKShippingMethod(label: option.name, amount: NSDecimalNumber(value: option.amount))
                 method.identifier = option.id
                 method.detail = option.description
                 return method
             } ?? []
-            
+
             // 3. Update summary items
             let summaryItems = buildSummaryItems(cartManager: cartManager)
-            
+
             completion(PKPaymentRequestShippingContactUpdate(
                 errors: nil,
                 paymentSummaryItems: summaryItems,
@@ -554,15 +720,45 @@ extension ApplePayManager: PKPaymentAuthorizationControllerDelegate {
                 completion(PKPaymentRequestShippingMethodUpdate(paymentSummaryItems: []))
                 return
             }
-            
-            VioLogger.debug("Shipping method selected: \(shippingMethod.label) (\(optionId))", component: "ApplePayManager")
-            
-            // Apply this shipping option to all items in the cart (Standard Apple Pay behavior)
-            for item in cartManager.items {
-                cartManager.setShippingOption(for: item.id, optionId: optionId)
+
+            VioLogger.debug("Shipping method selected: \(shippingMethod.label) (\(optionId)) (sponsorId=\(pendingSponsorId.map(String.init) ?? "-"))", component: "ApplePayManager")
+
+            // Q4 L3 B7: apply the shipping option to every item, but
+            // route through the sponsor's SDK + sponsor cart in sponsor
+            // mode. Each item gets its own `cart.updateItem(shipping_id:)`
+            // call so Commerce records the shipping_id per line item;
+            // this is what `applePayConfirm` validates server-side.
+            if let sid = pendingSponsorId,
+               let sponsorCart = cartManager.cartsBySponsor[sid],
+               let cid = sponsorCart.cartId,
+               !cid.isEmpty {
+                let activeSdk = sdkForActivePayment(cartManager)
+                var working = sponsorCart
+                for item in working.items {
+                    do {
+                        let dto = try await activeSdk.cart.updateItem(
+                            cart_id: cid,
+                            cart_item_id: item.id,
+                            shipping_id: optionId,
+                            quantity: nil
+                        )
+                        cartManager.syncSponsorCart(&working, from: dto)
+                        cartManager.cartsBySponsor[sid] = working
+                    } catch {
+                        VioLogger.warning(
+                            "didSelectShippingMethod: cart.updateItem(shipping_id:) failed for item \(item.id) sponsor=\(sid): \(error.localizedDescription)",
+                            component: "ApplePayManager"
+                        )
+                    }
+                }
+            } else {
+                // Legacy single-cart path
+                for item in cartManager.items {
+                    cartManager.setShippingOption(for: item.id, optionId: optionId)
+                }
             }
-            
-            // Recalculate totals
+
+            // Recalculate totals from active context (sponsor or legacy)
             let summaryItems = buildSummaryItems(cartManager: cartManager)
             completion(PKPaymentRequestShippingMethodUpdate(paymentSummaryItems: summaryItems))
         }

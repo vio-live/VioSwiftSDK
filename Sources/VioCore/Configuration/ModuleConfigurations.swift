@@ -788,9 +788,14 @@ public struct BrandConfiguration {
     public let iconAsset: String
     
     public init(
-        name: String = "Elkjøp",
+        name: String = "Vio",
         iconAsset: String = "avatar_el"
     ) {
+        // Q4 L3 B8 (2026-05-04): default name changed from "Elkjøp" to
+        // "Vio" so the Apple Pay sheet doesn't always show "Pay Elkjøp"
+        // for hosts that haven't customized `brandConfiguration`.
+        // Multi-sponsor stores additionally override per active sponsor
+        // in `ApplePayManager.buildSummaryItems` (see that helper).
         self.name = name
         self.iconAsset = iconAsset
     }

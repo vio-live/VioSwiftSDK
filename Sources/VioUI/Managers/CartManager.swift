@@ -40,6 +40,19 @@ public class CartManager: ObservableObject {
     @Published public var phoneCode: String = "+1"
     @Published public var flagURL: String?
 
+    /// Q4 L3 (2026-04-30): per-sponsor carts, keyed by `sponsors.id`.
+    ///
+    /// Source of truth for multi-sponsor stores. The flat `@Published`
+    /// properties above (`items`, `cartTotal`, etc.) remain for back-
+    /// compat — they're aggregated views computed from `cartsBySponsor`
+    /// after every mutation (see `syncFlatPublishersFromSponsorCarts()`).
+    ///
+    /// Empty until the first product is added with a `sponsorId`. Single-
+    /// sponsor placements that call `addProduct(_:variant:quantity:)` (no
+    /// sponsorId) fall back to the campaign's primary sponsor — see
+    /// `CartModule.resolveSponsorIdForFlatCallers()`.
+    @Published public var cartsBySponsor: [Int: CartManager.SponsorCart] = [:]
+
     internal var currentCartId: String?
     internal var pendingShippingSelections: [String: CartItem.ShippingOption] = [:]
     internal var didLoadMarkets = false

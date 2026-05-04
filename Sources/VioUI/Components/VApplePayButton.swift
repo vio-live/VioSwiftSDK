@@ -162,15 +162,32 @@ public struct VApplePayButton: View {
     }
 
     private func initiatePayment() {
-        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount)")
+        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount), sponsorId: \(sponsorId.map(String.init) ?? "-")")
         applePayManager.paymentResult = nil
         Task {
+            // Q4 L3 (2026-04-30): when this button is rendered inside a
+            // SponsorCheckoutSection (multi-sponsor cart), `sponsorId` is
+            // set and ApplePayManager routes the entire flow through the
+            // sponsor's per-channel SDK. Single-sponsor / legacy paths
+            // pass nil and the manager falls back to cartManager.sdk.
+            //
+            // The `checkoutId` we pass is the sponsor cart's checkoutId
+            // when available; otherwise nil so ApplePayManager creates a
+            // fresh one via createCheckout(forSponsor:) — also routed
+            // through the sponsor's SDK.
+            let resolvedCheckoutId: String? = {
+                if let sid = sponsorId {
+                    return cartManager.sponsorCart(forSponsorId: sid)?.checkoutId
+                }
+                return cartManager.checkoutId
+            }()
             await applePayManager.pay(
                 product: product,
                 variant: variant,
                 productName: productName,
                 amount: amount,
-                checkoutId: cartManager.checkoutId,
+                checkoutId: resolvedCheckoutId,
+                sponsorId: sponsorId,
                 cartManager: cartManager
             )
         }
