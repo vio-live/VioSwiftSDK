@@ -26,6 +26,10 @@ public enum VioTranslationKey: String, CaseIterable {
     case cart = "cart.title"
     case cartEmpty = "cart.empty"
     case cartEmptyMessage = "cart.emptyMessage"
+    /// Q4 L3 Fase C polish (2026-05-04): "paid" word, used after a
+    /// sponsor's items are successfully charged in multi-sponsor cart.
+    /// Rendered as "<sponsor name> <paid>", e.g. "XXL paid".
+    case cartSponsorPaid = "cart.sponsorPaid"
     case itemCount = "cart.itemCount"
     case items = "cart.items"
     case item = "cart.item"

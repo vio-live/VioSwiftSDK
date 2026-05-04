@@ -27,6 +27,13 @@ public struct VCheckoutOverlay: View {
     
     // MARK: - State
     @State private var checkoutStep: CheckoutStep = .address
+
+    /// Q4 L3 Fase C polish (2026-05-04): sponsorIds whose Apple Pay
+    /// just completed successfully. Drives the green confirmation
+    /// banners stacked at the top of `multiSponsorContent`. Each entry
+    /// is auto-removed after 5 seconds — see the `onPaymentComplete`
+    /// callback inside the ForEach for the timing logic.
+    @State private var recentlyPaidSponsors: [Int] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var isEditingAddress = false
@@ -224,26 +231,65 @@ public struct VCheckoutOverlay: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: VioSpacing.lg) {
-                    multiSponsorHeader
-
-                    ForEach(orderedSponsorCarts) { sponsorCart in
-                        SponsorCheckoutSection(
-                            sponsorCart: sponsorCart,
-                            onPaymentComplete: {
-                                // After clearCart the cart is gone from
-                                // cartsBySponsor; SwiftUI re-renders
-                                // without this section. If it was the
-                                // last sponsor, body switches back to
-                                // mainContent (legacy flow / empty cart).
-                                if cartManager.cartsBySponsor.isEmpty {
-                                    cartManager.isCheckoutPresented = false
-                                }
-                            }
-                        )
-                        .environmentObject(cartManager)
+                    // Q4 L3 Fase C polish (2026-05-04): banner stack of
+                    // recently-paid sponsors. After a section's Apple Pay
+                    // completes successfully, the section is cleared from
+                    // `cartsBySponsor` and the ForEach below re-renders
+                    // without it — so the user gets no feedback that
+                    // anything happened. This banner provides the
+                    // momentary "✓ XXL paid" / "XXL pagado" confirmation
+                    // before auto-dismissing after 5 seconds. Stacks
+                    // when multiple sponsors are paid back-to-back.
+                    ForEach(recentlyPaidSponsors, id: \.self) { sid in
+                        recentlyPaidBanner(sponsorId: sid)
                     }
 
-                    multiSponsorFooter
+                    if orderedSponsorCarts.isEmpty && recentlyPaidSponsors.isEmpty {
+                        // Q4 L3 Fase C polish: empty-state placeholder for
+                        // the rare case where the multi-sponsor view is
+                        // shown with no carts (e.g. all clearAllCarts'd
+                        // mid-render). The dual-mode body switch
+                        // (`isMultiSponsorMode`) usually falls back to
+                        // legacy mainContent when cartsBySponsor is
+                        // empty, but this guards the transition window.
+                        emptyStateView
+                    } else {
+                        multiSponsorHeader
+
+                        ForEach(orderedSponsorCarts) { sponsorCart in
+                            SponsorCheckoutSection(
+                                sponsorCart: sponsorCart,
+                                onPaymentComplete: {
+                                    // Capture sponsorId before clearCart
+                                    // wipes cartsBySponsor[sid]. After
+                                    // clearCart, SwiftUI re-renders
+                                    // without this section.
+                                    let paidId = sponsorCart.sponsorId
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        recentlyPaidSponsors.append(paidId)
+                                    }
+                                    // Auto-dismiss banner after 5s — the
+                                    // 5s number is per UX decision
+                                    // 2026-05-04 (long enough to read,
+                                    // short enough to not block).
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                                        withAnimation(.easeInOut(duration: 0.25)) {
+                                            recentlyPaidSponsors.removeAll { $0 == paidId }
+                                        }
+                                    }
+                                    // If it was the last sponsor cart,
+                                    // body switches back to mainContent
+                                    // (legacy flow / empty cart).
+                                    if cartManager.cartsBySponsor.isEmpty {
+                                        cartManager.isCheckoutPresented = false
+                                    }
+                                }
+                            )
+                            .environmentObject(cartManager)
+                        }
+
+                        multiSponsorFooter
+                    }
                 }
                 .padding(VioSpacing.md)
             }
@@ -270,6 +316,57 @@ public struct VCheckoutOverlay: View {
     /// top so the user sees the highest-value purchases first.
     private var orderedSponsorCarts: [CartManager.SponsorCart] {
         cartManager.cartsBySponsor.values.sorted { $0.subtotal > $1.subtotal }
+    }
+
+    /// Q4 L3 Fase C polish: green confirmation banner for one
+    /// recently-paid sponsor. Resolves the sponsor's display name from
+    /// the subscribe response (same source as the "Pay X" Apple Pay
+    /// label in B8) and falls back to "Sponsor #N" if the lookup
+    /// fails (very unlikely once payment has succeeded).
+    @ViewBuilder
+    private func recentlyPaidBanner(sponsorId: Int) -> some View {
+        let name = VioConfiguration.shared.sponsor(withId: sponsorId)?.name
+            ?? "Sponsor #\(sponsorId)"
+        let paidWord = VLocalizedString(VioTranslationKey.cartSponsorPaid.rawValue)
+        HStack(spacing: VioSpacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+                .font(.system(size: 18))
+            Text("\(name) \(paidWord)")
+                .font(VioTypography.body)
+                .foregroundColor(VioColors.textPrimary)
+            Spacer()
+        }
+        .padding(VioSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .fill(Color.green.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .stroke(Color.green.opacity(0.4), lineWidth: 1)
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
+    }
+
+    /// Q4 L3 Fase C polish: empty-state placeholder for the rare case
+    /// where the multi-sponsor view is mounted with no carts.
+    @ViewBuilder
+    private var emptyStateView: some View {
+        VStack(spacing: VioSpacing.md) {
+            Image(systemName: "cart")
+                .font(.system(size: 56, weight: .light))
+                .foregroundColor(VioColors.textSecondary)
+            Text(VLocalizedString(VioTranslationKey.cartEmpty.rawValue))
+                .font(VioTypography.headline)
+                .foregroundColor(VioColors.textPrimary)
+            Text(VLocalizedString(VioTranslationKey.cartEmptyMessage.rawValue))
+                .font(VioTypography.body)
+                .foregroundColor(VioColors.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(VioSpacing.xl)
     }
 
     @ViewBuilder

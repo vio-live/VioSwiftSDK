@@ -1,6 +1,42 @@
 import SwiftUI
 import VioCore
 
+/// One line in a post-purchase confirmation sheet. Mirrors what the cart
+/// actually charged: a product (title + image), the quantity bought, and
+/// the unit price. The sheet computes line total = `unitPrice * quantity`.
+///
+/// **Why this exists** (Q4 L3 Fase C polish, 2026-05-04): the
+/// confirmation sheet used to render a single hardcoded row with `"1 stk"`
+/// regardless of cart contents. Multi-sponsor carts can hold N items with
+/// arbitrary quantities, so a 2-unit purchase showed as "1 stk" while
+/// Apple Pay charged for 2 and Commerce received an order for 2. Passing
+/// real line items is the only way for the sheet to match what was paid.
+public struct ApplePayLineItem: Hashable {
+    public let title: String
+    public let imageUrl: String?
+    public let quantity: Int
+    public let unitPrice: Double
+    public let currencyCode: String
+
+    public init(
+        title: String,
+        imageUrl: String?,
+        quantity: Int,
+        unitPrice: Double,
+        currencyCode: String
+    ) {
+        self.title = title
+        self.imageUrl = imageUrl
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+        self.currencyCode = currencyCode
+    }
+
+    public var lineTotal: Double {
+        unitPrice * Double(quantity)
+    }
+}
+
 #if os(iOS)
 import PassKit
 
@@ -13,6 +49,13 @@ public struct VApplePayConfirmationSheet: View {
     let currencyCode: String
     let contact: PKContact?
     let sponsorId: Int?
+    /// Cart line items charged in this purchase. When non-empty, the
+    /// sheet renders one row per item with the actual quantity. When
+    /// empty, falls back to a single row using `productName /
+    /// productImageUrl / amount` and a literal "1 stk" — used by legacy
+    /// single-product call sites (e.g. VProductDetailOverlay) that don't
+    /// have a multi-line cart concept.
+    let lineItems: [ApplePayLineItem]
     let onDismiss: () -> Void
 
     /// The sponsor that owns this purchase. Q4 (2026-04-30): callers now
@@ -43,6 +86,7 @@ public struct VApplePayConfirmationSheet: View {
         currencyCode: String,
         contact: PKContact?,
         sponsorId: Int? = nil,
+        lineItems: [ApplePayLineItem] = [],
         onDismiss: @escaping () -> Void
     ) {
         self.productName = productName
@@ -51,6 +95,7 @@ public struct VApplePayConfirmationSheet: View {
         self.currencyCode = currencyCode
         self.contact = contact
         self.sponsorId = sponsorId
+        self.lineItems = lineItems
         self.onDismiss = onDismiss
     }
 
@@ -96,46 +141,33 @@ public struct VApplePayConfirmationSheet: View {
                 .padding(.bottom, 28)
 
             VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    if let urlStr = productImageUrl, let url = URL(string: urlStr) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let img):
-                                img.resizable().aspectRatio(contentMode: .fill)
-                            default:
-                                Color.white.opacity(0.1)
-                            }
+                if lineItems.isEmpty {
+                    // Legacy single-product fallback (e.g. VProductDetailOverlay
+                    // — buying one product with quantity 1).
+                    productLineRow(
+                        title: productName,
+                        imageUrl: productImageUrl,
+                        quantityLabel: "1 stk",
+                        priceText: formatMoney(amount, code: currencyCode)
+                    )
+                } else {
+                    // Multi-line: one row per cart item with the actual
+                    // quantity. Fixes the Q4 L3 bug where a 2-unit purchase
+                    // showed as "1 stk" while Apple Pay charged 2.
+                    ForEach(Array(lineItems.enumerated()), id: \.offset) { idx, item in
+                        productLineRow(
+                            title: item.title,
+                            imageUrl: item.imageUrl,
+                            quantityLabel: "\(item.quantity) stk",
+                            priceText: formatMoney(item.lineTotal, code: item.currencyCode)
+                        )
+                        if idx < lineItems.count - 1 {
+                            Divider()
+                                .background(Color.white.opacity(0.06))
+                                .padding(.horizontal, 16)
                         }
-                        .frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.08))
-                            .frame(width: 56, height: 56)
-                            .overlay(
-                                Image(systemName: "shippingbox")
-                                    .foregroundColor(.white.opacity(0.4))
-                            )
                     }
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(productName)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
-
-                        Text("1 stk")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.5))
-                    }
-
-                    Spacer()
-
-                    Text(formatMoney(amount, code: currencyCode))
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
                 }
-                .padding(16)
 
                 Divider().background(Color.white.opacity(0.1))
 
@@ -197,6 +229,55 @@ public struct VApplePayConfirmationSheet: View {
         )
     }
 
+    @ViewBuilder
+    private func productLineRow(
+        title: String,
+        imageUrl: String?,
+        quantityLabel: String,
+        priceText: String
+    ) -> some View {
+        HStack(spacing: 14) {
+            if let urlStr = imageUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        Color.white.opacity(0.1)
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 56, height: 56)
+                    .overlay(
+                        Image(systemName: "shippingbox")
+                            .foregroundColor(.white.opacity(0.4))
+                    )
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+
+                Text(quantityLabel)
+                    .font(.system(size: 13))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+
+            Spacer()
+
+            Text(priceText)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .padding(16)
+    }
+
     private var contactName: String? {
         guard let n = contact?.name else { return nil }
         return [n.givenName, n.familyName].compactMap { $0 }.joined(separator: " ")
@@ -225,6 +306,8 @@ public struct VApplePayConfirmationSheet: View {
         amount: Double,
         currencyCode: String,
         contact: Any?,
+        sponsorId: Int? = nil,
+        lineItems: [ApplePayLineItem] = [],
         onDismiss: @escaping () -> Void
     ) {}
 

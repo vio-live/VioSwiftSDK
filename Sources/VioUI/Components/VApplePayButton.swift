@@ -13,6 +13,12 @@ public struct VApplePayButton: View {
     let productImageUrl: String?
     let amount: Double
     let sponsorId: Int?
+    /// Line items charged in this purchase (from a multi-item cart).
+    /// When non-empty, the post-payment confirmation sheet renders one
+    /// row per item with the actual quantity. When empty, the sheet
+    /// falls back to a single-row display using `productName + amount`
+    /// — used by single-product callers like `VProductDetailOverlay`.
+    let lineItems: [ApplePayLineItem]
     let onPaymentComplete: (() -> Void)?
 
     @EnvironmentObject private var cartManager: CartManager
@@ -28,11 +34,13 @@ public struct VApplePayButton: View {
         productImageUrl: String? = nil,
         amount: Double? = nil,
         sponsorId: Int? = nil,
+        lineItems: [ApplePayLineItem] = [],
         onPaymentComplete: (() -> Void)? = nil
     ) {
         self.product = product
         self.variant = variant
         self.sponsorId = sponsorId
+        self.lineItems = lineItems
         
         // Resolve product name
         let resolvedProductName: String
@@ -110,7 +118,8 @@ public struct VApplePayButton: View {
                 amount: amount,
                 currencyCode: cartManager.currency,
                 contact: applePayManager.capturedContact,
-                sponsorId: sponsorId
+                sponsorId: sponsorId,
+                lineItems: lineItems
             ) {
                 showConfirmation = false
                 applePayManager.paymentResult = nil
@@ -227,6 +236,7 @@ public struct VApplePayButton: View {
         productImageUrl: String? = nil,
         amount: Double? = nil,
         sponsorId: Int? = nil,
+        lineItems: [ApplePayLineItem] = [],
         onPaymentComplete: (() -> Void)? = nil
     ) {}
 
