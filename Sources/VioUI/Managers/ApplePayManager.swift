@@ -588,7 +588,21 @@ public final class ApplePayManager: NSObject, ObservableObject {
         standaloneProductName: String? = nil,
         standaloneAmount: Double? = nil
     ) -> [PKPaymentSummaryItem] {
-        let merchantName = VioConfiguration.shared.brandConfiguration.name
+        // Q4 L3 B8 (2026-05-04): in sponsor mode, the Apple Pay "Pay X"
+        // label should reflect the sponsor that owns the items being
+        // paid. Without this, every charge would show "Pay Vio" (or
+        // "Pay Elkjøp" pre-B8 when the default was hardcoded), which is
+        // confusing when the user added a product from XXL or Torshov.
+        // Resolution order: sponsor name (sponsor mode) → brand
+        // configuration name (legacy) → "Vio" fallback.
+        let merchantName: String = {
+            if let sid = pendingSponsorId,
+               let sponsorName = VioConfiguration.shared.sponsor(withId: sid)?.name,
+               !sponsorName.isEmpty {
+                return sponsorName
+            }
+            return VioConfiguration.shared.brandConfiguration.name
+        }()
         // Q4 L3 B7: branch on the active context (sponsor cart vs legacy).
         let context = activeCartContextForPayment(cartManager)
 
