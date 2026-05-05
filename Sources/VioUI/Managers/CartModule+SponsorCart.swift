@@ -49,6 +49,13 @@ extension CartManager {
         quantity: Int = 1,
         sponsorId: Int
     ) async {
+        // [Q4-DIAG 2026-05-05] Confirms a multi-sponsor add lands in
+        // cartsBySponsor[sponsorId] (NOT in legacy items). Pair with
+        // [Q4-DIAG addProduct-LEGACY] in CartModule.swift — if that one
+        // fires for a multi-sponsor test, the call site is bypassing the
+        // sponsorId routing.
+        let existingSponsorCartId = cartsBySponsor[sponsorId]?.cartId ?? "nil"
+        print("🟣 [Q4-DIAG addProduct-SPONSOR] sponsorId=\(sponsorId) productId=\(product.id) qty=\(quantity) existingSponsorCartId=\(existingSponsorCartId)")
         // 1. Resolve sponsor's SDK client (per-sponsor commerce key).
         guard let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId) else {
             VioLogger.warning(
@@ -398,6 +405,10 @@ extension CartManager {
             let chkId = extractCheckoutId(dto)
             sponsorCart.checkoutId = chkId
             cartsBySponsor[sponsorId] = sponsorCart
+            // [Q4-DIAG 2026-05-05] Per-sponsor checkout creation. Pair the
+            // checkoutId logged here with the cartId logged in
+            // ensureSponsorCartId — they should both be sponsor-scoped.
+            print("🟣 [Q4-DIAG createCheckout-SPONSOR] sponsorId=\(sponsorId) cartId=\(cid) → checkoutId=\(chkId ?? "nil")")
             logResponse(
                 "sdk.checkout.create (sponsor=\(sponsorId))",
                 payload: ["checkoutId": chkId as Any]
@@ -539,6 +550,9 @@ extension CartManager {
         sdk: CartManagingSDK
     ) async -> String? {
         if let id = sponsorCart.cartId, !id.isEmpty {
+            // [Q4-DIAG 2026-05-05] Reusing an existing per-sponsor cart →
+            // expected on 2nd+ item from same sponsor.
+            print("🟣 [Q4-DIAG ensureSponsorCartId REUSE] sponsorId=\(sponsorCart.sponsorId) cartId=\(id)")
             return id
         }
         let session = "ios-sp\(sponsorCart.sponsorId)-\(UUID().uuidString)"
@@ -563,6 +577,11 @@ extension CartManager {
             sponsorCart.cartId = dto.cartId
             sponsorCart.currency = dto.currency
             sponsorCart.country = dto.shippingCountry ?? sponsorCart.country
+            // [Q4-DIAG 2026-05-05] Fresh cart created in sponsor's channel.
+            // Each sponsor should produce a different cartId here. If two
+            // sponsors get the same cartId, the per-sponsor SDK isn't actually
+            // hitting different Commerce accounts.
+            print("🟣 [Q4-DIAG ensureSponsorCartId CREATE] sponsorId=\(sponsorCart.sponsorId) NEW cartId=\(dto.cartId) currency=\(dto.currency) country=\(dto.shippingCountry ?? "-")")
             return dto.cartId
         } catch {
             logError(

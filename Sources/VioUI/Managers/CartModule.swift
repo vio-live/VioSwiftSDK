@@ -522,6 +522,12 @@ extension CartManager {
         variant: VioCore.Variant? = nil,
         quantity: Int = 1
     ) async {
+        // [Q4-DIAG 2026-05-05] LEGACY single-cart path entry. This SHOULD
+        // NOT fire during a multi-sponsor TV2 test. If it does → some UI
+        // callsite (VProductSpotlight inline button, VCastingVideoPlayer
+        // inline button, or others) bypassed the sponsorId routing. That
+        // would explain why Alan sees a single cart_id in Commerce.
+        print("🟠 [Q4-DIAG addProduct-LEGACY] productId=\(product.id) qty=\(quantity) (NO sponsorId — items will pile into legacy cartManager.cartId=\(cartId ?? "nil"))")
         isLoading = true
         errorMessage = nil
 

@@ -202,6 +202,11 @@ public struct VCastingVideoPlayer: View {
                             print("🛍️ [Product] Agregando producto de la API al carrito: \(apiProduct.title)")
                             let product = convertDtoToProduct(apiProduct)
                             Task {
+                                // [Q4-DIAG 2026-05-05] Inline add bypasses
+                                // sponsorId routing — VCastingVideoPlayer
+                                // doesn't currently know the sponsor of the
+                                // active product event.
+                                print("🟠 [Q4-DIAG inline-add VCastingVideoPlayer] productId=\(product.id) (will route to LEGACY)")
                                 await cartManager.addProduct(product, quantity: 1)
                                 print("✅ [Product] Producto agregado al carrito")
                             }

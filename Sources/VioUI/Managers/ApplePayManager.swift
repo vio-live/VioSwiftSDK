@@ -161,6 +161,10 @@ public final class ApplePayManager: NSObject, ObservableObject {
         sponsorId: Int? = nil,
         cartManager: CartManager
     ) async {
+        // [Q4-DIAG 2026-05-05] Apple Pay entry. If sponsorId=nil here for a
+        // multi-sponsor purchase → callsite (button / overlay) didn't
+        // propagate sponsorId → cart will fall back to legacy single-cart.
+        print("🟣 [Q4-DIAG applePay-pay ENTRY] sponsorId=\(sponsorId.map(String.init) ?? "nil") productId=\(product?.id.description ?? "nil") explicitCheckoutId=\(checkoutId ?? "nil") amount=\(amount.map { String($0) } ?? "nil")")
         self.isProcessing = true
         self.paymentResult = nil
         self.pendingCartManager = cartManager
@@ -193,6 +197,9 @@ public final class ApplePayManager: NSObject, ObservableObject {
         } else {
             activeCartId = cartManager.cartId
         }
+        // [Q4-DIAG 2026-05-05] cart resolution. If sponsorId set but cartId
+        // ends up matching the legacy cartManager.cartId → wrong routing.
+        print("🟣 [Q4-DIAG applePay-pay CART-RESOLVED] sponsorId=\(sponsorId.map(String.init) ?? "nil") activeCartId=\(activeCartId ?? "nil") legacyCartId=\(cartManager.cartId ?? "nil")")
         guard let currentCartId = activeCartId, !currentCartId.isEmpty else {
             VioLogger.warning(
                 "Apple Pay: missing cartId (sponsorId=\(sponsorId.map(String.init) ?? "-"))",
@@ -271,6 +278,11 @@ public final class ApplePayManager: NSObject, ObservableObject {
         }
 
         pendingCheckoutId = checkoutId
+        // [Q4-DIAG 2026-05-05] Final triple — sponsorId + cartId + checkoutId
+        // that this Apple Pay flow will charge against. Compare across two
+        // sponsors: all three should differ (or sponsorId+cartId+checkoutId
+        // should at least be unique per sponsor).
+        print("🟣 [Q4-DIAG applePay-pay FINAL] sponsorId=\(sponsorId.map(String.init) ?? "nil") cartId=\(activeCartId ?? "nil") checkoutId=\(checkoutId)")
 
         guard let runtimeBackendStripeKey = await resolveBackendStripeKey(
             checkoutId: checkoutId,

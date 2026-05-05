@@ -93,6 +93,11 @@ public final class CommerceSdkClientProvider {
             // visual-only sponsor without commerce). The active sponsor for a
             // purchase falls back to the primary because that's whose key the
             // shared client uses.
+            // [Q4-DIAG 2026-05-05] If you see this fired during a multi-sponsor
+            // test it means the sponsor in question has no commerce block →
+            // call routes to primary's channel → cart_id will collide with
+            // the primary cart in Commerce. Strip after validation.
+            print("🟣 [Q4-DIAG sdk-resolve FALLBACK→primary] sponsorId=\(sponsorId.map(String.init) ?? "nil") (no commerce key in config)")
             activeSponsorId = configuration.primarySponsor?.id
             return try client(configuration: configuration)
         }
@@ -105,6 +110,22 @@ public final class CommerceSdkClientProvider {
         // Per-sponsor resolution succeeded — this is the single source of
         // truth for "who are we transacting with". Confirmation sheet reads it.
         activeSponsorId = sponsorId
+
+        // [Q4-DIAG 2026-05-05] Log key suffix so we can confirm each sponsor
+        // hits a distinct Commerce channel. If the suffix matches across
+        // sponsors → all carts land in the same channel (config issue, not
+        // SDK). Strip these logs once Alan validates the per-channel split.
+        let keySuffix = sponsorKey.count >= 4
+            ? String(sponsorKey.suffix(4))
+            : sponsorKey
+        let cacheState: String = {
+            if let _ = sponsorClients[sponsorId],
+               sponsorClientURLs[sponsorId] == resolvedURL,
+               sponsorClientKeys[sponsorId] == sponsorKey { return "cached-hit" }
+            if sponsorClients[sponsorId] != nil { return "cached-creds-refresh" }
+            return "fresh-create"
+        }()
+        print("🟣 [Q4-DIAG sdk-resolve] sponsorId=\(sponsorId) apiKey=...\(keySuffix) (len=\(sponsorKey.count)) cache=\(cacheState)")
 
         if let existing = sponsorClients[sponsorId],
            sponsorClientURLs[sponsorId] == resolvedURL,

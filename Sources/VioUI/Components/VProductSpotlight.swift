@@ -482,6 +482,11 @@ public struct VProductSpotlight: View {
                             Button(action: {
                                 // Stop propagation to parent button
                                 Task {
+                                    // [Q4-DIAG 2026-05-05] Inline add bypasses
+                                    // sponsorId routing. activeComponent has it
+                                    // available — logging both so we can see
+                                    // the missing wire-up.
+                                    print("🟠 [Q4-DIAG inline-add VProductSpotlight] productId=\(product.id) componentSponsorId=\(activeComponent?.sponsorId.map(String.init) ?? "nil") (will route to LEGACY)")
                                     await cartManager.addProduct(product, quantity: 1)
                                 }
                             }) {
