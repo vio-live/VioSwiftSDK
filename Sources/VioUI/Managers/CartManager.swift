@@ -82,6 +82,7 @@ public class CartManager: ObservableObject {
         var cartTotal: Double
         var cartId: String?
         var checkoutId: String?
+        var currentCartId: String?
         var currency: String
         var country: String
         var shippingTotal: Double
@@ -113,6 +114,7 @@ public class CartManager: ObservableObject {
             cartTotal: cartTotal,
             cartId: cartId,
             checkoutId: checkoutId,
+            currentCartId: currentCartId,
             currency: currency,
             country: country,
             shippingTotal: shippingTotal,
@@ -120,11 +122,17 @@ public class CartManager: ObservableObject {
             lastDiscountCode: lastDiscountCode,
             lastDiscountId: lastDiscountId
         )
-        // Mirror sponsor cart into the flat legacy fields.
+        // Mirror sponsor cart into the flat legacy fields. `currentCartId`
+        // is the internal twin of `cartId` that legacy paths like
+        // `ensureCartIDForCheckout` check first — without mirroring it,
+        // those paths would see nil and call legacy `createCart()` which
+        // creates a brand-new cart on the GLOBAL sdk (primary sponsor's
+        // credentials), routing operations to the wrong Commerce channel.
         items = cart.items
         cartTotal = cart.subtotal
         cartId = cart.cartId
         checkoutId = cart.checkoutId
+        currentCartId = cart.cartId
         currency = cart.currency
         country = cart.country
         shippingTotal = cart.shippingTotal
@@ -162,6 +170,7 @@ public class CartManager: ObservableObject {
             cartTotal = s.cartTotal
             cartId = s.cartId
             checkoutId = s.checkoutId
+            currentCartId = s.currentCartId
             currency = s.currency
             country = s.country
             shippingTotal = s.shippingTotal
@@ -244,7 +253,32 @@ public class CartManager: ObservableObject {
     internal var lastLoadedProductCountry: String?
     private var bootstrapObserver: NSObjectProtocol?
 
-    internal var sdk: CartManagingSDK
+    /// Q4 L4 (2026-05-06): the underlying global SDK client (primary
+    /// sponsor's Commerce credentials). All legacy single-cart code
+    /// reads `sdk` (the computed property below), which routes to the
+    /// sponsor-scoped client when `activeCheckoutSponsorId` is set —
+    /// this stored field is only the fallback.
+    internal var _legacySdk: CartManagingSDK
+
+    /// Q4 L4 (2026-05-06): SDK client legacy code paths use to talk to
+    /// Commerce. When `activeCheckoutSponsorId` is set (user tapped
+    /// "Checkout" on a sponsor section in the multi-sponsor cart
+    /// overview), this returns that sponsor's per-channel SDK client
+    /// instead of the legacy global. That's how the legacy step views
+    /// (address → orderSummary → review → success) route their
+    /// `sdk.cart.*` and `sdk.payment.*` calls through the right
+    /// Commerce channel without having to rewrite every callsite.
+    ///
+    /// Important: this is the read side. Any code that previously
+    /// did `self.sdk = newClient` to swap credentials must now
+    /// assign to `_legacySdk` instead.
+    internal var sdk: CartManagingSDK {
+        if let sid = activeCheckoutSponsorId,
+           let sponsorSdk = resolveSponsorSdk(forSponsorId: sid) {
+            return sponsorSdk
+        }
+        return _legacySdk
+    }
 
     public init(
         sdk: CartManagingSDK? = nil,
@@ -252,21 +286,21 @@ public class CartManager: ObservableObject {
         autoBootstrap: Bool = true
     ) {
         if let provided = sdk {
-            self.sdk = provided
+            self._legacySdk = provided
         } else {
             do {
                 let sharedClient = try CommerceSdkClientProvider.shared.client(configuration: configuration)
                 VioLogger.debug(
                     "Initializing shared SDK Client - Base URL: \(sharedClient.baseUrl), API Key: \(sharedClient.apiKey.prefix(8))...",
                     component: "CartManager")
-                self.sdk = sharedClient
+                self._legacySdk = sharedClient
             } catch {
                 let baseURL = URL(string: configuration.environment.graphQLURL) ?? URL(string: "https://graph-ql-dev.vio.live/graphql")!
                 let apiKey = configuration.apiKey.isEmpty ? "DEMO_KEY" : configuration.apiKey
                 VioLogger.warning(
                     "Falling back to direct SDK client init due to provider error: \(error.localizedDescription)",
                     component: "CartManager")
-                self.sdk = SdkClient(baseUrl: baseURL, apiKey: apiKey)
+                self._legacySdk = SdkClient(baseUrl: baseURL, apiKey: apiKey)
             }
         }
 
@@ -323,9 +357,13 @@ public class CartManager: ObservableObject {
         }
     }
 
-    /// Ensures the underlying SdkClient is using the latest credentials from VioConfiguration
+    /// Ensures the underlying SdkClient is using the latest credentials from VioConfiguration.
+    /// Q4 L4 (2026-05-06): operates on `_legacySdk` directly (not the
+    /// scoped `sdk` computed property) — sponsor SDKs are managed per
+    /// sponsor by `CommerceSdkClientProvider`, syncing them with the
+    /// primary's resolved key would clobber their per-channel auth.
     public func syncSdkCredentials() {
-        guard let concreteSdk = sdk as? SdkClient else { return }
+        guard let concreteSdk = _legacySdk as? SdkClient else { return }
         let config = VioConfiguration.shared
         do {
             let sharedClient = try CommerceSdkClientProvider.shared.client(configuration: config)
