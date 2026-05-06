@@ -660,6 +660,14 @@ public struct VCheckoutOverlay: View {
                 Task { @MainActor in
                     isLoading = true
                     await loadAvailablePaymentMethods()
+                    // Q4 L4 (2026-05-06): defensive re-sync — pull
+                    // every non-paid sponsor cart's items from
+                    // Commerce so the UI never lists phantom items
+                    // that drifted out of sync with the server (see
+                    // `refreshSponsorCartsFromServer` for the failure
+                    // modes this guards against). Cheap when carts are
+                    // already in sync, idempotent.
+                    await cartManager.refreshSponsorCartsFromServer()
                     isLoading = false
                 }
             }

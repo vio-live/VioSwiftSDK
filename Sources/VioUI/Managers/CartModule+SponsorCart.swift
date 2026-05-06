@@ -527,6 +527,51 @@ extension CartManager {
         cartsBySponsor[sponsorId]
     }
 
+    /// Q4 L4 (2026-05-06): re-syncs every non-paid sponsor cart's
+    /// `items` (and totals) from Commerce. Useful before showing the
+    /// cart overlay so the UI never lists phantom items — the local
+    /// state can drift from the server when:
+    ///   - `addProduct` fell back to `addItemLocallyToSponsorCart`
+    ///     after a transient SDK error (the local item gets a UUID
+    ///     that doesn't exist server-side, causing 500s on later
+    ///     `deleteItem` mutations)
+    ///   - a previous payment partially completed and Commerce
+    ///     emptied the cart but iOS missed the update
+    ///   - any other path that bypassed `syncSponsorCart`
+    ///
+    /// Carts already marked `isPaid = true` (drained by clearCart on
+    /// success) are skipped — they intentionally hold an empty
+    /// `items` and a "Paid" badge in the UI; we don't want to
+    /// re-fetch them just to confirm what we already know.
+    ///
+    /// Carts without a `cartId` (never created server-side or already
+    /// cleared locally) are also skipped — there's nothing to sync.
+    public func refreshSponsorCartsFromServer() async {
+        let snapshot = cartsBySponsor
+        for (sid, cart) in snapshot {
+            guard !cart.isPaid, let cid = cart.cartId, !cid.isEmpty else { continue }
+            guard let sdk = resolveSponsorSdk(forSponsorId: sid) else { continue }
+            do {
+                let dto = try await sdk.cart.getById(cart_id: cid)
+                guard var sponsorCart = cartsBySponsor[sid] else { continue }
+                let beforeCount = sponsorCart.items.count
+                syncSponsorCart(&sponsorCart, from: dto)
+                cartsBySponsor[sid] = sponsorCart
+                let afterCount = sponsorCart.items.count
+                if beforeCount != afterCount {
+                    print("🟣 [Q4-DIAG refresh-from-server] sponsorId=\(sid) items \(beforeCount)→\(afterCount) (drift corrected)")
+                } else {
+                    print("🟣 [Q4-DIAG refresh-from-server] sponsorId=\(sid) items=\(afterCount) (in sync)")
+                }
+            } catch {
+                VioLogger.warning(
+                    "refreshSponsorCartsFromServer(\(sid)): server fetch failed: \(error.localizedDescription)",
+                    component: "CartModule"
+                )
+            }
+        }
+    }
+
     /// Records the user's payment method choice for a sponsor cart so the
     /// per-sponsor checkout flow knows which path to take (Apple Pay →
     /// direct sheet; Klarna → full address form; Vipps/Stripe →
