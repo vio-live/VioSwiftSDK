@@ -230,6 +230,15 @@ public struct VCheckoutOverlay: View {
         !cartManager.cartsBySponsor.isEmpty
     }
 
+    /// Q4 L4 Phase 7 (2026-05-06): true when every sponsor cart in this
+    /// session has `isPaid == true` — i.e. the user has completed
+    /// sequential checkout for all of them. Triggers the AllDoneSheet
+    /// in `multiSponsorContent` instead of the per-sponsor list.
+    private var allSponsorsPaid: Bool {
+        let carts = cartManager.cartsBySponsor.values
+        return !carts.isEmpty && carts.allSatisfy { $0.isPaid }
+    }
+
     /// Multi-sponsor checkout: one section per sponsor cart, each with its
     /// own Apple Pay button. Apple-Pay-only this sprint (UX decision in
     /// PR #11) — Klarna / Vipps / Stripe stay in the legacy flow only.
@@ -251,7 +260,22 @@ public struct VCheckoutOverlay: View {
                         recentlyPaidBanner(sponsorId: sid)
                     }
 
-                    if orderedSponsorCarts.isEmpty && recentlyPaidSponsors.isEmpty {
+                    if allSponsorsPaid {
+                        // Q4 L4 Phase 7 (2026-05-06): AllDoneSheet recap
+                        // when every sponsor cart in this session is paid.
+                        // Close drains the local + Commerce carts and
+                        // dismisses the overlay back to the store.
+                        VAllDoneSheet(
+                            paidSponsorCarts: orderedSponsorCarts,
+                            onClose: {
+                                Task {
+                                    await cartManager.clearAllCarts()
+                                    cartManager.isCheckoutPresented = false
+                                }
+                            }
+                        )
+                        .environmentObject(cartManager)
+                    } else if orderedSponsorCarts.isEmpty && recentlyPaidSponsors.isEmpty {
                         // Q4 L3 Fase C polish: empty-state placeholder for
                         // the rare case where the multi-sponsor view is
                         // shown with no carts (e.g. all clearAllCarts'd
