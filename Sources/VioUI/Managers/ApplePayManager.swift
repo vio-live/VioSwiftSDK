@@ -432,7 +432,24 @@ public final class ApplePayManager: NSObject, ObservableObject {
             if normalizedStatus == "success" {
                 VioLogger.success("applePayConfirm success orderId=\(confirmDto.orderId ?? "—")", component: logComponent)
                 paymentResult = .success
-                await cartManager.resetCartAndCreateNew()
+                // Q4 L4 (2026-05-06): cart cleanup branches by whether
+                // this was a sponsor-aware payment. Multi-sponsor paths
+                // mutated `cartsBySponsor[sid]`, NOT the legacy items —
+                // calling `resetCartAndCreateNew` here would only wipe
+                // the (already empty) legacy array and leave the
+                // sponsor cart's items visible in the cart overlay.
+                //
+                // Local-only cleanup: Commerce locks the cart into
+                // "completed" state after applePayConfirm, so calling
+                // cart.delete (the server side of `clearCart`) returns
+                // 500 ("Cart item not remove"). We just drain the
+                // SwiftUI-observed state and mark isPaid=true so the
+                // section renders the "Paid" banner.
+                if let sid = pendingSponsorId {
+                    cartManager.cleanupSponsorCartLocally(sid)
+                } else {
+                    await cartManager.resetCartAndCreateNew()
+                }
                 return true
             } else if normalizedStatus == "processing" || normalizedStatus == "pending" {
                 VioLogger.warning("applePayConfirm pending status=\(confirmDto.status ?? "UNKNOWN")", component: logComponent)

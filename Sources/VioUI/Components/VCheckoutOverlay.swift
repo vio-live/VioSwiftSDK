@@ -404,16 +404,18 @@ public struct VCheckoutOverlay: View {
         guard let result = result else { return }
         switch result {
         case .success:
-            cartManager.markSponsorCartPaid(sid)
-            Task {
-                await cartManager.clearCart(forSponsor: sid)
-                pendingApplePaySponsorId = nil
-                applePayManager.paymentResult = nil
-                let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
-                if remaining.isEmpty {
-                    cartManager.hideCheckout()
-                    await cartManager.clearAllCarts()
-                }
+            // ApplePayManager already called `cleanupSponsorCartLocally`
+            // in its success path (Q4 L4 fix), so the sponsor cart is
+            // already drained + isPaid=true here. We just handle the
+            // overlay-level UI: clear our pending tracker, reset the
+            // payment-result publisher so future Apple Pay events don't
+            // re-fire this branch, and close the overlay if there are
+            // no remaining unpaid sponsor carts.
+            pendingApplePaySponsorId = nil
+            applePayManager.paymentResult = nil
+            let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
+            if remaining.isEmpty {
+                cartManager.hideCheckout()
             }
         case .failure(let msg):
             errorMessage = msg
@@ -1822,36 +1824,34 @@ public struct VCheckoutOverlay: View {
     ///     resetCartAndCreateNew.
     private func handleSuccessClose() {
         if let sid = cartManager.activeCheckoutSponsorId {
-            // Scoped path. Order matters:
-            //   1. markSponsorCartPaid first so the section retains
-            //      isPaid = true after exitSponsorCheckoutScope writes
-            //      back the (cleared) flat fields.
-            //   2. clearCart(forSponsor:) wipes server + local items.
-            //   3. exitSponsorCheckoutScope(syncBackToSponsor: false)
+            // Scoped path (Klarna / Vipps / Stripe just succeeded).
+            //   1. cleanupSponsorCartLocally — drain the sponsor cart's
+            //      local state + mark isPaid. We explicitly do NOT call
+            //      `clearCart(forSponsor:)` here because Commerce locks
+            //      the cart in completed state after payment confirm,
+            //      so cart.delete returns 500 ("Cart item not remove").
+            //      The orphaned Commerce cart is harmless — it stays
+            //      in completed state and is never reused for new
+            //      orders.
+            //   2. exitSponsorCheckoutScope(syncBackToSponsor: false)
             //      restores the flat legacy snapshot — we explicitly
             //      DO NOT sync the (just-cleared) flat fields back to
-            //      the sponsor cart, that would reset isPaid+items
-            //      we just set.
-            cartManager.markSponsorCartPaid(sid)
-            Task {
-                await cartManager.clearCart(forSponsor: sid)
-                cartManager.exitSponsorCheckoutScope(syncBackToSponsor: false)
-                // After clearCart the sponsor cart still exists with
-                // items=[] + isPaid=true. If every sponsor cart is now
-                // paid (or has no items), close the overlay entirely;
-                // otherwise the body will flip back to
-                // multiSponsorContent (because activeCheckoutSponsorId
-                // is now nil and cartsBySponsor still has unpaid carts).
-                let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
-                if remaining.isEmpty {
-                    cartManager.hideCheckout()
-                    await cartManager.clearAllCarts()
-                } else {
-                    // Reset checkoutStep so when the user picks the
-                    // next sponsor, the legacy step flow starts fresh
-                    // at .address.
-                    checkoutStep = .address
-                }
+            //      the sponsor cart, that would re-populate the cart
+            //      we just drained.
+            cartManager.cleanupSponsorCartLocally(sid)
+            cartManager.exitSponsorCheckoutScope(syncBackToSponsor: false)
+            // After cleanup the sponsor cart still exists with items=[]
+            // + isPaid=true. If every sponsor cart is now paid, close
+            // the overlay entirely; otherwise body flips back to
+            // multiSponsorContent (activeCheckoutSponsorId is now nil
+            // and cartsBySponsor still has unpaid carts).
+            let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
+            if remaining.isEmpty {
+                cartManager.hideCheckout()
+            } else {
+                // Reset checkoutStep so when the user picks the next
+                // sponsor, the legacy step flow starts fresh at .address.
+                checkoutStep = .address
             }
         } else {
             // Legacy single-cart path (unchanged).

@@ -538,6 +538,33 @@ extension CartManager {
         cartsBySponsor[sponsorId] = sponsorCart
     }
 
+    /// Q4 L4 (2026-05-06): drains a sponsor cart's LOCAL state without
+    /// calling the Commerce `cart.delete` mutation. Used right after a
+    /// successful payment confirmation (Apple Pay / Klarna / Vipps /
+    /// Stripe) — Commerce locks the cart into "completed" state once
+    /// the payment confirms, so any subsequent `cart.delete` /
+    /// `cart.deleteItem` calls return 500 ("Cart item not remove").
+    ///
+    /// This helper sidesteps that by clearing the SwiftUI-observed
+    /// fields and marking `isPaid = true`. The orphaned Commerce cart
+    /// will be cleaned up server-side eventually (Commerce treats
+    /// "completed" carts as terminal, they're not reused for new
+    /// orders). The user-visible cart UI immediately reflects the
+    /// "Paid" state without showing stale items.
+    public func cleanupSponsorCartLocally(_ sponsorId: Int) {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else { return }
+        sponsorCart.cartId = nil
+        sponsorCart.checkoutId = nil
+        sponsorCart.items = []
+        sponsorCart.subtotal = 0
+        sponsorCart.shippingTotal = 0
+        sponsorCart.lastDiscountCode = nil
+        sponsorCart.lastDiscountId = nil
+        sponsorCart.isPaid = true
+        cartsBySponsor[sponsorId] = sponsorCart
+        print("🟣 [Q4-DIAG cleanup-local] sponsorId=\(sponsorId) — local state drained, isPaid=true (no server call)")
+    }
+
     // MARK: - Internal helpers
 
     /// Resolves the sponsor's per-channel SDK client. Returns nil if the
