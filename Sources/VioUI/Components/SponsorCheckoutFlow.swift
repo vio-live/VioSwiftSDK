@@ -472,7 +472,7 @@ public struct SponsorCheckoutFlow: View {
         }
         #if os(iOS)
         if let url = URL(string: dto.paymentUrl) {
-            UIApplication.shared.open(url)
+            await UIApplication.shared.open(url)
         }
         #endif
         // Vipps return-URL handling lives in VippsPaymentHandler today;
@@ -491,8 +491,18 @@ public struct SponsorCheckoutFlow: View {
         guard let intent = await cartManager.stripeIntent(
             returnEphemeralKey: true,
             sponsorId: sponsorCart.sponsorId
-        ), let clientSecret = intent.clientSecret else {
+        ) else {
             errorMessage = cartManager.errorMessage ?? "Stripe initialization failed"
+            step = .error
+            return
+        }
+        // `intent.clientSecret` is non-optional String per the
+        // PaymentIntentStripeDto schema — confirmed in the
+        // 2026-05-06 audit, so we read it directly. We also guard
+        // against an empty-string value just in case.
+        let clientSecret = intent.clientSecret
+        guard !clientSecret.isEmpty else {
+            errorMessage = "Stripe returned an empty client secret"
             step = .error
             return
         }
@@ -501,7 +511,6 @@ public struct SponsorCheckoutFlow: View {
         // Phase 5b: port that here. For now we surface the success path
         // so the e2e test can verify the sponsor-aware stripeIntent call
         // hit Commerce on the right channel.
-        let _ = clientSecret
         try? await Task.sleep(nanoseconds: 800_000_000)
         await cartManager.clearCart(forSponsor: sponsorCart.sponsorId)
         cartManager.markSponsorCartPaid(sponsorCart.sponsorId)
