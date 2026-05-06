@@ -28,6 +28,13 @@ public struct VCheckoutOverlay: View {
     // MARK: - State
     @State private var checkoutStep: CheckoutStep = .address
 
+    /// Q4 L4 (2026-05-06): identifies the sponsor the user is currently
+    /// checking out (tapped "Checkout" on its section). When non-nil
+    /// the multi-sponsor cart overlay covers itself with
+    /// `SponsorCheckoutFlow` scoped to that sponsor. Cleared on
+    /// success / cancel.
+    @State private var activeCheckoutSponsorId: Int?
+
     /// Q4 L3 Fase C polish (2026-05-04): sponsorIds whose Apple Pay
     /// just completed successfully. Drives the green confirmation
     /// banners stacked at the top of `multiSponsorContent`. Each entry
@@ -262,22 +269,10 @@ public struct VCheckoutOverlay: View {
                                 onCheckoutTapped: {
                                     // Q4 L4 (2026-05-06): hand off to the
                                     // per-sponsor checkout flow controller.
-                                    // The section already has the user's
-                                    // chosen payment method on
-                                    // `sponsorCart.selectedPaymentMethod`.
-                                    // The flow controller branches by
-                                    // method, runs the appropriate handler,
-                                    // and on success calls
-                                    // `cartManager.markSponsorCartPaid(sid)`
-                                    // — at which point this same section
-                                    // re-renders with the dimmed "Paid"
-                                    // banner.
-                                    //
-                                    // TODO(Phase 5): wire this up to the
-                                    // per-sponsor flow controller. For the
-                                    // current commit (Phase 1) the tap is
-                                    // a no-op — the section's UI is what's
-                                    // landing here, the flow comes next.
+                                    // Set the active sponsor and the body
+                                    // covers itself with SponsorCheckoutFlow
+                                    // (sheet/overlay) scoped to that sponsor.
+                                    activeCheckoutSponsorId = sponsorCart.sponsorId
                                 }
                             )
                             .environmentObject(cartManager)
@@ -304,6 +299,28 @@ public struct VCheckoutOverlay: View {
                 }
             }
             #endif
+        }
+        .sheet(item: Binding(
+            get: { activeCheckoutSponsorId.flatMap { sid in cartManager.cartsBySponsor[sid] } },
+            set: { newCart in
+                if newCart == nil { activeCheckoutSponsorId = nil }
+            }
+        )) { sponsorCart in
+            // Q4 L4: per-sponsor checkout flow. Branches internally by
+            // sponsorCart.selectedPaymentMethod (Apple Pay direct, Klarna
+            // full form, Vipps/Stripe email-only).
+            SponsorCheckoutFlow(
+                sponsorCart: sponsorCart,
+                onCancel: { activeCheckoutSponsorId = nil },
+                onSuccess: {
+                    // Section in cart now shows isPaid=true (set by
+                    // SponsorCheckoutFlow before success). Close the
+                    // sheet — user sees the cart with one section
+                    // marked Paid + remaining sponsors to check out.
+                    activeCheckoutSponsorId = nil
+                }
+            )
+            .environmentObject(cartManager)
         }
     }
 
