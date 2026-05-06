@@ -220,23 +220,21 @@ public struct VCheckoutOverlay: View {
     // MARK: - Q4 L3 — Multi-sponsor mode
 
     /// True when the user has items from more than one sponsor (or any
-    /// items in `cartsBySponsor` at all — Q4 L3 multi-sponsor flow). The
-    /// body switches between `mainContent` (legacy single-cart) and
-    /// `multiSponsorContent` based on this.
+    /// items in `cartsBySponsor` at all — Q4 L3 multi-sponsor flow) AND
+    /// the user is NOT currently checking out one of those sponsors.
+    /// The body switches between `mainContent` (legacy step flow,
+    /// either single-cart or scoped to active sponsor) and
+    /// `multiSponsorContent` (the cart overview with per-sponsor
+    /// sections) based on this.
     ///
-    /// Empty `cartsBySponsor` ⇒ legacy flow (preserves single-sponsor
-    /// stores + back-compat with hosts that never adopted multi-sponsor).
+    /// `activeCheckoutSponsorId != nil` ⇒ user tapped Checkout on a
+    /// sponsor section, render `mainContent` scoped to that sponsor
+    /// (Q4 L4 — the legacy step views are sponsor-aware).
+    ///
+    /// Empty `cartsBySponsor` ⇒ legacy single-sponsor flow (preserves
+    /// back-compat with hosts that never adopted multi-sponsor).
     private var isMultiSponsorMode: Bool {
-        !cartManager.cartsBySponsor.isEmpty
-    }
-
-    /// Q4 L4 Phase 7 (2026-05-06): true when every sponsor cart in this
-    /// session has `isPaid == true` — i.e. the user has completed
-    /// sequential checkout for all of them. Triggers the AllDoneSheet
-    /// in `multiSponsorContent` instead of the per-sponsor list.
-    private var allSponsorsPaid: Bool {
-        let carts = cartManager.cartsBySponsor.values
-        return !carts.isEmpty && carts.allSatisfy { $0.isPaid }
+        activeCheckoutSponsorId == nil && !cartManager.cartsBySponsor.isEmpty
     }
 
     /// Multi-sponsor checkout: one section per sponsor cart, each with its
@@ -260,22 +258,7 @@ public struct VCheckoutOverlay: View {
                         recentlyPaidBanner(sponsorId: sid)
                     }
 
-                    if allSponsorsPaid {
-                        // Q4 L4 Phase 7 (2026-05-06): AllDoneSheet recap
-                        // when every sponsor cart in this session is paid.
-                        // Close drains the local + Commerce carts and
-                        // dismisses the overlay back to the store.
-                        VAllDoneSheet(
-                            paidSponsorCarts: orderedSponsorCarts,
-                            onClose: {
-                                Task {
-                                    await cartManager.clearAllCarts()
-                                    cartManager.isCheckoutPresented = false
-                                }
-                            }
-                        )
-                        .environmentObject(cartManager)
-                    } else if orderedSponsorCarts.isEmpty && recentlyPaidSponsors.isEmpty {
+                    if orderedSponsorCarts.isEmpty && recentlyPaidSponsors.isEmpty {
                         // Q4 L3 Fase C polish: empty-state placeholder for
                         // the rare case where the multi-sponsor view is
                         // shown with no carts (e.g. all clearAllCarts'd
@@ -291,12 +274,22 @@ public struct VCheckoutOverlay: View {
                             SponsorCheckoutSection(
                                 sponsorCart: sponsorCart,
                                 onCheckoutTapped: {
-                                    // Q4 L4 (2026-05-06): hand off to the
-                                    // per-sponsor checkout flow controller.
-                                    // Set the active sponsor and the body
-                                    // covers itself with SponsorCheckoutFlow
-                                    // (sheet/overlay) scoped to that sponsor.
+                                    // Q4 L4 (2026-05-06): scope the legacy
+                                    // step flow to this sponsor's cart.
+                                    //   1. Set activeCheckoutSponsorId →
+                                    //      `isMultiSponsorMode` flips false →
+                                    //      body renders `mainContent` (the
+                                    //      legacy address → orderSummary →
+                                    //      review → success step flow).
+                                    //   2. Reset `checkoutStep` to `.address`
+                                    //      so the user enters the form fresh.
+                                    //   3. The legacy step views are scoped
+                                    //      to the sponsor cart via the helper
+                                    //      reads added in the sponsor-aware
+                                    //      pass (see CartManager.activeCheckout*
+                                    //      computed properties).
                                     activeCheckoutSponsorId = sponsorCart.sponsorId
+                                    checkoutStep = .address
                                 }
                             )
                             .environmentObject(cartManager)
@@ -323,28 +316,6 @@ public struct VCheckoutOverlay: View {
                 }
             }
             #endif
-        }
-        .sheet(item: Binding(
-            get: { activeCheckoutSponsorId.flatMap { sid in cartManager.cartsBySponsor[sid] } },
-            set: { newCart in
-                if newCart == nil { activeCheckoutSponsorId = nil }
-            }
-        )) { sponsorCart in
-            // Q4 L4: per-sponsor checkout flow. Branches internally by
-            // sponsorCart.selectedPaymentMethod (Apple Pay direct, Klarna
-            // full form, Vipps/Stripe email-only).
-            SponsorCheckoutFlow(
-                sponsorCart: sponsorCart,
-                onCancel: { activeCheckoutSponsorId = nil },
-                onSuccess: {
-                    // Section in cart now shows isPaid=true (set by
-                    // SponsorCheckoutFlow before success). Close the
-                    // sheet — user sees the cart with one section
-                    // marked Paid + remaining sponsors to check out.
-                    activeCheckoutSponsorId = nil
-                }
-            )
-            .environmentObject(cartManager)
         }
     }
 
