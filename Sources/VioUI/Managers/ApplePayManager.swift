@@ -435,18 +435,18 @@ public final class ApplePayManager: NSObject, ObservableObject {
                 // Q4 L4 (2026-05-06): cart cleanup branches by whether
                 // this was a sponsor-aware payment. Multi-sponsor paths
                 // mutated `cartsBySponsor[sid]`, NOT the legacy items —
-                // calling `resetCartAndCreateNew` here would only wipe
-                // the (already empty) legacy array and leave the
-                // sponsor cart's items visible in the cart overlay.
+                // `resetCartAndCreateNew` here would only wipe the
+                // (already empty) legacy array and leave the sponsor
+                // cart's items visible in the cart overlay.
                 //
-                // Local-only cleanup: Commerce locks the cart into
-                // "completed" state after applePayConfirm, so calling
-                // cart.delete (the server side of `clearCart`) returns
-                // 500 ("Cart item not remove"). We just drain the
-                // SwiftUI-observed state and mark isPaid=true so the
-                // section renders the "Paid" banner.
+                // For sponsor-aware: call the existing
+                // `clearCart(forSponsor:)` which uses Commerce's
+                // `cart.delete` mutation server-side and clears local
+                // state. Mark paid first so the section renders the
+                // "Paid" banner.
                 if let sid = pendingSponsorId {
-                    cartManager.cleanupSponsorCartLocally(sid)
+                    cartManager.markSponsorCartPaid(sid)
+                    await cartManager.clearCart(forSponsor: sid)
                 } else {
                     await cartManager.resetCartAndCreateNew()
                 }
