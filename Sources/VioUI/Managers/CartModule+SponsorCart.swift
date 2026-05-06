@@ -77,6 +77,21 @@ extension CartManager {
             shippingCurrency: shippingCurrency
         )
 
+        // Q4 L4 (2026-05-06): if the user previously paid this sponsor
+        // (`isPaid == true`, items already cleared by clearCart) and is
+        // now adding a new product, that's a brand-new transaction for
+        // the same sponsor — reset isPaid + selectedPaymentMethod so
+        // the section flips back from "Paid" banner to method picker
+        // + Checkout button. The cleared cartId/checkoutId from the
+        // previous clearCart trigger ensureSponsorCartId to create a
+        // fresh Commerce cart below, so we don't reuse the completed
+        // one.
+        if sponsorCart.isPaid {
+            sponsorCart.isPaid = false
+            sponsorCart.selectedPaymentMethod = nil
+            print("🟣 [Q4-DIAG sponsor-cart-reactivated] sponsorId=\(sponsorId) — was paid, new product added, isPaid reset to false")
+        }
+
         // 3. Ensure a Reachu cart row exists in the sponsor's channel.
         guard let cid = await ensureSponsorCartId(
             for: &sponsorCart,
