@@ -53,6 +53,189 @@ public class CartManager: ObservableObject {
     /// `CartModule.resolveSponsorIdForFlatCallers()`.
     @Published public var cartsBySponsor: [Int: CartManager.SponsorCart] = [:]
 
+    /// Q4 L4 (2026-05-06): the sponsor whose cart the user is currently
+    /// checking out. Set by `VCheckoutOverlay.enterSponsorCheckoutScope`
+    /// when the user taps "Checkout" on a sponsor section; cleared on
+    /// success / cancel via `exitSponsorCheckoutScope`.
+    ///
+    /// **Mirroring strategy**: while non-nil, the flat legacy fields
+    /// (`items`, `cartTotal`, `cartId`, `checkoutId`, `currency`,
+    /// `country`, `shippingTotal`, `shippingCurrency`) are mirrored
+    /// from the sponsor's cart so the legacy step views in
+    /// `mainContent` render the right data without per-step sponsor
+    /// branching. The original legacy values are saved in
+    /// `_legacySnapshotForCheckoutScope` and restored on exit.
+    ///
+    /// Payment handler calls inside the scope still need to receive
+    /// `sponsorId: activeCheckoutSponsorId` explicitly so they route
+    /// through the sponsor's Commerce SDK (the mirror only handles the
+    /// UI-side read; routing is decided in `resolvePaymentTarget`).
+    @Published public var activeCheckoutSponsorId: Int?
+
+    /// Snapshot of the flat legacy cart state taken when entering a
+    /// sponsor checkout scope, restored on exit so any pre-existing
+    /// legacy single-cart state survives a sponsor checkout. Internal
+    /// — only `enterSponsorCheckoutScope` / `exitSponsorCheckoutScope`
+    /// touch this.
+    internal struct LegacySnapshotForCheckoutScope {
+        var items: [CartItem]
+        var cartTotal: Double
+        var cartId: String?
+        var checkoutId: String?
+        var currency: String
+        var country: String
+        var shippingTotal: Double
+        var shippingCurrency: String
+        var lastDiscountCode: String?
+        var lastDiscountId: Int?
+    }
+    internal var _legacySnapshotForCheckoutScope: LegacySnapshotForCheckoutScope?
+
+    /// Q4 L4: enters a per-sponsor checkout scope. Mirrors the sponsor
+    /// cart's data into the flat legacy fields so the existing
+    /// `VCheckoutOverlay.mainContent` step views render against the
+    /// sponsor's items/totals/checkoutId without modification.
+    /// Idempotent: calling twice with the same sponsorId is a no-op.
+    public func enterSponsorCheckoutScope(_ sponsorId: Int) {
+        guard let cart = cartsBySponsor[sponsorId] else {
+            VioLogger.warning("enterSponsorCheckoutScope: no cart for sponsor \(sponsorId)", component: "CartManager")
+            return
+        }
+        // If we're already scoped to this sponsor, nothing to do.
+        if activeCheckoutSponsorId == sponsorId { return }
+        // If we're scoped to a different sponsor, exit first.
+        if activeCheckoutSponsorId != nil {
+            exitSponsorCheckoutScope(syncBackToSponsor: false)
+        }
+        // Snapshot the legacy state once.
+        _legacySnapshotForCheckoutScope = LegacySnapshotForCheckoutScope(
+            items: items,
+            cartTotal: cartTotal,
+            cartId: cartId,
+            checkoutId: checkoutId,
+            currency: currency,
+            country: country,
+            shippingTotal: shippingTotal,
+            shippingCurrency: shippingCurrency,
+            lastDiscountCode: lastDiscountCode,
+            lastDiscountId: lastDiscountId
+        )
+        // Mirror sponsor cart into the flat legacy fields.
+        items = cart.items
+        cartTotal = cart.subtotal
+        cartId = cart.cartId
+        checkoutId = cart.checkoutId
+        currency = cart.currency
+        country = cart.country
+        shippingTotal = cart.shippingTotal
+        shippingCurrency = cart.shippingCurrency
+        lastDiscountCode = cart.lastDiscountCode
+        lastDiscountId = cart.lastDiscountId
+        activeCheckoutSponsorId = sponsorId
+        print("🟣 [Q4-DIAG enter-checkout-scope] sponsorId=\(sponsorId) cartId=\(cart.cartId ?? "nil") checkoutId=\(cart.checkoutId ?? "nil") items=\(cart.items.count)")
+    }
+
+    /// Q4 L4: exits a per-sponsor checkout scope. Restores the flat
+    /// legacy fields from the snapshot. Pass `syncBackToSponsor: true`
+    /// when the in-scope mutations (qty edits, discount applies, etc.)
+    /// should be persisted into the sponsor cart before exiting (true
+    /// for cancel paths so the user doesn't lose changes); pass false
+    /// for success paths where the sponsor cart has already been
+    /// cleared and any flat-field state is throw-away.
+    public func exitSponsorCheckoutScope(syncBackToSponsor: Bool = true) {
+        guard let sid = activeCheckoutSponsorId else { return }
+        if syncBackToSponsor, var cart = cartsBySponsor[sid] {
+            cart.items = items
+            cart.subtotal = cartTotal
+            cart.cartId = cartId
+            cart.checkoutId = checkoutId
+            cart.currency = currency
+            cart.country = country
+            cart.shippingTotal = shippingTotal
+            cart.shippingCurrency = shippingCurrency
+            cart.lastDiscountCode = lastDiscountCode
+            cart.lastDiscountId = lastDiscountId
+            cartsBySponsor[sid] = cart
+        }
+        if let s = _legacySnapshotForCheckoutScope {
+            items = s.items
+            cartTotal = s.cartTotal
+            cartId = s.cartId
+            checkoutId = s.checkoutId
+            currency = s.currency
+            country = s.country
+            shippingTotal = s.shippingTotal
+            shippingCurrency = s.shippingCurrency
+            lastDiscountCode = s.lastDiscountCode
+            lastDiscountId = s.lastDiscountId
+        }
+        _legacySnapshotForCheckoutScope = nil
+        activeCheckoutSponsorId = nil
+        print("🟣 [Q4-DIAG exit-checkout-scope] sponsorId=\(sid) syncBack=\(syncBackToSponsor)")
+    }
+
+    /// Q4 L4: items the active checkout is paying for. Returns the
+    /// sponsor cart's items when `activeCheckoutSponsorId` is set,
+    /// otherwise the legacy flat `items`. Used by the step views in
+    /// `VCheckoutOverlay.mainContent` so they don't need explicit
+    /// sponsor branching.
+    public var activeCheckoutItems: [CartItem] {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.items
+        }
+        return items
+    }
+
+    /// Q4 L4: subtotal scoped to the active checkout. Sponsor cart's
+    /// subtotal when scoped, else legacy `cartTotal`.
+    public var activeCheckoutSubtotal: Double {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.subtotal
+        }
+        return cartTotal
+    }
+
+    /// Q4 L4: shipping total scoped to the active checkout.
+    public var activeCheckoutShippingTotal: Double {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.shippingTotal
+        }
+        return shippingTotal
+    }
+
+    /// Q4 L4: currency scoped to the active checkout (per-sponsor when
+    /// scoped, falls back to legacy `currency`).
+    public var activeCheckoutCurrency: String {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.currency
+        }
+        return currency
+    }
+
+    /// Q4 L4: shipping country scoped to the active checkout. The
+    /// legacy step views read this when building the shipping address
+    /// for `applePayConfirm`, `klarnaNativeInit`, etc.
+    public var activeCheckoutCountry: String {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.country
+        }
+        return country
+    }
+
+    /// Q4 L4: checkoutId scoped to the active checkout. Used by the
+    /// legacy step views' payment handler calls so the right Commerce
+    /// checkout receives the operation. When the active sponsor cart
+    /// doesn't have a checkoutId yet, callers fall back to the
+    /// per-sponsor `createCheckout(forSponsor:)` (which the
+    /// `resolvePaymentTarget` helper in PaymentManager handles
+    /// transparently when given `sponsorId`).
+    public var activeCheckoutCheckoutId: String? {
+        if let sid = activeCheckoutSponsorId, let cart = cartsBySponsor[sid] {
+            return cart.checkoutId
+        }
+        return checkoutId
+    }
+
     internal var currentCartId: String?
     internal var pendingShippingSelections: [String: CartItem.ShippingOption] = [:]
     internal var didLoadMarkets = false

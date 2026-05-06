@@ -29,11 +29,23 @@ public struct VCheckoutOverlay: View {
     @State private var checkoutStep: CheckoutStep = .address
 
     /// Q4 L4 (2026-05-06): identifies the sponsor the user is currently
-    /// checking out (tapped "Checkout" on its section). When non-nil
-    /// the multi-sponsor cart overlay covers itself with
-    /// `SponsorCheckoutFlow` scoped to that sponsor. Cleared on
-    /// success / cancel.
-    @State private var activeCheckoutSponsorId: Int?
+    /// checking out (tapped "Checkout" on its section in the multi-
+    /// sponsor cart overview). When non-nil:
+    ///   - `isMultiSponsorMode` flips false so the body renders
+    ///     `mainContent` (the legacy step flow) instead of the cart
+    ///     overview
+    ///   - the step views inside mainContent read sponsor-scoped data
+    ///     via `cartManager.activeCheckout*` computeds instead of the
+    ///     flat `items` / `cartTotal` / `checkoutId`
+    ///   - payment handler calls receive this as `sponsorId:` so they
+    ///     route to the right Commerce channel
+    ///
+    /// Mirrored to `cartManager.activeCheckoutSponsorId` so the cart
+    /// manager's computed properties react to changes.
+    private var activeCheckoutSponsorId: Int? {
+        get { cartManager.activeCheckoutSponsorId }
+        nonmutating set { cartManager.activeCheckoutSponsorId = newValue }
+    }
 
     /// Q4 L3 Fase C polish (2026-05-04): sponsorIds whose Apple Pay
     /// just completed successfully. Drives the green confirmation
@@ -274,22 +286,7 @@ public struct VCheckoutOverlay: View {
                             SponsorCheckoutSection(
                                 sponsorCart: sponsorCart,
                                 onCheckoutTapped: {
-                                    // Q4 L4 (2026-05-06): scope the legacy
-                                    // step flow to this sponsor's cart.
-                                    //   1. Set activeCheckoutSponsorId →
-                                    //      `isMultiSponsorMode` flips false →
-                                    //      body renders `mainContent` (the
-                                    //      legacy address → orderSummary →
-                                    //      review → success step flow).
-                                    //   2. Reset `checkoutStep` to `.address`
-                                    //      so the user enters the form fresh.
-                                    //   3. The legacy step views are scoped
-                                    //      to the sponsor cart via the helper
-                                    //      reads added in the sponsor-aware
-                                    //      pass (see CartManager.activeCheckout*
-                                    //      computed properties).
-                                    activeCheckoutSponsorId = sponsorCart.sponsorId
-                                    checkoutStep = .address
+                                    handleSponsorCheckoutTap(sponsorCart)
                                 }
                             )
                             .environmentObject(cartManager)
@@ -324,6 +321,114 @@ public struct VCheckoutOverlay: View {
     private var orderedSponsorCarts: [CartManager.SponsorCart] {
         cartManager.cartsBySponsor.values.sorted { $0.subtotal > $1.subtotal }
     }
+
+    /// Q4 L4 (2026-05-06): handles the user tapping "Checkout" on a
+    /// sponsor section in the multi-sponsor cart overview. Branches
+    /// by selected payment method:
+    ///
+    /// - **Apple Pay**: triggers `ApplePayManager.shared.pay(...)`
+    ///   directly. Apple Pay collects address via PKContact and
+    ///   confirms via `payment.applePayConfirm` (sponsor-routed via
+    ///   the `sponsorId:` parameter — the manager already is). No
+    ///   step flow involved. Completion arrives via the
+    ///   `.onChange(of: applePayManager.paymentResult)` observer
+    ///   below; success → markSponsorCartPaid + clearCart.
+    ///
+    /// - **Klarna / Vipps / Stripe**: enters
+    ///   `cartManager.enterSponsorCheckoutScope(sid)` — mirrors the
+    ///   sponsor cart's items/totals/checkoutId into the flat legacy
+    ///   fields so the existing `mainContent` step views (address →
+    ///   orderSummary → review → success) render against the sponsor
+    ///   data without per-step modification. The body switches to
+    ///   `mainContent` because `isMultiSponsorMode` flips false when
+    ///   `activeCheckoutSponsorId` is non-nil.
+    private func handleSponsorCheckoutTap(_ sponsorCart: CartManager.SponsorCart) {
+        guard let raw = sponsorCart.selectedPaymentMethod else { return }
+        let method = raw.lowercased().replacingOccurrences(of: "_", with: "").replacingOccurrences(of: " ", with: "")
+        switch method {
+        case "apple", "applepay":
+            triggerSponsorApplePay(sponsorCart)
+        default:
+            cartManager.enterSponsorCheckoutScope(sponsorCart.sponsorId)
+            // Default the orderSummary step's selected method picker to
+            // the one chosen in the cart section (Klarna / Vipps /
+            // Stripe). PaymentMethod enum cases mirror our string keys.
+            switch method {
+            case "klarna":
+                selectedPaymentMethod = .klarna
+            case "vipps":
+                selectedPaymentMethod = .vipps
+            case "stripe":
+                selectedPaymentMethod = .stripe
+            default:
+                break
+            }
+            checkoutStep = .address
+        }
+    }
+
+    /// Q4 L4: invokes Apple Pay for the given sponsor cart, no step
+    /// flow. The native sheet handles auth + address collection.
+    /// Sets `pendingApplePaySponsorId` so the
+    /// `.onChange(of: applePayManager.paymentResult)` observer below
+    /// can correlate the completion event back to the right sponsor
+    /// cart for cleanup.
+    @State private var pendingApplePaySponsorId: Int? = nil
+    #if os(iOS)
+    @ObservedObject private var applePayManager = ApplePayManager.shared
+    #endif
+
+    private func triggerSponsorApplePay(_ sponsorCart: CartManager.SponsorCart) {
+        #if os(iOS)
+        let sid = sponsorCart.sponsorId
+        pendingApplePaySponsorId = sid
+        Task {
+            await ApplePayManager.shared.pay(
+                productName: VioConfiguration.shared.sponsor(withId: sid)?.name ?? "Sponsor",
+                amount: sponsorCart.subtotal + sponsorCart.shippingTotal,
+                checkoutId: sponsorCart.checkoutId,
+                sponsorId: sid,
+                cartManager: cartManager
+            )
+        }
+        #endif
+    }
+
+    #if os(iOS)
+    /// Handles Apple Pay completion when triggered from the cart's
+    /// per-sponsor section (vs from a product detail overlay or the
+    /// legacy single-cart flow). Filters by `pendingApplePaySponsorId`
+    /// so this only fires for OUR Apple Pay event.
+    private func handleScopedApplePayResult(_ result: ApplePayManager.PaymentResult?) {
+        guard let sid = pendingApplePaySponsorId else { return }
+        guard let result = result else { return }
+        switch result {
+        case .success:
+            cartManager.markSponsorCartPaid(sid)
+            Task {
+                await cartManager.clearCart(forSponsor: sid)
+                pendingApplePaySponsorId = nil
+                applePayManager.paymentResult = nil
+                let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
+                if remaining.isEmpty {
+                    cartManager.hideCheckout()
+                    await cartManager.clearAllCarts()
+                }
+            }
+        case .failure(let msg):
+            errorMessage = msg
+            checkoutStep = .error
+            pendingApplePaySponsorId = nil
+            applePayManager.paymentResult = nil
+        case .cancelled:
+            // User cancelled the Apple Pay sheet — do nothing,
+            // cart overlay still shows multi-sponsor view with
+            // method still selected.
+            pendingApplePaySponsorId = nil
+            applePayManager.paymentResult = nil
+        }
+    }
+    #endif
 
     /// Q4 L3 Fase C polish: green confirmation banner for one
     /// recently-paid sponsor. Resolves the sponsor's display name from
@@ -542,6 +647,11 @@ public struct VCheckoutOverlay: View {
                     mainContent
                 }
             }
+            #if os(iOS)
+            .onChange(of: applePayManager.paymentResult) { newValue in
+                handleScopedApplePayResult(newValue)
+            }
+            #endif
             .onAppear {
                 VioLogger.debug("onAppear triggered", component: "VCheckoutOverlay")
                 syncSelectedMarket()
@@ -692,13 +802,17 @@ public struct VCheckoutOverlay: View {
                             
                             VioLogger.debug("CheckoutId: \(cartManager.checkoutId ?? "nil"), Email: \(email)", component: "VCheckoutOverlay")
                             
-                            // Call backend to confirm payment
+                            // Call backend to confirm payment. Q4 L4
+                            // (2026-05-06): when this fires inside a
+                            // sponsor checkout scope, sponsorId routes
+                            // through that sponsor's Commerce key.
                             guard let result = await cartManager.confirmKlarnaNative(
                                 authorizationToken: authToken,
                                 autoCapture: true,
                                 customer: customer,
                                 billingAddress: billingAddress,
-                                shippingAddress: shippingAddress
+                                shippingAddress: shippingAddress,
+                                sponsorId: cartManager.activeCheckoutSponsorId
                             ) else {
                                 VioLogger.error("Backend no pudo confirmar el pago", component: "VCheckoutOverlay")
                                 VioLogger.error("Verificar: AuthToken válido, Backend respondió, Klarna API respondió", component: "VCheckoutOverlay")
@@ -1685,11 +1799,7 @@ public struct VCheckoutOverlay: View {
                     style: .primary,
                     size: .large
                 ) {
-                    cartManager.hideCheckout()
-                    Task {
-                        // Reset cart and create new one after successful payment
-                        await cartManager.resetCartAndCreateNew()
-                    }
+                    handleSuccessClose()
                 }
                 .padding(.horizontal, VioSpacing.lg)
                 .padding(.bottom, VioSpacing.xl)
@@ -1698,6 +1808,56 @@ public struct VCheckoutOverlay: View {
                     .easeInOut(duration: 0.5).delay(1.0),
                     value: checkoutStep
                 )
+            }
+        }
+    }
+
+    /// Q4 L4 (2026-05-06): success-step Close handler. Two paths:
+    ///   - **Scoped per-sponsor checkout**: mark this sponsor's cart
+    ///     as paid + clearCart(forSponsor:) (server + local) + exit
+    ///     scope. If there are still un-paid sponsor carts left, the
+    ///     body switches back to `multiSponsorContent` for the next
+    ///     one. If this was the last → close the overlay entirely.
+    ///   - **Legacy single-cart**: original behaviour — hideCheckout +
+    ///     resetCartAndCreateNew.
+    private func handleSuccessClose() {
+        if let sid = cartManager.activeCheckoutSponsorId {
+            // Scoped path. Order matters:
+            //   1. markSponsorCartPaid first so the section retains
+            //      isPaid = true after exitSponsorCheckoutScope writes
+            //      back the (cleared) flat fields.
+            //   2. clearCart(forSponsor:) wipes server + local items.
+            //   3. exitSponsorCheckoutScope(syncBackToSponsor: false)
+            //      restores the flat legacy snapshot — we explicitly
+            //      DO NOT sync the (just-cleared) flat fields back to
+            //      the sponsor cart, that would reset isPaid+items
+            //      we just set.
+            cartManager.markSponsorCartPaid(sid)
+            Task {
+                await cartManager.clearCart(forSponsor: sid)
+                cartManager.exitSponsorCheckoutScope(syncBackToSponsor: false)
+                // After clearCart the sponsor cart still exists with
+                // items=[] + isPaid=true. If every sponsor cart is now
+                // paid (or has no items), close the overlay entirely;
+                // otherwise the body will flip back to
+                // multiSponsorContent (because activeCheckoutSponsorId
+                // is now nil and cartsBySponsor still has unpaid carts).
+                let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
+                if remaining.isEmpty {
+                    cartManager.hideCheckout()
+                    await cartManager.clearAllCarts()
+                } else {
+                    // Reset checkoutStep so when the user picks the
+                    // next sponsor, the legacy step flow starts fresh
+                    // at .address.
+                    checkoutStep = .address
+                }
+            }
+        } else {
+            // Legacy single-cart path (unchanged).
+            cartManager.hideCheckout()
+            Task {
+                await cartManager.resetCartAndCreateNew()
             }
         }
     }
@@ -2254,9 +2414,10 @@ public struct VCheckoutOverlay: View {
             )
 
             VioLogger.debug("Step 2: Llamando a backend Vio (initKlarnaNative)", component: "VCheckoutOverlay")
-            
-            // Call backend to initialize Klarna session
-            guard let dto = await cartManager.initKlarnaNative(input: input) else {
+
+            // Call backend to initialize Klarna session. Q4 L4
+            // (2026-05-06): sponsor-aware routing via activeCheckoutSponsorId.
+            guard let dto = await cartManager.initKlarnaNative(input: input, sponsorId: cartManager.activeCheckoutSponsorId) else {
                 VioLogger.error("initKlarnaNative returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VCheckoutOverlay")
                 await MainActor.run {
                     VioLogger.error("Setting checkoutStep to .error (initKlarnaNative returned nil)", component: "VCheckoutOverlay")
@@ -2317,10 +2478,12 @@ public struct VCheckoutOverlay: View {
         
         VioLogger.debug("Step 2: Llamando a backend Vio (vippsInit)", component: "VCheckoutOverlay")
         
-        // Call backend to initialize Vipps payment
+        // Call backend to initialize Vipps payment. Q4 L4
+        // (2026-05-06): sponsor-aware routing.
         guard let dto = await cartManager.vippsInit(
             email: email,
-            returnUrl: successUrlWithTracking
+            returnUrl: successUrlWithTracking,
+            sponsorId: cartManager.activeCheckoutSponsorId
         ) else {
                 VioLogger.error("vippsInit returned: NIL - Backend retornó nil. Verificar: CheckoutId existe, Backend respondió, Credenciales configuradas", component: "VCheckoutOverlay")
                 await MainActor.run {
@@ -2502,7 +2665,8 @@ public struct VCheckoutOverlay: View {
         private func prepareStripePaymentSheet() async -> Bool {
             guard
                 let dto = await cartManager.stripeIntent(
-                    returnEphemeralKey: true
+                    returnEphemeralKey: true,
+                    sponsorId: cartManager.activeCheckoutSponsorId
                 ),
                 let dict = dtoToDict(dto)
             else {
@@ -2625,7 +2789,7 @@ public struct VCheckoutOverlay: View {
                 shippingAddress: hardcodedAddress
             )
 
-            guard let dto = await cartManager.initKlarnaNative(input: input)
+            guard let dto = await cartManager.initKlarnaNative(input: input, sponsorId: cartManager.activeCheckoutSponsorId)
             else {
                 return false
             }
