@@ -54,47 +54,90 @@ extension CartManager {
         }
     }
 
+    /// Q4 L4 (2026-05-06): resolves the (sdk, checkoutId) pair for a
+    /// payment method call. When `sponsorId` is set, both come from
+    /// the sponsor's SDK + sponsor cart (channel isolation). When nil,
+    /// falls back to the legacy `cartManager.sdk` + `cartManager.checkoutId`.
+    /// Used by the new sponsor-aware Klarna / Vipps / Stripe handlers
+    /// below so each one routes through the right Commerce channel.
+    internal func resolvePaymentTarget(
+        sponsorId: Int?,
+        component: String
+    ) async -> (sdk: CartManagingSDK, checkoutId: String)? {
+        // 1. Resolve checkoutId
+        let resolvedCheckoutId: String?
+        if let sid = sponsorId {
+            if let cid = sponsorCart(forSponsorId: sid)?.checkoutId, !cid.isEmpty {
+                resolvedCheckoutId = cid
+            } else {
+                resolvedCheckoutId = await createCheckout(forSponsor: sid)
+            }
+        } else if let passed = checkoutId, !passed.isEmpty {
+            resolvedCheckoutId = passed
+        } else {
+            resolvedCheckoutId = await createCheckout()
+        }
+
+        guard let checkout = resolvedCheckoutId, !checkout.isEmpty else {
+            VioLogger.error("\(component): missing checkoutId (sponsorId=\(sponsorId.map(String.init) ?? "nil"))", component: "PaymentManager")
+            return nil
+        }
+
+        // 2. Resolve SDK (sponsor's per-channel client when sponsorId set)
+        let activeSdk: CartManagingSDK
+        if let sid = sponsorId, let sponsorSdk = resolveSponsorSdk(forSponsorId: sid) {
+            activeSdk = sponsorSdk
+            print("🟣 [Q4-DIAG payment-resolve] component=\(component) sponsorId=\(sid) using sponsor SDK + checkoutId=\(checkout)")
+        } else {
+            activeSdk = sdk
+            print("🟣 [Q4-DIAG payment-resolve] component=\(component) sponsorId=nil using legacy SDK + checkoutId=\(checkout)")
+        }
+
+        return (activeSdk, checkout)
+    }
+
     @discardableResult
     public func initKlarnaNative(
-        input: KlarnaNativeInitInputDto
+        input: KlarnaNativeInitInputDto,
+        sponsorId: Int? = nil
     ) async -> InitPaymentKlarnaNativeDto? {
-        VioLogger.debug("initKlarnaNative MÉTODO LLAMADO - Thread: \(Thread.current)", component: "PaymentManager")
+        VioLogger.debug("initKlarnaNative MÉTODO LLAMADO - Thread: \(Thread.current) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
-        let id: String?
-        if let passed = checkoutId, !passed.isEmpty {
-            id = passed
-        } else {
-            id = await createCheckout()
-        }
-
-        guard let checkout = id, !checkout.isEmpty else {
-            VioLogger.error("KlarnaNativeInit: missing checkoutId - checkoutId actual: \(String(describing: checkoutId)), id después de createCheckout: \(String(describing: id))", component: "PaymentManager")
+        guard let target = await resolvePaymentTarget(sponsorId: sponsorId, component: "KlarnaNativeInit") else {
             return nil
         }
+        let activeSdk = target.sdk
+        let checkout = target.checkoutId
 
-        VioLogger.debug("KlarnaNativeInit START - checkoutId: \(checkout), countryCode: \(input.countryCode), currency: \(input.currency), locale: \(input.locale), customer.email: \(input.customer?.email ?? "nil"), customer.phone: \(input.customer?.phone ?? "nil")", component: "PaymentManager")
+        VioLogger.debug("KlarnaNativeInit START - checkoutId: \(checkout), sponsorId: \(sponsorId.map(String.init) ?? "nil"), countryCode: \(input.countryCode), currency: \(input.currency), locale: \(input.locale), customer.email: \(input.customer?.email ?? "nil"), customer.phone: \(input.customer?.phone ?? "nil")", component: "PaymentManager")
         do {
             logRequest(
                 "sdk.payment.klarnaNativeInit",
                 payload: [
                     "checkoutId": checkout,
+                    "sponsorId": sponsorId as Any,
                     "autoCapture": input.autoCapture as Any
                 ]
             )
-            let dto = try await sdk.payment.klarnaNativeInit(
+            let dto = try await activeSdk.payment.klarnaNativeInit(
                 checkoutId: checkout,
                 input: input
             )
-            checkoutId = dto.checkoutId
+            // Only mirror to the legacy `cartManager.checkoutId` when this
+            // was a legacy (non-sponsor) call — the sponsor cart already
+            // owns its checkoutId via `createCheckout(forSponsor:)`.
+            if sponsorId == nil {
+                checkoutId = dto.checkoutId
+            }
             logResponse(
                 "sdk.payment.klarnaNativeInit",
                 payload: ["sessionId": dto.sessionId, "checkoutId": dto.checkoutId]
             )
-            VioLogger.success("KlarnaNativeInit OK sessionId=\(dto.sessionId)", component: "PaymentManager")
+            VioLogger.success("KlarnaNativeInit OK sessionId=\(dto.sessionId) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
             return dto
         } catch {
             let msg = (error as? SdkException)?.description ?? error.localizedDescription
@@ -115,24 +158,19 @@ extension CartManager {
         autoCapture: Bool? = nil,
         customer: KlarnaNativeCustomerInputDto? = nil,
         billingAddress: KlarnaNativeAddressInputDto? = nil,
-        shippingAddress: KlarnaNativeAddressInputDto? = nil
+        shippingAddress: KlarnaNativeAddressInputDto? = nil,
+        sponsorId: Int? = nil
     ) async -> ConfirmPaymentKlarnaNativeDto? {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
-        let id: String?
-        if let passed = checkoutId, !passed.isEmpty {
-            id = passed
-        } else {
-            id = await createCheckout()
-        }
-
-        guard let checkout = id, !checkout.isEmpty else {
-            VioLogger.info("KlarnaNativeConfirm: missing checkoutId", component: "PaymentManager")
+        guard let target = await resolvePaymentTarget(sponsorId: sponsorId, component: "KlarnaNativeConfirm") else {
             return nil
         }
+        let activeSdk = target.sdk
+        let checkout = target.checkoutId
 
         let input = KlarnaNativeConfirmInputDto(
             authorizationToken: authorizationToken,
@@ -142,16 +180,17 @@ extension CartManager {
             shippingAddress: shippingAddress
         )
 
-        VioLogger.debug("KlarnaNativeConfirm START checkoutId=\(checkout)", component: "PaymentManager")
+        VioLogger.debug("KlarnaNativeConfirm START checkoutId=\(checkout) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
         do {
             logRequest(
                 "sdk.payment.klarnaNativeConfirm",
                 payload: [
                     "checkoutId": checkout,
+                    "sponsorId": sponsorId as Any,
                     "authorizationToken": authorizationToken
                 ]
             )
-            let dto = try await sdk.payment.klarnaNativeConfirm(
+            let dto = try await activeSdk.payment.klarnaNativeConfirm(
                 checkoutId: checkout,
                 input: input
             )
@@ -159,7 +198,7 @@ extension CartManager {
                 "sdk.payment.klarnaNativeConfirm",
                 payload: ["orderId": dto.orderId as Any]
             )
-            VioLogger.success("KlarnaNativeConfirm OK orderId=\(dto.orderId)", component: "PaymentManager")
+            VioLogger.success("KlarnaNativeConfirm OK orderId=\(dto.orderId) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
             return dto
         } catch {
             let msg = (error as? SdkException)?.description ?? error.localizedDescription
@@ -204,34 +243,32 @@ extension CartManager {
     }
 
     @discardableResult
-    public func stripeIntent(returnEphemeralKey: Bool? = true) async -> PaymentIntentStripeDto? {
+    public func stripeIntent(
+        returnEphemeralKey: Bool? = true,
+        sponsorId: Int? = nil
+    ) async -> PaymentIntentStripeDto? {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
-        let id: String?
-        if let passed = checkoutId, !passed.isEmpty {
-            id = passed
-        } else {
-            id = await createCheckout()
-        }
-
-        guard let checkout = id else {
-            VioLogger.info("StripeIntent: missing checkoutId", component: "PaymentManager")
+        guard let target = await resolvePaymentTarget(sponsorId: sponsorId, component: "StripeIntent") else {
             return nil
         }
+        let activeSdk = target.sdk
+        let checkout = target.checkoutId
 
-        VioLogger.debug("StripeIntent START checkoutId=\(checkout)", component: "PaymentManager")
+        VioLogger.debug("StripeIntent START checkoutId=\(checkout) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
         do {
             logRequest(
                 "sdk.payment.stripeIntent",
                 payload: [
                     "checkoutId": checkout,
+                    "sponsorId": sponsorId as Any,
                     "returnEphemeralKey": returnEphemeralKey as Any
                 ]
             )
-            let dto = try await sdk.payment.stripeIntent(
+            let dto = try await activeSdk.payment.stripeIntent(
                 checkoutId: checkout,
                 returnEphemeralKey: returnEphemeralKey
             )
@@ -239,7 +276,7 @@ extension CartManager {
                 "sdk.payment.stripeIntent",
                 payload: ["clientSecret": dto.clientSecret as Any]
             )
-            VioLogger.success("StripeIntent OK", component: "PaymentManager")
+            VioLogger.success("StripeIntent OK sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
             return dto
         } catch {
             let msg = (error as? SdkException)?.description ?? error.localizedDescription
@@ -254,44 +291,40 @@ extension CartManager {
     public func stripeLink(
         successUrl: String,
         paymentMethod: String,
-        email: String
+        email: String,
+        sponsorId: Int? = nil
     ) async -> InitPaymentStripeDto? {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
-        let id: String?
-        if let passed = checkoutId, !passed.isEmpty {
-            id = passed
-        } else {
-            id = await createCheckout()
-        }
-
-        guard let checkout = id else {
-            VioLogger.info("StripeLink: missing checkoutId", component: "PaymentManager")
+        guard let target = await resolvePaymentTarget(sponsorId: sponsorId, component: "StripeLink") else {
             return nil
         }
+        let activeSdk = target.sdk
+        let checkout = target.checkoutId
 
-        VioLogger.debug("StripeLink START checkoutId=\(checkout)", component: "PaymentManager")
+        VioLogger.debug("StripeLink START checkoutId=\(checkout) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
         do {
             logRequest(
                 "sdk.payment.stripeLink",
                 payload: [
                     "checkoutId": checkout,
+                    "sponsorId": sponsorId as Any,
                     "successUrl": successUrl,
                     "paymentMethod": paymentMethod,
                     "email": email
                 ]
             )
-            let dto = try await sdk.payment.stripeLink(
+            let dto = try await activeSdk.payment.stripeLink(
                 checkoutId: checkout,
                 successUrl: successUrl,
                 paymentMethod: paymentMethod,
                 email: email
             )
             logResponse("sdk.payment.stripeLink")
-            VioLogger.success("StripeLink OK", component: "PaymentManager")
+            VioLogger.success("StripeLink OK sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
             return dto
         } catch {
             let msg = (error as? SdkException)?.description ?? error.localizedDescription
@@ -305,42 +338,38 @@ extension CartManager {
     @discardableResult
     public func vippsInit(
         email: String,
-        returnUrl: String
+        returnUrl: String,
+        sponsorId: Int? = nil
     ) async -> InitPaymentVippsDto? {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         guard await ensurePaymentRuntimeReady(component: "PaymentManager") else { return nil }
 
-        let id: String?
-        if let passed = checkoutId, !passed.isEmpty {
-            id = passed
-        } else {
-            id = await createCheckout()
-        }
-
-        guard let checkout = id else {
-            VioLogger.info("VippsInit: missing checkoutId", component: "PaymentManager")
+        guard let target = await resolvePaymentTarget(sponsorId: sponsorId, component: "VippsInit") else {
             return nil
         }
+        let activeSdk = target.sdk
+        let checkout = target.checkoutId
 
-        VioLogger.debug("VippsInit START checkoutId=\(checkout)", component: "PaymentManager")
+        VioLogger.debug("VippsInit START checkoutId=\(checkout) sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
         do {
             logRequest(
                 "sdk.payment.vippsInit",
                 payload: [
                     "checkoutId": checkout,
+                    "sponsorId": sponsorId as Any,
                     "email": email,
                     "returnUrl": returnUrl
                 ]
             )
-            let dto = try await sdk.payment.vippsInit(
+            let dto = try await activeSdk.payment.vippsInit(
                 checkoutId: checkout,
                 email: email,
                 returnUrl: returnUrl
             )
             logResponse("sdk.payment.vippsInit")
-            VioLogger.success("VippsInit OK", component: "PaymentManager")
+            VioLogger.success("VippsInit OK sponsorId=\(sponsorId.map(String.init) ?? "nil")", component: "PaymentManager")
             return dto
         } catch {
             let msg = (error as? SdkException)?.description ?? error.localizedDescription
