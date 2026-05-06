@@ -771,8 +771,16 @@ extension CartManager {
         }
     }
 
+    /// Total item quantity in cart. Q4 L3 (2026-05-05): now sums across
+    /// the legacy `items` array AND every per-sponsor cart in
+    /// `cartsBySponsor`, so multi-sponsor hosts (e.g. TV2 demo) see the
+    /// real count in `VFloatingCartIndicator` / `VCartIcon` /
+    /// `canProceedToNext` etc. Pre-Q4 hosts continue to work because if
+    /// `cartsBySponsor` is empty the term is 0 and the legacy sum stands.
     public var itemCount: Int {
-        items.reduce(0) { $0 + $1.quantity }
+        let legacy = items.reduce(0) { $0 + $1.quantity }
+        let perSponsor = itemCountAcrossSponsors
+        return legacy + perSponsor
     }
 
     // MARK: - Helpers
