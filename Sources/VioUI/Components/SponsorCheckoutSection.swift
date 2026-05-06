@@ -2,26 +2,33 @@ import SwiftUI
 import VioCore
 import VioDesignSystem
 
-// MARK: - Q4 Layer 3: per-sponsor checkout section
+// MARK: - Q4 Layer 4: per-sponsor checkout section (method picker + Checkout)
 //
 // Renders one SponsorCart inside the multi-sponsor checkout view. Each
 // section is self-contained: header (logo + name + subtotal), items
-// (compact), totals row (subtotal + shipping + total), and an Apple Pay
-// button scoped to that sponsor (`sponsorId` already plumbed via Q4 L1).
+// (compact), totals row (subtotal + shipping + total), method picker,
+// and a "Checkout" button that hands off to the per-sponsor checkout
+// flow with the chosen method.
 //
-// On successful Apple Pay completion, the section calls
-// `cartManager.clearCart(forSponsor:)` for its sponsor — that drops the
-// SponsorCart from `cartsBySponsor`, and SwiftUI re-renders the parent
-// `VCheckoutOverlay` without this section. Other sponsors' sections
-// stay intact.
+// **Q4 L4 (2026-05-06): method picker before checkout.** The user picks
+// the payment method per sponsor (filtered to that sponsor's
+// `commerce.paymentMethods` set) directly in the cart, *before* tapping
+// Checkout. This lets the per-sponsor flow branch by method without
+// asking again later:
+//   - Apple Pay → direct native sheet, no extra step
+//   - Klarna   → full BuyerInfo form (klarnaNativeInit needs address)
+//   - Vipps    → email-only form (Vipps app collects the rest)
+//   - Stripe   → email-only form (PaymentSheet collects card+address)
 //
-// Klarna / Vipps / Stripe are deliberately **not exposed in this
-// section**: per the UX decisions on Q4 L3 (PR #11 plan), multi-sponsor
-// stores are Apple-Pay-only this sprint. Klarna/Vipps/Stripe stay
-// available in the legacy single-cart path. A user with multi-sponsor
-// items who wants Klarna would need to clear all carts and re-add
-// items one sponsor at a time — friction we accept to avoid the 3-4 day
-// refactor of the Klarna / Vipps / Stripe handlers.
+// **Paid state**: when the per-sponsor flow completes successfully, the
+// parent calls `cartManager.markSponsorCartPaid(sponsorId)` and the
+// section stays visible with `isPaid = true` (dimmed + green "Paid"
+// badge). Final cleanup happens in `clearCart(forSponsor:)` on close.
+//
+// **Pre Q4 L4 history**: section used to expose only Apple Pay (Q4 L3
+// PR #11 — multi-sponsor was Apple-Pay-only that sprint). Now Klarna
+// / Vipps / Stripe are first-class via the per-method handlers turned
+// sponsor-aware in Q4 L4 phases 2-4.
 
 @MainActor
 public struct SponsorCheckoutSection: View {
@@ -30,21 +37,23 @@ public struct SponsorCheckoutSection: View {
     /// passes one SponsorCart per item from `cartManager.cartsBySponsor`.
     public let sponsorCart: CartManager.SponsorCart
 
-    /// Callback fired when the user completes an Apple Pay purchase
-    /// for this sponsor's cart. The section already calls
-    /// `cartManager.clearCart(forSponsor:)` internally — this callback
-    /// is for the parent to dismiss banners, advance steps, or update
-    /// other UI state on top of the cart removal.
-    public let onPaymentComplete: () -> Void
+    /// Callback fired when the user taps the "Checkout" button for this
+    /// sponsor's cart. The parent (`VCheckoutOverlay`) is responsible
+    /// for opening the per-sponsor checkout flow and handing back to
+    /// `markSponsorCartPaid` / `clearCart(forSponsor:)` on completion.
+    /// Q4 L4 (2026-05-06): renamed from `onPaymentComplete` since the
+    /// section no longer drives the payment itself — it only signals
+    /// intent + selected method.
+    public let onCheckoutTapped: () -> Void
 
     @EnvironmentObject private var cartManager: CartManager
 
     public init(
         sponsorCart: CartManager.SponsorCart,
-        onPaymentComplete: @escaping () -> Void = {}
+        onCheckoutTapped: @escaping () -> Void = {}
     ) {
         self.sponsorCart = sponsorCart
-        self.onPaymentComplete = onPaymentComplete
+        self.onCheckoutTapped = onCheckoutTapped
     }
 
     public var body: some View {
@@ -54,9 +63,12 @@ public struct SponsorCheckoutSection: View {
             itemsList
             Divider().background(Color.white.opacity(0.1))
             totalsRow
-            #if os(iOS)
-            applePayActionRow
-            #endif
+            if sponsorCart.isPaid {
+                paidBanner
+            } else {
+                methodPickerRow
+                checkoutButton
+            }
         }
         .padding(VioSpacing.lg)
         .background(
@@ -65,8 +77,9 @@ public struct SponsorCheckoutSection: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: VioBorderRadius.large)
-                .stroke(VioColors.border, lineWidth: 1)
+                .stroke(sponsorCart.isPaid ? VioColors.success.opacity(0.5) : VioColors.border, lineWidth: 1)
         )
+        .opacity(sponsorCart.isPaid ? 0.65 : 1)
     }
 
     // MARK: - Header (logo + name + subtotal)
@@ -255,48 +268,170 @@ public struct SponsorCheckoutSection: View {
         }
     }
 
-    // MARK: - Apple Pay action row
+    // MARK: - Method picker (Q4 L4)
 
-    #if os(iOS)
+    /// Available payment methods for this sponsor — comes from
+    /// `commerce.paymentMethods` in the bootstrap response. Empty array
+    /// means visual-only sponsor (no commerce block) which shouldn't
+    /// reach this view in the first place; we still degrade safely by
+    /// disabling the picker.
+    private var availableMethods: [String] {
+        let raw = VioConfiguration.shared.sponsor(withId: sponsorCart.sponsorId)?.commerce?.paymentMethods ?? []
+        // Stable order across renders + de-dup. Backend may send "apple_pay"
+        // or "applePay"; we normalise to lowercase compact keys.
+        let normalized = raw.map { $0.lowercased().replacingOccurrences(of: "_", with: "").replacingOccurrences(of: " ", with: "") }
+        var seen = Set<String>()
+        return normalized.filter { seen.insert($0).inserted }
+    }
+
+    /// Horizontal scrollable strip of method chips. Tap to select; the
+    /// selection is persisted on the SponsorCart so it survives
+    /// re-renders. Visual lifted from the Claude Design handoff
+    /// (`MethodChips`) — radio dot + brand logo + label.
     @ViewBuilder
-    private var applePayActionRow: some View {
-        // VApplePayButton (Q4 L1) accepts sponsorId — propagates through to
-        // the confirmation sheet so the post-purchase logo matches this
-        // sponsor (not the global activeSponsorId).
-        //
-        // The amount we hand the button is `subtotal + shipping` —
-        // matches what the sheet shows and what Apple Pay will charge.
-        //
-        // `lineItems` (Q4 L3 Fase C polish, 2026-05-04) carries the real
-        // cart contents into the post-payment confirmation sheet so it
-        // renders the actual quantities — fixes the bug where a 2-unit
-        // purchase showed as "1 stk" while Apple Pay charged 2 and
-        // Commerce received an order for 2.
-        let totalAmount = sponsorCart.subtotal + sponsorCart.shippingTotal
-        let confirmationLineItems: [ApplePayLineItem] = sponsorCart.items.map { item in
-            ApplePayLineItem(
-                title: item.title,
-                imageUrl: item.imageUrl,
-                quantity: item.quantity,
-                unitPrice: item.price,
-                currencyCode: item.currency
-            )
-        }
-        VApplePayButton(
-            productName: payButtonLabel,
-            productImageUrl: sponsorCart.items.first?.imageUrl,
-            amount: totalAmount,
-            sponsorId: sponsorCart.sponsorId,
-            lineItems: confirmationLineItems,
-            onPaymentComplete: {
-                Task {
-                    await cartManager.clearCart(forSponsor: sponsorCart.sponsorId)
-                    onPaymentComplete()
+    private var methodPickerRow: some View {
+        if availableMethods.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+                Text(VLocalizedString(VioTranslationKey.paymentMethod.rawValue))
+                    .font(VioTypography.caption1.weight(.semibold))
+                    .foregroundColor(VioColors.textSecondary)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: VioSpacing.sm) {
+                        ForEach(availableMethods, id: \.self) { method in
+                            methodChip(method)
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func methodChip(_ method: String) -> some View {
+        let isSelected = sponsorCart.selectedPaymentMethod == method
+        Button {
+            cartManager.setSelectedPaymentMethod(method, forSponsor: sponsorCart.sponsorId)
+        } label: {
+            HStack(spacing: 6) {
+                methodIcon(method)
+                Text(methodLabel(method))
+                    .font(VioTypography.caption1.weight(.semibold))
+                    .foregroundColor(isSelected ? VioColors.textPrimary : VioColors.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(isSelected ? VioColors.primary.opacity(0.18) : Color.white.opacity(0.04))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? VioColors.primary : VioColors.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func methodIcon(_ method: String) -> some View {
+        // Brand-correct mark per method, sized to fit a 16pt chip line.
+        // Designs can be polished later — these are minimal placeholders
+        // matching the Claude Design output.
+        switch method {
+        case "apple", "applepay":
+            Image(systemName: "applelogo")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(VioColors.textPrimary)
+        case "klarna":
+            Text("K.")
+                .font(.system(size: 11, weight: .black))
+                .foregroundColor(Color(red: 1.0, green: 0.66, blue: 0.8))
+        case "vipps":
+            Text("V")
+                .font(.system(size: 11, weight: .black))
+                .foregroundColor(Color(red: 1.0, green: 0.36, blue: 0.14))
+        case "stripe":
+            Image(systemName: "creditcard.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Color(red: 0.39, green: 0.36, blue: 1.0))
+        default:
+            Image(systemName: "creditcard")
+                .font(.system(size: 11))
+                .foregroundColor(VioColors.textSecondary)
+        }
+    }
+
+    private func methodLabel(_ method: String) -> String {
+        switch method {
+        case "apple", "applepay": return "Apple Pay"
+        case "klarna": return "Klarna"
+        case "vipps": return "Vipps"
+        case "stripe": return "Card"
+        default: return method.capitalized
+        }
+    }
+
+    // MARK: - Checkout button (Q4 L4)
+
+    /// Big primary "Checkout" button. Disabled until a payment method
+    /// is picked. Hands off to the parent flow controller via
+    /// `onCheckoutTapped` — this section never touches the SDK
+    /// directly anymore (Q4 L3's per-section Apple Pay button is gone).
+    private var checkoutButton: some View {
+        Button {
+            onCheckoutTapped()
+        } label: {
+            HStack(spacing: 6) {
+                Text(VLocalizedString(VioTranslationKey.checkout.rawValue))
+                    .font(VioTypography.body.weight(.semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                    .fill(sponsorCart.selectedPaymentMethod != nil ? VioColors.primary : VioColors.primary.opacity(0.35))
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(sponsorCart.selectedPaymentMethod == nil)
+        .accessibilityLabel(checkoutAccessibilityLabel)
+    }
+
+    private var checkoutAccessibilityLabel: String {
+        if let method = sponsorCart.selectedPaymentMethod {
+            return "\(VLocalizedString(VioTranslationKey.checkout.rawValue)) \(sponsorName) \(methodLabel(method))"
+        }
+        return VLocalizedString(VioTranslationKey.selectPaymentMethod.rawValue)
+    }
+
+    // MARK: - Paid banner (Q4 L4)
+
+    /// Dimmed "Paid" banner shown in place of method picker + checkout
+    /// button after this sponsor's checkout completes. Keeps the section
+    /// visible so the user sees progress across sponsors.
+    private var paidBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(VioColors.success)
+            Text(VLocalizedString(VioTranslationKey.cartSponsorPaid.rawValue).capitalized)
+                .font(VioTypography.body.weight(.semibold))
+                .foregroundColor(VioColors.success)
+            Spacer()
+        }
+        .padding(.vertical, VioSpacing.sm)
+        .padding(.horizontal, VioSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .fill(VioColors.success.opacity(0.12))
         )
     }
-    #endif
 
     // MARK: - Helpers
 
@@ -313,14 +448,6 @@ public struct SponsorCheckoutSection: View {
     private var itemCountText: String {
         let count = sponsorCart.itemCount
         return count == 1 ? "1 vare" : "\(count) varer"
-    }
-
-    private var payButtonLabel: String {
-        let count = sponsorCart.itemCount
-        let label = count == 1
-            ? sponsorCart.items.first?.title ?? sponsorName
-            : "\(count) varer fra \(sponsorName)"
-        return label
     }
 
     private func formatMoney(_ value: Double, code: String) -> String {

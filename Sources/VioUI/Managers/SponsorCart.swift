@@ -61,6 +61,27 @@ extension CartManager {
         /// Discount row id matching `lastDiscountCode`.
         public var lastDiscountId: Int?
 
+        /// Payment method picked by the user for this sponsor's checkout
+        /// (Q4 L4, 2026-05-06). Set from the cart screen's per-sponsor
+        /// method picker; consumed by the per-sponsor checkout flow which
+        /// branches by method (Apple Pay → direct sheet, Klarna → full
+        /// address form, Vipps/Stripe → email-only). Nil = not picked
+        /// yet, the section's "Checkout" button stays disabled.
+        ///
+        /// Allowed string values mirror `VioSponsor.CommerceBlock.paymentMethods`
+        /// — typically `"apple"`, `"klarna"`, `"vipps"`, `"stripe"`. Stored
+        /// as String (not enum) so backend can introduce new methods
+        /// without an SDK release; the cart UI filters the picker to
+        /// the sponsor's supported methods anyway.
+        public var selectedPaymentMethod: String?
+
+        /// True when this sponsor's checkout has completed successfully
+        /// (Q4 L4, 2026-05-06). The cart UI keeps the section visible but
+        /// dimmed with a "Paid" badge so the user can see progress
+        /// across sponsors. Cleared together with the rest of the cart
+        /// state by `clearCart(forSponsor:)`.
+        public var isPaid: Bool
+
         public var id: Int { sponsorId }
 
         public init(
@@ -74,7 +95,9 @@ extension CartManager {
             shippingTotal: Double = 0,
             shippingCurrency: String = "USD",
             lastDiscountCode: String? = nil,
-            lastDiscountId: Int? = nil
+            lastDiscountId: Int? = nil,
+            selectedPaymentMethod: String? = nil,
+            isPaid: Bool = false
         ) {
             self.sponsorId = sponsorId
             self.cartId = cartId
@@ -87,6 +110,8 @@ extension CartManager {
             self.shippingCurrency = shippingCurrency
             self.lastDiscountCode = lastDiscountCode
             self.lastDiscountId = lastDiscountId
+            self.selectedPaymentMethod = selectedPaymentMethod
+            self.isPaid = isPaid
         }
 
         /// Convenience: count items in this sponsor's cart (sum of quantities).

@@ -259,30 +259,25 @@ public struct VCheckoutOverlay: View {
                         ForEach(orderedSponsorCarts) { sponsorCart in
                             SponsorCheckoutSection(
                                 sponsorCart: sponsorCart,
-                                onPaymentComplete: {
-                                    // Capture sponsorId before clearCart
-                                    // wipes cartsBySponsor[sid]. After
-                                    // clearCart, SwiftUI re-renders
-                                    // without this section.
-                                    let paidId = sponsorCart.sponsorId
-                                    withAnimation(.easeInOut(duration: 0.25)) {
-                                        recentlyPaidSponsors.append(paidId)
-                                    }
-                                    // Auto-dismiss banner after 5s — the
-                                    // 5s number is per UX decision
-                                    // 2026-05-04 (long enough to read,
-                                    // short enough to not block).
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                        withAnimation(.easeInOut(duration: 0.25)) {
-                                            recentlyPaidSponsors.removeAll { $0 == paidId }
-                                        }
-                                    }
-                                    // If it was the last sponsor cart,
-                                    // body switches back to mainContent
-                                    // (legacy flow / empty cart).
-                                    if cartManager.cartsBySponsor.isEmpty {
-                                        cartManager.isCheckoutPresented = false
-                                    }
+                                onCheckoutTapped: {
+                                    // Q4 L4 (2026-05-06): hand off to the
+                                    // per-sponsor checkout flow controller.
+                                    // The section already has the user's
+                                    // chosen payment method on
+                                    // `sponsorCart.selectedPaymentMethod`.
+                                    // The flow controller branches by
+                                    // method, runs the appropriate handler,
+                                    // and on success calls
+                                    // `cartManager.markSponsorCartPaid(sid)`
+                                    // — at which point this same section
+                                    // re-renders with the dimmed "Paid"
+                                    // banner.
+                                    //
+                                    // TODO(Phase 5): wire this up to the
+                                    // per-sponsor flow controller. For the
+                                    // current commit (Phase 1) the tap is
+                                    // a no-op — the section's UI is what's
+                                    // landing here, the flow comes next.
                                 }
                             )
                             .environmentObject(cartManager)

@@ -512,6 +512,32 @@ extension CartManager {
         cartsBySponsor[sponsorId]
     }
 
+    /// Records the user's payment method choice for a sponsor cart so the
+    /// per-sponsor checkout flow knows which path to take (Apple Pay →
+    /// direct sheet; Klarna → full address form; Vipps/Stripe →
+    /// email-only). Q4 L4 (2026-05-06).
+    ///
+    /// `method` should be one of the strings from
+    /// `VioSponsor.CommerceBlock.paymentMethods` (typically `"apple"`,
+    /// `"klarna"`, `"vipps"`, `"stripe"`). The cart UI filters the picker
+    /// against the sponsor's supported set, so callers don't need to
+    /// validate again here.
+    public func setSelectedPaymentMethod(_ method: String?, forSponsor sponsorId: Int) {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else { return }
+        sponsorCart.selectedPaymentMethod = method
+        cartsBySponsor[sponsorId] = sponsorCart
+    }
+
+    /// Marks the sponsor cart as paid (Q4 L4, 2026-05-06). The cart UI
+    /// keeps the section visible but dimmed with a "Paid" badge so the
+    /// user sees progress when paying multiple sponsors sequentially.
+    /// Server-side cart cleanup happens in `clearCart(forSponsor:)`.
+    public func markSponsorCartPaid(_ sponsorId: Int) {
+        guard var sponsorCart = cartsBySponsor[sponsorId] else { return }
+        sponsorCart.isPaid = true
+        cartsBySponsor[sponsorId] = sponsorCart
+    }
+
     // MARK: - Internal helpers
 
     /// Resolves the sponsor's per-channel SDK client. Returns nil if the
