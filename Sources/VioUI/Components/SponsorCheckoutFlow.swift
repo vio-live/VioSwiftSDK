@@ -524,11 +524,56 @@ public struct SponsorCheckoutFlow: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Q4 L4 Phase 6 (2026-05-06): success screen with continue/done
+    /// branching. Mirrors the design's success step:
+    /// - if there are pending sponsor carts left after this one, show
+    ///   "Continue with next sponsor" (primary) + "Pay the rest later"
+    ///   (secondary, just closes the sheet)
+    /// - if this was the last cart, show a single "Done" CTA — the
+    ///   AllDoneScreen (Phase 7) renders when the parent sees the
+    ///   cart fully drained.
     private var successView: some View {
-        VStack(spacing: VioSpacing.lg) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(VioColors.success)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: VioSpacing.lg) {
+                    successHero
+                    orderRecapCard
+                    receiptHint
+                }
+                .padding(VioSpacing.lg)
+            }
+            successActionButtons
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var successHero: some View {
+        VStack(spacing: VioSpacing.md) {
+            ZStack {
+                Circle()
+                    .fill(VioColors.success.opacity(0.15))
+                    .frame(width: 96, height: 96)
+                    .overlay(
+                        Circle()
+                            .stroke(VioColors.success.opacity(0.4), lineWidth: 2)
+                    )
+                Image(systemName: "checkmark")
+                    .font(.system(size: 40, weight: .bold))
+                    .foregroundColor(VioColors.success)
+                if let logo = sponsorLogoUrl, let url = URL(string: logo) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let img) = phase {
+                            img.resizable().aspectRatio(contentMode: .fit)
+                        } else { Color.clear }
+                    }
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(VioColors.background))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(VioColors.background, lineWidth: 3))
+                    .offset(x: 32, y: 32)
+                }
+            }
+            .padding(.top, VioSpacing.lg)
             Text("Payment complete")
                 .font(VioTypography.title2.weight(.bold))
                 .foregroundColor(VioColors.textPrimary)
@@ -536,24 +581,134 @@ public struct SponsorCheckoutFlow: View {
                 .font(VioTypography.body)
                 .foregroundColor(VioColors.textSecondary)
                 .multilineTextAlignment(.center)
-
-            Button(action: onSuccess) {
-                Text("Continue")
-                    .font(VioTypography.body.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(
-                        RoundedRectangle(cornerRadius: VioBorderRadius.medium)
-                            .fill(VioColors.primary)
-                    )
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, VioSpacing.lg)
-            .padding(.top, VioSpacing.lg)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(VioSpacing.lg)
+    }
+
+    private var orderRecapCard: some View {
+        VStack(alignment: .leading, spacing: VioSpacing.sm) {
+            HStack {
+                Text("Order summary")
+                    .font(VioTypography.caption2.weight(.semibold))
+                    .foregroundColor(VioColors.textSecondary)
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle().fill(VioColors.success).frame(width: 6, height: 6)
+                    Text("Confirmed")
+                        .font(VioTypography.caption2.weight(.semibold))
+                        .foregroundColor(VioColors.success)
+                }
+            }
+            Divider().background(VioColors.border)
+            ForEach(sponsorCart.items, id: \.id) { item in
+                HStack(spacing: 10) {
+                    if let urlStr = item.imageUrl, let url = URL(string: urlStr) {
+                        AsyncImage(url: url) { phase in
+                            if case .success(let img) = phase {
+                                img.resizable().aspectRatio(contentMode: .fit)
+                            } else { Color.white.opacity(0.05) }
+                        }
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title)
+                            .font(VioTypography.caption1.weight(.semibold))
+                            .foregroundColor(VioColors.textPrimary)
+                            .lineLimit(1)
+                        Text("× \(item.quantity)")
+                            .font(VioTypography.caption2)
+                            .foregroundColor(VioColors.textSecondary)
+                    }
+                    Spacer()
+                    Text(formatMoney(item.price * Double(item.quantity), code: item.currency))
+                        .font(VioTypography.caption1.weight(.semibold))
+                        .foregroundColor(VioColors.textPrimary)
+                }
+            }
+            Divider().background(VioColors.border)
+            HStack {
+                Text("Total paid")
+                    .font(VioTypography.body.weight(.semibold))
+                    .foregroundColor(VioColors.textPrimary)
+                Spacer()
+                Text(formatMoney(sponsorCart.subtotal + sponsorCart.shippingTotal, code: sponsorCart.currency))
+                    .font(VioTypography.body.weight(.bold))
+                    .foregroundColor(VioColors.primary)
+            }
+        }
+        .padding(VioSpacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .fill(VioColors.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                .stroke(VioColors.border, lineWidth: 1)
+        )
+    }
+
+    private var receiptHint: some View {
+        Text("A receipt has been sent to your email.\nTracking will follow within 24 hours.")
+            .font(VioTypography.caption2)
+            .foregroundColor(VioColors.textSecondary.opacity(0.8))
+            .multilineTextAlignment(.center)
+            .padding(.top, VioSpacing.sm)
+    }
+
+    /// True iff there are still sponsor carts pending payment after
+    /// this one. Drives the success screen's CTA layout: "Continue" +
+    /// "Pay the rest later" when there are more, or just "Done" when
+    /// this was the last.
+    private var hasMorePendingSponsors: Bool {
+        cartManager.cartsBySponsor.values.contains { !$0.isPaid && $0.sponsorId != sponsorCart.sponsorId }
+    }
+
+    private var successActionButtons: some View {
+        VStack(spacing: VioSpacing.sm) {
+            if hasMorePendingSponsors {
+                primarySuccessButton(label: "Continue with next sponsor", action: onSuccess)
+                Button(action: onSuccess) {
+                    Text("Pay the rest later")
+                        .font(VioTypography.caption1.weight(.medium))
+                        .foregroundColor(VioColors.textSecondary)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+            } else {
+                primarySuccessButton(label: "Done", action: onSuccess)
+            }
+        }
+        .padding(.horizontal, VioSpacing.lg)
+        .padding(.bottom, VioSpacing.md)
+    }
+
+    private func primarySuccessButton(label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(label)
+                    .font(VioTypography.body.weight(.semibold))
+                if hasMorePendingSponsors && label != "Done" {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                    .fill(VioColors.primary)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatMoney(_ value: Double, code: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = code
+        formatter.maximumFractionDigits = 2
+        return formatter.string(from: NSNumber(value: value)) ?? "\(code) \(value)"
     }
 
     private var errorView: some View {
