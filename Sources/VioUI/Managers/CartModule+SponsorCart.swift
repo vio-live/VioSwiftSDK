@@ -521,6 +521,28 @@ extension CartManager {
         cartsBySponsor.values.reduce(0) { $0 + $1.shippingTotal }
     }
 
+    /// Q4 L4 (2026-05-08): display-friendly total across legacy +
+    /// per-sponsor carts. Use this for cart-indicator/badge UIs that
+    /// need a single number. Mirrors the `itemCount` aggregation pattern
+    /// landed in Q4 L3 (`172ae52`) — without this, the floating cart
+    /// indicator shows "USD 0.00" while items live in `cartsBySponsor`.
+    public var totalAcrossAllCarts: Double {
+        cartTotal + totalAcrossSponsors
+    }
+
+    /// Q4 L4 (2026-05-08): display-friendly currency code for cart
+    /// indicators. Returns the legacy `currency` when there are legacy
+    /// items, else falls back to the first sponsor cart's currency, else
+    /// the legacy default. Multi-market hosts must aggregate manually.
+    public var currencyAcrossAllCarts: String {
+        if !items.isEmpty { return currency }
+        if let sponsorCurrency = cartsBySponsor.values
+            .first(where: { !$0.currency.isEmpty })?.currency {
+            return sponsorCurrency
+        }
+        return currency
+    }
+
     /// Returns the SponsorCart for `sponsorId`, or nil when no items have
     /// been added for that sponsor yet.
     public func sponsorCart(forSponsorId sponsorId: Int) -> SponsorCart? {
