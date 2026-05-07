@@ -1,5 +1,6 @@
 import SwiftUI
 import VioCore
+import VioDesignSystem
 
 #if os(iOS)
 import PassKit
@@ -144,7 +145,11 @@ public struct VApplePayButton: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color(red: 0.44, green: 0.0, blue: 1.0))
+            // Apple's standard "black" Apple Pay button style — black bg
+            // + white logo + white "Pay" text. Matches Apple's HIG and
+            // PKPaymentButtonStyle.black. Hosts that want a custom tint
+            // can wrap this in their own button surface.
+            .background(Color.black)
             .cornerRadius(12)
         }
         .disabled(applePayManager.isProcessing)
@@ -201,7 +206,12 @@ private extension View {
             self
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.hidden)
-                .presentationBackground(Color(red: 0.08, green: 0.08, blue: 0.12))
+                // Match the sheet content's `surface` so the container rim
+                // around the rounded inner card doesn't flash a different
+                // tone (was TV2 dark navy `#141520` hardcoded — that bled
+                // through to the underlying product modal during the sheet
+                // transition on iOS 26, making it look black).
+                .presentationBackground(VioColors.surface)
                 .presentationCornerRadius(28)
         } else if #available(iOS 16.0, *) {
             self

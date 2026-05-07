@@ -121,7 +121,37 @@ public struct VProductDetailOverlay: View {
         if !VioConfiguration.shared.shouldUseSDK || !CampaignManager.shared.isCampaignActive {
             EmptyView()
         } else {
-            productDetailContent
+            // SwiftUI's `.sheet` creates a new environment that in
+            // iOS 17+/26 does NOT reliably inherit the host's
+            // `.preferredColorScheme(...)`. Both ends of the dial
+            // need explicit overrides:
+            //
+            //   1. Pin the *content's* color scheme from `theme.mode`
+            //      so VioColors.adaptive(...) and friends resolve to
+            //      the host's desired palette.
+            //   2. Override the *sheet container's* presentation
+            //      background (iOS 16.4+) — without this the sheet's
+            //      surface stays whatever the system trait collection
+            //      says (dark on a dark-mode device), even when the
+            //      content underneath is fully white.
+            if #available(iOS 16.4, *) {
+                productDetailContent
+                    .preferredColorScheme(resolvedThemeColorScheme)
+                    .presentationBackground(VioColors.background)
+            } else {
+                productDetailContent
+                    .preferredColorScheme(resolvedThemeColorScheme)
+            }
+        }
+    }
+
+    /// Resolves SwiftUI's preferredColorScheme from the SDK's theme.mode.
+    /// `.automatic` returns nil so the system decides.
+    private var resolvedThemeColorScheme: SwiftUI.ColorScheme? {
+        switch VioConfiguration.shared.theme.mode {
+        case .light: return .light
+        case .dark:  return .dark
+        case .automatic: return nil
         }
     }
     
@@ -260,7 +290,9 @@ public struct VProductDetailOverlay: View {
                         }
                     }
             } else if displayImages.count == 1 {
-                // Single image - full width, edge to edge
+                // Single image — full width with a small horizontal inset
+                // so studio shots (white background, square aspect) don't
+                // press against the screen edges. Hosts get this for free.
                 LoadedImage(
                     url: URL(string: displayImages[0].url),
                     placeholder: AnyView(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius)
@@ -272,10 +304,11 @@ public struct VProductDetailOverlay: View {
                             VCustomLoader(style: .rotate, size: 30)
                         })
                 )
-                .aspectRatio(contentMode: .fill)
+                .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .frame(height: productDetailConfig.imageHeight ?? 400)
-                .clipped()
+                .padding(.horizontal, VioSpacing.lg)
+                .clipShape(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius))
                 .onAppear {
                     imageLoaded = true
                 }
@@ -298,9 +331,9 @@ public struct VProductDetailOverlay: View {
                                             .foregroundColor(VioColors.error)
                                     })
                             )
-                            .aspectRatio(contentMode: .fill)
+                            .aspectRatio(contentMode: .fit)
                             .frame(maxWidth: .infinity)
-                            .clipped()
+                            .padding(.horizontal, VioSpacing.lg)
                             .clipShape(RoundedRectangle(cornerRadius: productDetailConfig.imageCornerRadius))
                             .onAppear {
                                 if index == 0 {
@@ -630,11 +663,13 @@ public struct VProductDetailOverlay: View {
     // MARK: - Bottom Action Bar
     private var bottomActionBar: some View {
         VStack(spacing: 0) {
-            // Subtle top separator
+            // Subtle top separator — keeps the visual hint that this band
+            // is fixed even when the underlying material is the same tone
+            // as the content above.
             Rectangle()
                 .fill(VioColors.border.opacity(0.3))
                 .frame(height: 0.5)
-            
+
             // Full-width sexy button
             Button(action: addToCart) {
                 HStack(spacing: VioSpacing.sm) {
@@ -693,7 +728,6 @@ public struct VProductDetailOverlay: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCheckmark)
             .padding(.horizontal, VioSpacing.lg)
             .padding(.vertical, VioSpacing.sm)
-            .background(VioColors.surface.opacity(0.95))
 
             #if os(iOS)
             if isInStock {
@@ -710,6 +744,13 @@ public struct VProductDetailOverlay: View {
             }
             #endif
         }
+        // Frosted-glass / liquid-glass surface for the fixed bottom action
+        // bar — communicates that this band is pinned while the rest of the
+        // detail (specs, description, etc.) scrolls underneath. Uses the
+        // system `Material` so it adapts to light/dark theme automatically
+        // and matches the iOS 26 / native Apple bottom bar treatment.
+        // Hosts get this for free — no per-app config needed.
+        .background(.regularMaterial)
     }
     
     // MARK: - Actions

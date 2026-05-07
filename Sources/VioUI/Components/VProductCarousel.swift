@@ -451,9 +451,16 @@ public struct VProductCarousel: View {
                 stopAutoScroll()
             }
             .sheet(item: $showingProductDetail) { product in
+                // Resolve sponsorId for routing: prefer the placement's
+                // own sponsorId (multi-sponsor case), fall back to the
+                // primary sponsor of the active campaign. The fallback
+                // catches cases where a component instance was decoded
+                // before sponsorId was populated, or live-updated by a
+                // legacy WS event that drops the field.
                 VProductDetailOverlay(
                     product: product,
-                    sponsorId: activeComponent?.sponsorId,
+                    sponsorId: activeComponent?.sponsorId
+                        ?? VioConfiguration.shared.primarySponsor?.id,
                     onDismiss: {
                         showingProductDetail = nil
                     }
