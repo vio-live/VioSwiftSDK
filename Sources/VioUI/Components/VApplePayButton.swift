@@ -144,7 +144,11 @@ public struct VApplePayButton: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(Color(red: 0.44, green: 0.0, blue: 1.0))
+            // Apple's standard "black" Apple Pay button style — black bg
+            // + white logo + white "Pay" text. Matches Apple's HIG and
+            // PKPaymentButtonStyle.black. Hosts that want a custom tint
+            // can wrap this in their own button surface.
+            .background(Color.black)
             .cornerRadius(12)
         }
         .disabled(applePayManager.isProcessing)

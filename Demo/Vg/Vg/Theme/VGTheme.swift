@@ -18,6 +18,24 @@ struct VGTheme {
         static let white = Color.white
         static let textPrimary = Color.white
         static let textSecondary = Color(red: 0.7, green: 0.7, blue: 0.7)
+
+        // VG news layout palette (matches vg.no app screenshots).
+        /// Outer page background + top bar — the darkest tone of the
+        /// palette. Sits between cards so card boundaries visually pop.
+        static let pageBackground = Color(red: 0.11, green: 0.0, blue: 0.0) // #1C0000
+        /// Card / box surface — slightly lighter wine. Used as `.background`
+        /// on every news card so the card edges are visible against
+        /// `pageBackground`.
+        static let burgundy = Color(red: 0.196, green: 0.0, blue: 0.0) // #320000
+        /// Deepest tone — used inside cards for accent surfaces (e.g. the
+        /// "Vis flere" pill, the TIPS OSS banner stroke fill).
+        static let burgundyDeep = Color(red: 0.07, green: 0.0, blue: 0.0) // #120000
+        /// Pure VG brand red used in pills, breaking-news kickers and CTAs.
+        static let brandRed = Color(red: 0.90, green: 0.10, blue: 0.13) // #E61A22
+        /// Muted/dimmed kicker text on burgundy background.
+        static let kickerMuted = Color(red: 0.60, green: 0.50, blue: 0.50) // ~#998080
+        /// Annonse / advertorial label tint.
+        static let annonseLabel = Color(red: 0.75, green: 0.70, blue: 0.70)
     }
     
     // MARK: - Spacing
@@ -34,21 +52,55 @@ struct VGTheme {
         static func title() -> Font {
             return .system(size: 24, weight: .bold)
         }
-        
+
         static func headline() -> Font {
             return .system(size: 18, weight: .semibold)
         }
-        
+
         static func body() -> Font {
             return .system(size: 16, weight: .regular)
         }
-        
+
         static func caption() -> Font {
             return .system(size: 14, weight: .regular)
         }
-        
+
         static func small() -> Font {
             return .system(size: 12, weight: .regular)
+        }
+
+        // News layout typography — VG uses a heavy serif for headlines.
+        // We approximate with `Georgia-Bold` (system font, no asset needed).
+        static func newsHeroHeadline() -> Font {
+            .custom("Georgia-Bold", size: 44, relativeTo: .largeTitle)
+        }
+
+        static func newsSplitHeadline() -> Font {
+            .custom("Georgia-Bold", size: 26, relativeTo: .title2)
+        }
+
+        static func newsGridHeadline() -> Font {
+            .custom("Georgia-Bold", size: 24, relativeTo: .title3)
+        }
+
+        static func newsListHeadline() -> Font {
+            .system(size: 17, weight: .bold)
+        }
+
+        static func newsKicker() -> Font {
+            .custom("Georgia", size: 16, relativeTo: .callout)
+        }
+
+        static func newsSectionLabel() -> Font {
+            .system(size: 28, weight: .black)
+        }
+
+        static func newsAnnonseLabel() -> Font {
+            .system(size: 12, weight: .regular)
+        }
+
+        static func newsTimestamp() -> Font {
+            .system(size: 13, weight: .medium)
         }
     }
     

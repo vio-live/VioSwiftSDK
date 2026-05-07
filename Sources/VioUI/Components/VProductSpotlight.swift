@@ -573,9 +573,9 @@ public struct VProductSpotlight: View {
                     }
                 ))
         )
-        .aspectRatio(contentMode: .fill)
+        .aspectRatio(contentMode: .fit)
         .frame(height: height)
-        .clipped()
+        .padding(.horizontal, VioSpacing.sm)
         .cornerRadius(VioBorderRadius.medium)
     }
     

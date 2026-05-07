@@ -1,19 +1,19 @@
 {
   "name": "VG Demo Configuration",
   "version": "1.0.0",
-  "apiKey": "KCXF10Y-W5T4PCR-GG5119A-Z64SQ9S",
+  "apiKey": "vg_api_key_05e51473f1704187",
   "environment": "development",
   "theme": {
     "name": "VG Demo Theme",
-    "mode": "automatic",
+    "mode": "light",
     "lightColors": {
-      "primary": "#FF0000",
+      "primary": "#E61A22",
       "secondary": "#F7931E",
       "success": "#34C759",
       "warning": "#FF9500",
       "error": "#FF3B30",
       "info": "#007AFF",
-      "background": "#F2F2F7",
+      "background": "#FFFFFF",
       "surface": "#FFFFFF",
       "surfaceSecondary": "#F9F9F9",
       "textPrimary": "#000000",
@@ -22,7 +22,7 @@
       "textOnPrimary": "#FFFFFF",
       "border": "#E5E5EA",
       "borderSecondary": "#D1D1D6",
-      "priceColor": "#bbbbbb"
+      "priceColor": "#E61A22"
     },
     "darkColors": {
       "primary": "#FF0000",
@@ -117,6 +117,15 @@
     "currencySymbol": "kr",
     "phoneCode": "+47",
     "flag": "https://flagcdn.com/w320/no.png"
+  },
+  "campaigns": {
+    "webSocketBaseURL": "wss://api-dev.vio.live",
+    "restAPIBaseURL": "https://api-dev.vio.live",
+    "devWebSocketBaseURL": "wss://api-dev.vio.live",
+    "devRestAPIBaseURL": "https://api-dev.vio.live",
+    "autoDiscover": true,
+    "wsBaseURL": "wss://api-dev.vio.live",
+    "devWsBaseURL": "wss://api-dev.vio.live"
   },
   "localization": {
     "defaultLanguage": "no",
