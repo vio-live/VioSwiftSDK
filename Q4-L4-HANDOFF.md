@@ -1,11 +1,47 @@
 # Q4 L4 — Multi-sponsor unified checkout — Handoff (STUCK)
 
-> **Status (2026-05-06): STUCK / paused mid-implementation.**
+> **Status (2026-05-06, refreshed 2026-05-07): STUCK / paused mid-implementation.**
 > The unified multi-sponsor checkout (per-sponsor method picker → legacy step flow scoped to that sponsor) was 90% wired up but the last fix (`3319396`) is **untested**. Resume from this doc.
 
 **Branch:** `feat/multi-sponsor-checkout-flow` (off `chore/q4-l3-cart-diagnostics`, **local-only, never pushed**)
-**Last commit:** `3319396 fix(q4-l4): cartManager.sdk routes to sponsor SDK when scoped + mirror currentCartId`
-**Don't touch:** `develop` and `main` are intact. Develop has Q4 L3 PR #11 + #12 polish landed.
+**Last commit on this branch:** `3319396 fix(q4-l4): cartManager.sdk routes to sponsor SDK when scoped + mirror currentCartId`
+
+## Develop drift since this branch was paused (refreshed 2026-05-07)
+
+`develop` advanced by **1 commit** between when this branch was paused (2026-05-06) and now (2026-05-07):
+
+- `e463c51 feat(vg-demo): VG advertorial flow with end-to-end Apple Pay (#14)` — new VG demo + theme-driven Apple Pay confirmation sheet + a few SDK polish items.
+
+### Files in develop that overlap this branch
+
+The VG PR touched these SDK files. **Rebase / merge develop first** before resuming Q4 L4 work — most are additive, but `ApplePayManager.swift`, `VApplePayButton.swift` and `PaymentRuntimeGuard.swift` are touched on both sides and will likely need a manual merge.
+
+| File | What VG PR did | Q4 L4 already touches? | Conflict risk |
+|------|----------------|------------------------|---------------|
+| `Sources/VioUI/Managers/ApplePayManager.swift` | Diagnostic prints added then removed pre-merge — function shape unchanged, plus the Q4 L3 logic stays. | Yes — the whole `pay()` flow + `pendingSponsorId` routing | Low (VG only added/removed prints) but **review the area around `pay()` line 180** |
+| `Sources/VioUI/Components/VProductCarousel.swift` | Defensive fallback: `sponsorId: activeComponent?.sponsorId ?? VioConfiguration.shared.primarySponsor?.id` so `VProductDetailOverlay` always receives a non-nil sponsor route. | No (Q4 L4 didn't touch this file) | Low |
+| `Sources/VioUI/Components/VProductDetailOverlay.swift` | `.preferredColorScheme(...)` + `.presentationBackground(VioColors.background)` (iOS 16.4+) on the body. Image gallery `.fill` → `.fit` + `VioSpacing.lg` horizontal inset. Bottom action bar wrapped in `.regularMaterial`. | No (Q4 L4 doesn't touch the overlay's chrome — only the embedded `VApplePayButton` invocation, which is unchanged) | Low |
+| `Sources/VioUI/Components/VApplePayButton.swift` | Bg color `#7000FF` (purple) → `Color.black`. `.presentationBackground(...)` on the chrome helper now reads `VioColors.surface` instead of hardcoded TV2 navy. New `import VioDesignSystem`. | Yes — Q4 L4 wired the `sponsorId` into `applePayButton` and passes through to `pay()`. | **Medium** — both edits touch the same file; merge by hand. |
+| `Sources/VioUI/Components/VApplePayConfirmationSheet.swift` | Whole body refactored from hardcoded TV2 colors to `VioColors.adaptive(for:)` tokens. New `import VioDesignSystem`. | No | Low |
+| `Sources/VioUI/Components/VProductCard.swift`, `VProductSpotlight.swift` | Image content mode `.fill` → `.fit` with small inset so square products show whole. | No | Low |
+| `Sources/VioUI/Managers/PaymentRuntimeGuard.swift` | `ensurePaymentRuntimeReady` skips the defensive `ensureCommerceBootstrapApplied()` when `sdkBootstrapCommerceApiKey` is already set (avoids iOS 26 deadlock during Apple Pay tap). | Yes — Q4 L4 modifies the same function to add scope handling. | **Medium** — review the early-return logic. |
+
+### Recommended resume sequence
+
+```bash
+git checkout feat/multi-sponsor-checkout-flow
+git fetch origin develop
+git merge origin/develop      # expect manual merges in ApplePayManager.swift,
+                              # VApplePayButton.swift, PaymentRuntimeGuard.swift
+# ... resolve conflicts (Q4 L4 logic + VG polish coexist) ...
+git status                    # confirm tree clean
+# now run the smoke test below from scratch (it's the same as before, just
+# picks up the new SDK polish layer for free)
+```
+
+After the merge: `File → Packages → Reset Package Caches`, `Cmd+Shift+K`, `Cmd+R`.
+
+**Don't touch:** `develop` and `main` are intact. Develop now has Q4 L3 PR #11 + #12 polish + VG demo (#14) all landed.
 
 ## What this sprint was trying to do
 
