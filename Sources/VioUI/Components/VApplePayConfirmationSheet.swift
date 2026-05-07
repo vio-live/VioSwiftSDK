@@ -1,5 +1,6 @@
 import SwiftUI
 import VioCore
+import VioDesignSystem
 
 #if os(iOS)
 import PassKit
