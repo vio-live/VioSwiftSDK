@@ -324,9 +324,15 @@ public struct VProductCard: View {
             placeholder: AnyView(placeholderView(systemImage: "photo", color: adaptiveColors.textSecondary)),
             errorView: AnyView(placeholderView(systemImage: "exclamationmark.triangle", color: adaptiveColors.error))
         )
-        .aspectRatio(contentMode: .fill)
+        // `.fit` (not `.fill`) so square / portrait product photos show
+        // fully inside the card without being cropped on top/bottom.
+        // The small inner inset gives the image breathing room from the
+        // card edges; `imageBackgroundColor` (or the card's parent bg)
+        // fills any aspect-ratio bands.
+        .aspectRatio(contentMode: .fit)
         .frame(width: width, height: height)
-        .clipped()
+        .padding(.horizontal, VioSpacing.sm)
+        .padding(.vertical, VioSpacing.sm)
         
         // Wrap with background color if specified
         if let backgroundColor = imageBackgroundColor {

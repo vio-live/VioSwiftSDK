@@ -10,11 +10,12 @@ import VioUI
 import VioCore
 
 struct VGHomeView: View {
-    @State private var selectedTab = 3 // "Direkte" tab
+    @State private var selectedTab = 0 // "Nyheter" (news) tab — default for VG demo
     @State private var showMatchDetail = false
     @State private var selectedMatchTitle = ""
     @State private var selectedMatchSubtitle = ""
     @State private var showProducts = false
+    @State private var showMaxboArticle = false  // advertorial: push from right
     
     @EnvironmentObject private var cartManager: CartManager
     @EnvironmentObject private var checkoutDraft: CheckoutDraft
@@ -24,13 +25,27 @@ struct VGHomeView: View {
             // Background
             VGTheme.Colors.black
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                // Content based on selected tab
+                // Content based on selected tab. The Maxbo advertorial
+                // takes over the news tab in-place (NOT as a fullScreenCover)
+                // because nesting `.fullScreenCover` + `.sheet` (the product
+                // detail) on iOS 26 stalls the post-AddItem resume of the
+                // Apple Pay flow when @Published cart state cascades through
+                // the modal stack. Swapping the tab content keeps a single
+                // active sheet (matching TV2's known-working flow).
                 Group {
                     switch selectedTab {
                     case 0:
-                        NewsView()
+                        if showMaxboArticle {
+                            MaxboArticleView(onClose: {
+                                showMaxboArticle = false
+                            })
+                        } else {
+                            NewsView(onMaxboArticleTap: {
+                                showMaxboArticle = true
+                            })
+                        }
                     case 1:
                         ClipsView()
                     case 2:
@@ -43,10 +58,11 @@ struct VGHomeView: View {
                         liveContentView
                     }
                 }
-                
+
                 // Bottom Navigation Bar (always visible)
                 BottomNavigationBar(selectedTab: $selectedTab)
             }
+
         }
         .sheet(isPresented: $showMatchDetail) {
             MatchDetailView(
