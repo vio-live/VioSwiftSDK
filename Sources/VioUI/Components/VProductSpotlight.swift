@@ -482,12 +482,21 @@ public struct VProductSpotlight: View {
                             Button(action: {
                                 // Stop propagation to parent button
                                 Task {
-                                    // [Q4-DIAG 2026-05-05] Inline add bypasses
-                                    // sponsorId routing. activeComponent has it
-                                    // available — logging both so we can see
-                                    // the missing wire-up.
-                                    print("🟠 [Q4-DIAG inline-add VProductSpotlight] productId=\(product.id) componentSponsorId=\(activeComponent?.sponsorId.map(String.init) ?? "nil") (will route to LEGACY)")
-                                    await cartManager.addProduct(product, quantity: 1)
+                                    // Fase 1.2 (2026-05-08, ADR-0006):
+                                    // route via placement's sponsorId from
+                                    // activeComponent — the backend is the
+                                    // source of truth. Nil means data is
+                                    // missing upstream (placement without
+                                    // sponsor_id) or plumbing is broken —
+                                    // we surface as error and skip the add
+                                    // rather than fall through to the legacy
+                                    // single-cart path.
+                                    guard let sid = activeComponent?.sponsorId else {
+                                        print("🔴 [Q4-DIAG inline-add VProductSpotlight] productId=\(product.id) — activeComponent.sponsorId IS NIL — skipping (fix at backend: app_placements.sponsor_id)")
+                                        return
+                                    }
+                                    print("🟣 [Q4-DIAG inline-add VProductSpotlight] sponsorId=\(sid) productId=\(product.id)")
+                                    await cartManager.addProduct(product, quantity: 1, sponsorId: sid)
                                 }
                             }) {
                                 Text(VLocalizedString(VioTranslationKey.addToCart.rawValue))
