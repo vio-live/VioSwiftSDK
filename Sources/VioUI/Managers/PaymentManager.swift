@@ -67,7 +67,28 @@ extension CartManager {
         // 1. Resolve checkoutId
         let resolvedCheckoutId: String?
         if let sid = sponsorId {
-            if let cid = sponsorCart(forSponsorId: sid)?.checkoutId, !cid.isEmpty {
+            // Q4 L4 mirror correction (2026-05-08): when we're already
+            // scoped to this sponsor (`activeCheckoutSponsorId == sid`),
+            // the legacy `checkoutId` field has been populated by the step
+            // flow's createCheckout + updateCheckout (address bound).
+            // Prefer it over `sponsorCart.checkoutId` which is only synced
+            // back on `exitSponsorCheckoutScope`. Without this, Stripe /
+            // Klarna would create a SECOND empty checkout via
+            // `createCheckout(forSponsor:)` — with no address bound — and
+            // Reachu's `CreatePaymentIntentStripe` 500s because the
+            // checkout is missing customer/billing data.
+            //
+            // Apple Pay flow doesn't hit this because it bypasses the
+            // step flow and calls `createCheckout(forSponsor:)` directly
+            // before `applePayInit`, then collects address via PKContact.
+            //
+            // Once Fase 2 retires the mirror entirely (step views read
+            // `sponsorCart` directly), this whole branch collapses.
+            if activeCheckoutSponsorId == sid,
+               let scopedLegacy = checkoutId, !scopedLegacy.isEmpty {
+                resolvedCheckoutId = scopedLegacy
+                print("🟣 [Q4-DIAG payment-resolve REUSE-SCOPED-CHECKOUT] sponsorId=\(sid) checkoutId=\(scopedLegacy) (from step flow)")
+            } else if let cid = sponsorCart(forSponsorId: sid)?.checkoutId, !cid.isEmpty {
                 resolvedCheckoutId = cid
             } else {
                 resolvedCheckoutId = await createCheckout(forSponsor: sid)
