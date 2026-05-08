@@ -122,8 +122,19 @@ private struct CartIntentProductDetailHost: View {
         .sheet(item: $loadedProduct, onDismiss: {
             onDismissIntent()
         }, content: { product in
+            // Fase 1.1 (2026-05-08, ADR-0006): forward the cart_intent's
+            // sponsorId to VProductDetailOverlay. Without this, the overlay
+            // falls through to the legacy `addProduct(product, variant:,
+            // quantity:)` overload (line 807) and the item lands in
+            // CartManager.items instead of cartsBySponsor[sid] — which is
+            // why TV2's cart_intent flow rendered the legacy single-cart
+            // checkout regardless of how many sponsors the campaign carried.
+            // The whole upstream chain (backend → WS → CartIntentEvent →
+            // CampaignManager → ProductService) already routes by sponsorId
+            // correctly; the overlay was the last hop dropping it.
             VProductDetailOverlay(
                 product: product,
+                sponsorId: sponsorId,
                 onDismiss: {
                     loadedProduct = nil
                 }
