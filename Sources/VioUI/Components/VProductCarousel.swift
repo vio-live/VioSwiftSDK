@@ -689,13 +689,27 @@ public struct VProductCarousel: View {
     
     private func productCardView(product: Product) -> some View {
         let currentLayout = layout ?? cachedConfig?.layout ?? "full"
-        
+
         // Use custom layout for "full" to avoid oversized hero variant
         if currentLayout == "full" {
             return AnyView(fullLayoutProductCardView(product: product))
         } else {
-            // For compact and horizontal layouts, use grid variant without extra padding
-            return AnyView(VProductCard(product: product, variant: .grid, imageBackgroundColor: imageBackgroundColor))
+            // For compact and horizontal layouts, use grid variant without extra padding.
+            //
+            // Fase 1.2 follow-up (2026-05-08): VProductCard handles its own
+            // tap → VProductDetailOverlay sheet (default `showProductDetail: true`).
+            // Without `sponsorId`, that internal sheet renders with sponsorId=nil
+            // and the embedded "Add to cart" falls through to the legacy path.
+            // Pass the placement's sponsorId so non-full carousel layouts route
+            // adds through cartsBySponsor[sid] consistently with the full layout
+            // (which uses showingProductDetail at the parent level — also sponsor-aware
+            // via the parent's .sheet binding).
+            return AnyView(VProductCard(
+                product: product,
+                variant: .grid,
+                sponsorId: activeComponent?.sponsorId,
+                imageBackgroundColor: imageBackgroundColor
+            ))
         }
     }
     
