@@ -134,7 +134,7 @@ public struct VProductDetailOverlay: View {
             //      surface stays whatever the system trait collection
             //      says (dark on a dark-mode device), even when the
             //      content underneath is fully white.
-            if #available(iOS 16.4, *) {
+            if #available(iOS 16.4, macOS 13.3, tvOS 16.4, watchOS 9.4, *) {
                 productDetailContent
                     .preferredColorScheme(resolvedThemeColorScheme)
                     .presentationBackground(VioColors.background)
