@@ -31,6 +31,17 @@ legacy (single-cart `items`, mirror strategy de Q4 L4) ya no existe.
 - No optimizamos performance ni rediseñamos UX más allá de lo necesario para
   unificar paths.
 
+## Scope boundary (locked 2026-05-08)
+
+El scope de este sprint es la jerarquía **app → campaign → components → cart**.
+Cualquier path fuera de esa cadena queda explícitamente fuera de scope:
+
+| Path | Estado | Razón |
+|---|---|---|
+| `Sources/VioCastingUI/Components/Video/VCastingVideoPlayer.swift:205` (inline add) | **OUT OF SCOPE** | Casting flow tiene su propio protocolo WS (`ProductEventData` en `EventStreamerManager`). Hoy `ProductEventData` no carga `sponsorId` — agregarlo requiere cambio coordinado backend casting event constructor + parser + protocolo. Es trabajo cross-repo con Reachu/Commerce, no aplica al model app→campaign→components. **Defer** a sprint dedicado al casting protocol. |
+| `Demo/tv2demo/tv2demo/Components/TV2VideoPlayer.swift:130-156` | **OUT OF SCOPE** | Dead code confirmado por audit (`currentProduct` solo se asigna a nil, nunca a un valor non-nil). Eliminar es hygiene, no afecta el comportamiento de la jerarquía app→campaign→components. **Defer** al cleanup de Fase 5 con el resto del legacy. |
+| `Demo/Vg/Vg/Components/VGVideoPlayer.swift:72` | OUT OF SCOPE *para TV2* | Vg-only path. Fix análogo a ProductsGridView (Fase 1.5) cuando volvamos a Vg testing. |
+
 ## Decisions locked (2026-05-08)
 
 1. **Storage = `cartsBySponsor` siempre.** El `items: [CartItem]` legacy y los
