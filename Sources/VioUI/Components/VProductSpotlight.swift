@@ -388,12 +388,22 @@ public struct VProductSpotlight: View {
                     customHeroLayout(product: product)
                         .padding(.horizontal, VioSpacing.md)
                 } else {
+                    // Fase 1.2 follow-up (2026-05-08): when the operator
+                    // picks a non-hero layout (list / grid / minimal),
+                    // VProductSpotlight delegates rendering to VProductCard.
+                    // VProductCard's tap → VProductDetailOverlay flow needs
+                    // sponsorId or the embedded "Add" button falls through
+                    // to legacy `addProduct(product, variant:, quantity:)`.
+                    // Pass the placement's sponsorId so the card path
+                    // routes through cartsBySponsor[sid] consistently with
+                    // the hero path.
                     VProductCard(
                         product: product,
                         variant: resolvedVariant!,
                         showBrand: VioConfiguration.shared.uiConfiguration.showProductBrands,
                         showDescription: VioConfiguration.shared.uiConfiguration.showProductDescriptions,
-                        showProductDetail: true
+                        showProductDetail: true,
+                        sponsorId: activeComponent?.sponsorId
                     )
                     .padding(.horizontal, VioSpacing.md)
                 }
