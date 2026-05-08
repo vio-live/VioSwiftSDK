@@ -69,8 +69,14 @@ struct ProductsGridView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: TV2Theme.Spacing.md) {
                 ForEach(products) { product in
+                    // Fase 1.5: pass primary's sponsorId so the
+                    // VProductDetailOverlay (opened when the user taps
+                    // the card) routes addProduct through cartsBySponsor
+                    // too. Same constructive identity argument as
+                    // addToCart() below.
                     VProductCard(
                         product: product,
+                        sponsorId: VioConfiguration.shared.primarySponsor?.id,
                         onAddToCart: {
                             Task {
                                 await addToCart(product: product)
@@ -199,9 +205,22 @@ struct ProductsGridView: View {
     }
     
     private func addToCart(product: Product) async {
-        print("🛒 [ProductsGridView] Adding to cart: \(product.title)")
-        
-        await cartManager.addProduct(product, quantity: 1)
+        // Fase 1.5 (2026-05-08, ADR-0006): ProductsGridView is — by
+        // construction — a browser of the campaign's PRIMARY sponsor's
+        // catalog. The view loads products via `config.apiKey` (the
+        // primary's commerce key) above in `loadProducts()`. The
+        // matching sponsorId for the cart routing is therefore the
+        // campaign's primary. This is identity, not fallback.
+        //
+        // If the campaign has no primary configured, that's a backend
+        // data integrity problem — we fail-fast rather than silently
+        // dropping the item into the legacy `items` array.
+        guard let sid = VioConfiguration.shared.primarySponsor?.id else {
+            print("🔴 [Q4-DIAG ProductsGridView] No primary sponsor configured on campaign — skipping add for productId=\(product.id)")
+            return
+        }
+        print("🟣 [Q4-DIAG ProductsGridView] sponsorId=\(sid) productId=\(product.id)")
+        await cartManager.addProduct(product, quantity: 1, sponsorId: sid)
     }
 }
 
