@@ -121,11 +121,11 @@
   "campaigns": {
     "webSocketBaseURL": "wss://api-dev.vio.live",
     "restAPIBaseURL": "https://api-dev.vio.live",
-    "devWebSocketBaseURL": "wss://api-dev.vio.live",
-    "devRestAPIBaseURL": "https://api-dev.vio.live",
+    "devWebSocketBaseURL": "wss://api-local-angelo.vio.live",
+    "devRestAPIBaseURL": "https://api-local-angelo.vio.live",
     "autoDiscover": true,
     "wsBaseURL": "wss://api-dev.vio.live",
-    "devWsBaseURL": "wss://api-dev.vio.live"
+    "devWsBaseURL": "wss://api-local-angelo.vio.live"
   },
   "localization": {
     "defaultLanguage": "no",
