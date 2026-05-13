@@ -637,22 +637,62 @@ public struct VCheckoutOverlay: View {
                 return
             }
 
-            // 2. Minimal init — most customer / address fields nil so
-            //    Klarna's webview prompts the user. The ONE non-obvious
-            //    required field is `returnUrl` — Klarna API rejects the
+            // 2. PRE-FLIGHT: seed the checkout with email + addresses
+            //    (same as `triggerSponsorStripe` does — see Fase Pago-1.1b
+            //    commit 18d763c). Commerce's `CreatePaymentKlarnaNative`
+            //    resolver requires this for the same reason Stripe does:
+            //    Klarna API expects the checkout to have customer data
+            //    before init.
+            //
+            //    Verified via direct GraphQL probe 2026-05-13
+            //    (`/tmp/test-klarna-noprep.ts`):
+            //      Without pre-update → both Elkjøp + Torshov fail with
+            //                           "not initialized [object Object]"
+            //      With pre-update    → both succeed with token len 1762
+            //
+            //    ⚠️ TEMPORARY: hardcoded test data — same caveat as the
+            //    Stripe pre-flight. The 3 remediation paths (A/B/C) in
+            //    DIRECT-PAYMENT-LAUNCH-PLAN.md Fase Pago-2b apply to both
+            //    methods symmetrically.
+            let klarnaTestAddress: [String: Any] = [
+                "first_name": "John",
+                "last_name": "Doe",
+                "address1": "Test Street 1",
+                "city": "Oslo",
+                "province": "Oslo",
+                "zip": "0150",
+                "country": "Norway",
+                "phone": "+4799999999",
+            ]
+            let updated = await cartManager.updateCheckout(
+                forSponsor: sid,
+                checkoutId: chkId,
+                email: "test@vio.live",
+                shippingAddress: klarnaTestAddress,
+                billingAddress: klarnaTestAddress
+            )
+            if !updated {
+                errorMessage = "Could not seed checkout for Klarna (pre-flight)"
+                pendingKlarnaSponsorId = nil
+                VioLogger.error(
+                    "triggerSponsorKlarna: pre-flight updateCheckout failed for sponsor \(sid)",
+                    component: "VCheckoutOverlay"
+                )
+                return
+            }
+
+            // 3. Minimal Klarna init — most customer / address fields nil
+            //    so Klarna's webview prompts the user. The non-obvious
+            //    required field is `returnUrl`: Klarna API rejects the
             //    init without it (generic 500 "Payment Klarna Native not
             //    initialized: [object Object]" from commerce that hides
-            //    the actual Klarna error). The Vio DTO marks it as
-            //    optional but Klarna's own validation requires it for
-            //    the in-app flow. Verified via direct GraphQL probe
-            //    (`/tmp/test-klarna-returnurl.ts` 2026-05-13): all 5
-            //    test variations including legacy shape failed without
-            //    return_url, all 5 succeeded once `return_url` was
-            //    added.
+            //    the actual Klarna error). The Vio DTO marks it optional
+            //    but Klarna's own validation requires it for the in-app
+            //    flow (verified `/tmp/test-klarna-returnurl.ts` 2026-05-13).
             //
-            //    The legacy `prepareKlarnaNative` does pass it (line
-            //    2859: `returnUrl: klarnaSuccessURLString`), which is
-            //    why the legacy flow worked.
+            //    The legacy `prepareKlarnaNative` at line 2859 always
+            //    passed it (`returnUrl: klarnaSuccessURLString`), which
+            //    is why the legacy form-driven flow worked.
             let resolvedCountry =
                 cartManager.selectedMarket?.code
                 ?? sponsorCart.country
@@ -670,7 +710,7 @@ public struct VCheckoutOverlay: View {
                 // → Klarna webview will prompt for them
             )
 
-            // 3. Call init via sponsor's SDK.
+            // 4. Call init via sponsor's SDK.
             guard
                 let dto = await cartManager.initKlarnaNative(
                     input: input,
@@ -682,7 +722,7 @@ public struct VCheckoutOverlay: View {
                 return
             }
 
-            // 4. Set up state for HiddenKlarnaAutoAuthorize to fire.
+            // 5. Set up state for HiddenKlarnaAutoAuthorize to fire.
             //    Picks the first available payment method category.
             let categories = dto.paymentMethodCategories ?? []
             guard let firstCategory = categories.first else {
