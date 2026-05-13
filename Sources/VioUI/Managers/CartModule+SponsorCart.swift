@@ -379,8 +379,87 @@ extension CartManager {
         }
     }
 
-    /// Creates a Reachu Commerce Checkout for the sponsor's cart and
-    /// stores the resulting `checkoutId` on the SponsorCart in
+    /// Fase Pago-1.1b (2026-05-13): sponsor-aware `updateCheckout` for
+    /// the direct-launch payment flow.
+    ///
+    /// Commerce's `CreatePaymentIntentStripe` resolver requires the
+    /// checkout to have `email + shipping_address + billing_address`
+    /// populated BEFORE the intent call (verified via direct GraphQL
+    /// probe 2026-05-13 — `stripeIntent` on an empty checkout fails
+    /// with `"Payment Stripe not intent execute: : [object Object]"`,
+    /// `stripeIntent` on the same checkout after `updateCheckout(email
+    /// + addr)` succeeds with clientSecret + customer + ephemeral_key).
+    ///
+    /// Apple Pay didn't hit this because its `applePayInit + applePayConfirm`
+    /// two-step pattern lets the backend hydrate the checkout post-PassKit.
+    /// Stripe's PaymentIntent doesn't have an analogous "post-collect"
+    /// step — Stripe webhook tells commerce the charge succeeded, but
+    /// without an updateCheckout call the order has no shipping data.
+    ///
+    /// This function lets `triggerSponsorStripe` (and any future
+    /// direct-launch trigger) seed the sponsor's checkout with whatever
+    /// data we have before calling `stripeIntent`. Routes through the
+    /// sponsor's per-channel SDK via `resolveSponsorSdk` so the update
+    /// hits the right Commerce channel (not the legacy global one).
+    @discardableResult
+    public func updateCheckout(
+        forSponsor sponsorId: Int,
+        checkoutId: String,
+        email: String? = nil,
+        shippingAddress: [String: Any]? = nil,
+        billingAddress: [String: Any]? = nil,
+        acceptsTerms: Bool = true,
+        acceptsPurchaseConditions: Bool = true
+    ) async -> Bool {
+        guard let sponsorSdk = resolveSponsorSdk(forSponsorId: sponsorId) else {
+            return false
+        }
+
+        VioLogger.debug(
+            "updateCheckout(forSponsor:\(sponsorId)) START checkoutId=\(checkoutId) emailPresent=\(email != nil)",
+            component: "CartModule"
+        )
+        do {
+            logRequest(
+                "sdk.checkout.update (sponsor=\(sponsorId))",
+                payload: [
+                    "checkout_id": checkoutId,
+                    "email": email as Any,
+                    "shipping_present": shippingAddress != nil,
+                    "billing_present": billingAddress != nil,
+                ]
+            )
+            _ = try await sponsorSdk.checkout.update(
+                checkout_id: checkoutId,
+                status: nil,
+                email: email,
+                success_url: nil,
+                cancel_url: nil,
+                payment_method: nil,
+                shipping_address: shippingAddress,
+                billing_address: billingAddress,
+                buyer_accepts_terms_conditions: acceptsTerms,
+                buyer_accepts_purchase_conditions: acceptsPurchaseConditions
+            )
+            print("🟣 [Q4-DIAG updateCheckout-SPONSOR] sponsorId=\(sponsorId) checkoutId=\(checkoutId) emailPresent=\(email != nil) shipping/billing=\(shippingAddress != nil)/\(billingAddress != nil)")
+            VioLogger.success(
+                "updateCheckout(forSponsor:\(sponsorId)) OK",
+                component: "CartModule"
+            )
+            return true
+        } catch {
+            let msg = (error as? SdkException)?.description ?? error.localizedDescription
+            logError("sdk.checkout.update (sponsor=\(sponsorId))", error: error)
+            VioLogger.error(
+                "updateCheckout(forSponsor:\(sponsorId)) FAIL: \(msg)",
+                component: "CartModule"
+            )
+            return false
+        }
+    }
+
+    /// Creates a Commerce Checkout for the sponsor's cart and stores the
+    /// resulting `checkoutId` on the SponsorCart in
     /// `cartsBySponsor[sponsorId]`. Required before Apple Pay confirm —
     /// `sdk.payment.applePayConfirm(checkoutId:)` and
     /// `sdk.payment.stripeIntent(checkoutId:)` both need a checkoutId

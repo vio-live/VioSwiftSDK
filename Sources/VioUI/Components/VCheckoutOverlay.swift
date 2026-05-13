@@ -459,7 +459,73 @@ public struct VCheckoutOverlay: View {
                 return
             }
 
-            // 2. Fetch PaymentIntent from Reachu via sponsor's SDK.
+            // 2. PRE-FLIGHT: seed the checkout with email + addresses.
+            //
+            // Commerce's `CreatePaymentIntentStripe` resolver rejects an
+            // empty checkout with the generic 500 `"Payment Stripe not
+            // intent execute: [object Object]"`. Verified via direct
+            // GraphQL probe 2026-05-13 (`/tmp/test-stripe-intent.ts`):
+            // intent over an empty checkout fails, intent after
+            // `updateCheckout(email + shipping + billing)` succeeds with
+            // clientSecret + customer + ephemeral_key.
+            //
+            // ⚠️ TEMPORARY: hardcoded test data, matching the same pattern
+            // the legacy `prepareKlarnaNative` uses at
+            // `VCheckoutOverlay.swift:3147` (hardcoded customer +
+            // address). This unlocks the direct-launch UX for demo
+            // testing today but is NOT production-ready.
+            //
+            // Three paths to remove this hardcode (DIRECT-PAYMENT-LAUNCH-PLAN.md
+            // Fase Pago-2b):
+            //   A. Add a tiny SwiftUI mini-prompt before PaymentSheet
+            //      that collects email + shipping address from the
+            //      user. 1 form added vs current 3-step flow.
+            //   B. Stripe's `AddressElement` native sheet (Stripe-styled
+            //      address-only sheet) before PaymentSheet card-only.
+            //      2 sheets but Stripe-consistent UX.
+            //   C. Coordinate with commerce team to add
+            //      `shipping_address_collection` to the PaymentIntent
+            //      params server-side; then Stripe's PaymentSheet
+            //      collects shipping inline and we don't need pre-flight
+            //      at all (true Apple Pay parity). Tracked as
+            //      Fase Pago-2b in DIRECT-PAYMENT-LAUNCH-PLAN.md.
+            //
+            // Apple Pay doesn't hit this because PassKit returns the
+            // contact via `applePayConfirm`, which Reachu uses to
+            // hydrate the order post-payment. Stripe's PaymentSheet
+            // doesn't have an analogous post-confirm hook — webhook
+            // is the only post-success signal and it skips Vio.
+            let stripeTestAddress: [String: Any] = [
+                "first_name": "John",
+                "last_name": "Doe",
+                "address1": "Test Street 1",
+                "city": "Oslo",
+                "province": "Oslo",
+                "zip": "0150",
+                "country": "Norway",
+                "phone": "+4799999999",
+            ]
+            let updated = await cartManager.updateCheckout(
+                forSponsor: sid,
+                checkoutId: chkId,
+                email: "test@vio.live",
+                shippingAddress: stripeTestAddress,
+                billingAddress: stripeTestAddress
+            )
+            if !updated {
+                errorMessage = "Could not seed checkout for Stripe (pre-flight)"
+                pendingStripeSponsorId = nil
+                VioLogger.error(
+                    "triggerSponsorStripe: pre-flight updateCheckout failed for sponsor \(sid)",
+                    component: "VCheckoutOverlay"
+                )
+                return
+            }
+
+            // 3. Fetch PaymentIntent from commerce via sponsor's SDK.
+            //    Now that the checkout has email + addresses, this call
+            //    should succeed and return clientSecret + customer +
+            //    ephemeral_key.
             guard
                 let dto = await cartManager.stripeIntent(
                     returnEphemeralKey: true,
