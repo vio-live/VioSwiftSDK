@@ -250,10 +250,19 @@ extension CartManager {
             total + (item.price * Double(item.quantity))
         }
 
-        // Recalculate shippingTotal using shipping prices with taxes from items (what customer actually pays)
-        shippingTotal = items.reduce(0) { total, item in
-            total + (item.shippingAmount ?? 0.0)
-        }
+        // UX-2 (2026-05-13): trust the server's consolidated `cart.shipping`
+        // total. Commerce already deduplicates same-supplier same-option
+        // shipping (e.g. 2 items same supplier → ONE shipping fee + tax,
+        // verified via direct GraphQL probe 2026-05-13). The previous
+        // local sum of `item.shippingAmount` double-charged across items
+        // sharing a supplier — visible to the user as "Total shipping
+        // NOK 200" pre-checkout while Commerce was actually charging 100.
+        //
+        // Reading `cart.shipping` (tax-inclusive, server source of truth)
+        // makes the display match the actual charge from address step
+        // onward, removing the need for the checkoutTotals fallback to
+        // "correct" the value once `checkout.create` runs.
+        shippingTotal = cart.shipping
         shippingCurrency =
             items.first(where: { $0.shippingCurrency != nil })?.shippingCurrency
             ?? cart.currency

@@ -771,9 +771,11 @@ extension CartManager {
         sponsorCart.subtotal = mapped.reduce(0.0) { total, item in
             total + (item.price * Double(item.quantity))
         }
-        sponsorCart.shippingTotal = mapped.reduce(0.0) { total, item in
-            total + (item.shippingAmount ?? 0.0)
-        }
+        // UX-2 (2026-05-13): same fix as legacy `sync(from:)` — trust
+        // `cart.shipping` (server-consolidated, tax-inclusive) instead of
+        // summing per-item `shippingAmount`, which double-charges when
+        // multiple items share a supplier + shipping option.
+        sponsorCart.shippingTotal = cart.shipping
         sponsorCart.shippingCurrency = mapped.first(where: { $0.shippingCurrency != nil })?.shippingCurrency ?? cart.currency
     }
 
