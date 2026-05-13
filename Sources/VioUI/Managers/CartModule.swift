@@ -879,23 +879,54 @@ extension CartManager {
         #endif
     }
 
+    /// UX-2 (2026-05-13): groups items by `supplier` before summing so
+    /// same-supplier items don't double-charge shipping. Commerce
+    /// consolidates `cart.shipping` server-side (verified via direct
+    /// GraphQL probe) — this client-side recompute mirrors that
+    /// behaviour for the pre-checkout step views that don't yet have
+    /// `checkoutTotals` to lean on.
+    ///
+    /// Logic: for each supplier in the cart, take the first item's
+    /// `shippingAmount` (Commerce returns the same amount for every
+    /// item in the same supplier group after `cart.updateItem` runs
+    /// against any of them). Items without a supplier identifier fall
+    /// back to per-item summing — degenerate path, shouldn't fire in
+    /// practice since the Reachu schema always sets `supplier`.
+    ///
+    /// `sync(from cart:)` already sets `shippingTotal = cart.shipping`
+    /// directly when a fresh DTO arrives. This recompute is for the
+    /// in-between moments (e.g. user picks a shipping option locally
+    /// before the server round-trip completes).
     internal func recalcShippingTotalsFromItems() {
-        var total: Double = 0.0
+        var perSupplierShipping: [String: Double] = [:]
         var detectedCurrency: String?
+        var orphanItemsSum: Double = 0.0
 
         for item in items {
-            if let amount = item.shippingAmount {
-                total += amount
-            }
             if detectedCurrency == nil,
                 let cur = item.shippingCurrency,
                 !cur.isEmpty
             {
                 detectedCurrency = cur
             }
+
+            guard let amount = item.shippingAmount else { continue }
+
+            if let supplier = item.supplier, !supplier.isEmpty {
+                // Take the first amount we see per supplier. Commerce
+                // returns the same per-item shipping price for items
+                // sharing a supplier + option, so this collapses the
+                // duplicate without losing data.
+                if perSupplierShipping[supplier] == nil {
+                    perSupplierShipping[supplier] = amount
+                }
+            } else {
+                // Items lacking a supplier id keep per-item billing.
+                orphanItemsSum += amount
+            }
         }
 
-        shippingTotal = total
+        shippingTotal = perSupplierShipping.values.reduce(0.0, +) + orphanItemsSum
         shippingCurrency = detectedCurrency ?? currency
     }
 
