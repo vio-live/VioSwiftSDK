@@ -66,8 +66,7 @@ public struct SponsorCheckoutSection: View {
             if sponsorCart.isPaid {
                 paidBanner
             } else {
-                methodPickerRow
-                checkoutButton
+                methodActionButtons
             }
         }
         .padding(VioSpacing.lg)
@@ -284,82 +283,109 @@ public struct SponsorCheckoutSection: View {
         return normalized.filter { seen.insert($0).inserted }
     }
 
-    /// Horizontal scrollable strip of method chips. Tap to select; the
-    /// selection is persisted on the SponsorCart so it survives
-    /// re-renders. Visual lifted from the Claude Design handoff
-    /// (`MethodChips`) — radio dot + brand logo + label.
+    /// UX (2026-05-13): one-tap payment action list. Replaces the
+    /// previous two-step "pick method chip → tap Kasse →" pattern with
+    /// a vertical list of full-width primary buttons, one per backend-
+    /// active method. Tapping a button sets the SponsorCart's
+    /// `selectedPaymentMethod` (so downstream flow controllers can
+    /// branch by method as before) AND immediately dispatches
+    /// `onCheckoutTapped`, removing the need for a separate "Kasse"
+    /// CTA.
+    ///
+    /// Methods come from `sponsor.commerce.paymentMethods` in the
+    /// `/v2/mobile/config` bootstrap response — strictly backend-
+    /// driven. No client-side filtering or hardcoding. If the array
+    /// is empty (visual-only sponsor or misconfigured backend), the
+    /// section renders the noPaymentMethods empty state instead of
+    /// disabled buttons.
     @ViewBuilder
-    private var methodPickerRow: some View {
+    private var methodActionButtons: some View {
         if availableMethods.isEmpty {
-            EmptyView()
+            Text(VLocalizedString(VioTranslationKey.noPaymentMethods.rawValue))
+                .font(VioTypography.body)
+                .foregroundColor(VioColors.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, VioSpacing.md)
         } else {
-            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+            VStack(alignment: .leading, spacing: VioSpacing.sm) {
                 Text(VLocalizedString(VioTranslationKey.paymentMethod.rawValue))
                     .font(VioTypography.caption1.weight(.semibold))
                     .foregroundColor(VioColors.textSecondary)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: VioSpacing.sm) {
-                        ForEach(availableMethods, id: \.self) { method in
-                            methodChip(method)
-                        }
-                    }
-                    .padding(.vertical, 2)
+
+                ForEach(availableMethods, id: \.self) { method in
+                    methodActionButton(method)
                 }
             }
         }
     }
 
+    /// Single-tap action button per payment method. Visually distinct
+    /// from the legacy chip — full-width, 48pt tall, leading icon +
+    /// label + trailing chevron — to read as a primary CTA.
     @ViewBuilder
-    private func methodChip(_ method: String) -> some View {
-        let isSelected = sponsorCart.selectedPaymentMethod == method
+    private func methodActionButton(_ method: String) -> some View {
         Button {
             cartManager.setSelectedPaymentMethod(method, forSponsor: sponsorCart.sponsorId)
+            onCheckoutTapped()
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: VioSpacing.sm) {
                 methodIcon(method)
                 Text(methodLabel(method))
-                    .font(VioTypography.caption1.weight(.semibold))
-                    .foregroundColor(isSelected ? VioColors.textPrimary : VioColors.textSecondary)
+                    .font(VioTypography.body.weight(.semibold))
+                    .foregroundColor(VioColors.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(VioColors.textSecondary)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, VioSpacing.md)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
             .background(
-                Capsule()
-                    .fill(isSelected ? VioColors.primary.opacity(0.18) : Color.white.opacity(0.04))
+                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                    .fill(VioColors.surfaceSecondary)
             )
             .overlay(
-                Capsule()
-                    .stroke(isSelected ? VioColors.primary : VioColors.border, lineWidth: 1)
+                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                    .stroke(VioColors.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(
+            "\(VLocalizedString(VioTranslationKey.checkout.rawValue)) \(sponsorName) \(methodLabel(method))"
+        )
     }
 
     @ViewBuilder
     private func methodIcon(_ method: String) -> some View {
-        // Brand-correct mark per method, sized to fit a 16pt chip line.
-        // Designs can be polished later — these are minimal placeholders
-        // matching the Claude Design output.
+        // Brand-correct mark per method. Sized for the 48pt action
+        // button row — bigger than the legacy chip variant.
         switch method {
         case "apple", "applepay":
             Image(systemName: "applelogo")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(VioColors.textPrimary)
         case "klarna":
             Text("K.")
-                .font(.system(size: 11, weight: .black))
+                .font(.system(size: 14, weight: .black))
                 .foregroundColor(Color(red: 1.0, green: 0.66, blue: 0.8))
         case "vipps":
             Text("V")
-                .font(.system(size: 11, weight: .black))
+                .font(.system(size: 14, weight: .black))
                 .foregroundColor(Color(red: 1.0, green: 0.36, blue: 0.14))
-        case "stripe":
+        case "stripe", "stripelink":
             Image(systemName: "creditcard.fill")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Color(red: 0.39, green: 0.36, blue: 1.0))
+        case "googlepay":
+            // Generic placeholder — Google branding requires asset
+            // licensing not currently bundled. Card glyph for now.
+            Image(systemName: "creditcard")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(VioColors.textPrimary)
         default:
             Image(systemName: "creditcard")
-                .font(.system(size: 11))
+                .font(.system(size: 14))
                 .foregroundColor(VioColors.textSecondary)
         }
     }
@@ -370,44 +396,10 @@ public struct SponsorCheckoutSection: View {
         case "klarna": return "Klarna"
         case "vipps": return "Vipps"
         case "stripe": return "Card"
+        case "stripelink": return "Card"
+        case "googlepay": return "Google Pay"
         default: return method.capitalized
         }
-    }
-
-    // MARK: - Checkout button (Q4 L4)
-
-    /// Big primary "Checkout" button. Disabled until a payment method
-    /// is picked. Hands off to the parent flow controller via
-    /// `onCheckoutTapped` — this section never touches the SDK
-    /// directly anymore (Q4 L3's per-section Apple Pay button is gone).
-    private var checkoutButton: some View {
-        Button {
-            onCheckoutTapped()
-        } label: {
-            HStack(spacing: 6) {
-                Text(VLocalizedString(VioTranslationKey.checkout.rawValue))
-                    .font(VioTypography.body.weight(.semibold))
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 12, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(
-                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
-                    .fill(sponsorCart.selectedPaymentMethod != nil ? VioColors.primary : VioColors.primary.opacity(0.35))
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(sponsorCart.selectedPaymentMethod == nil)
-        .accessibilityLabel(checkoutAccessibilityLabel)
-    }
-
-    private var checkoutAccessibilityLabel: String {
-        if let method = sponsorCart.selectedPaymentMethod {
-            return "\(VLocalizedString(VioTranslationKey.checkout.rawValue)) \(sponsorName) \(methodLabel(method))"
-        }
-        return VLocalizedString(VioTranslationKey.selectPaymentMethod.rawValue)
     }
 
     // MARK: - Paid banner (Q4 L4)
