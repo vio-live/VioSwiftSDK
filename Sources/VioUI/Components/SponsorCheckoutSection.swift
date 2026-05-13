@@ -320,8 +320,11 @@ public struct SponsorCheckoutSection: View {
     }
 
     /// Single-tap action button per payment method. Visually distinct
-    /// from the legacy chip — full-width, 48pt tall, leading icon +
-    /// label + trailing chevron — to read as a primary CTA.
+    /// from the legacy chip — full-width, primary CTA height, leading
+    /// icon + label + trailing chevron.
+    ///
+    /// All font sizes use `VioTypography` tokens so the button scales
+    /// with the host's design-system configuration (no hardcoded points).
     @ViewBuilder
     private func methodActionButton(_ method: String) -> some View {
         Button {
@@ -331,16 +334,16 @@ public struct SponsorCheckoutSection: View {
             HStack(spacing: VioSpacing.sm) {
                 methodIcon(method)
                 Text(methodLabel(method))
-                    .font(VioTypography.body.weight(.semibold))
+                    .font(VioTypography.bodyBold)
                     .foregroundColor(VioColors.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(VioTypography.footnote.weight(.semibold))
                     .foregroundColor(VioColors.textSecondary)
             }
             .padding(.horizontal, VioSpacing.md)
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .padding(.vertical, VioSpacing.md)
             .background(
                 RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                     .fill(VioColors.surfaceSecondary)
@@ -358,34 +361,38 @@ public struct SponsorCheckoutSection: View {
 
     @ViewBuilder
     private func methodIcon(_ method: String) -> some View {
-        // Brand-correct mark per method. Sized for the 48pt action
-        // button row — bigger than the legacy chip variant.
+        // Brand mark per method, sized via `VioTypography` so it
+        // tracks the label scale and any host-side Dynamic Type
+        // settings. Brand colors are still literal because they
+        // are part of the payment-network identity, not the host
+        // theme — Apple Pay logo is black/white, Klarna is pink,
+        // Vipps is orange, Stripe is purple-ish.
         switch method {
         case "apple", "applepay":
             Image(systemName: "applelogo")
-                .font(.system(size: 16, weight: .semibold))
+                .font(VioTypography.bodyBold)
                 .foregroundColor(VioColors.textPrimary)
         case "klarna":
             Text("K.")
-                .font(.system(size: 14, weight: .black))
+                .font(VioTypography.bodyBold)
                 .foregroundColor(Color(red: 1.0, green: 0.66, blue: 0.8))
         case "vipps":
             Text("V")
-                .font(.system(size: 14, weight: .black))
+                .font(VioTypography.bodyBold)
                 .foregroundColor(Color(red: 1.0, green: 0.36, blue: 0.14))
         case "stripe", "stripelink":
             Image(systemName: "creditcard.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(VioTypography.bodyBold)
                 .foregroundColor(Color(red: 0.39, green: 0.36, blue: 1.0))
         case "googlepay":
             // Generic placeholder — Google branding requires asset
             // licensing not currently bundled. Card glyph for now.
             Image(systemName: "creditcard")
-                .font(.system(size: 14, weight: .semibold))
+                .font(VioTypography.bodyBold)
                 .foregroundColor(VioColors.textPrimary)
         default:
             Image(systemName: "creditcard")
-                .font(.system(size: 14))
+                .font(VioTypography.body)
                 .foregroundColor(VioColors.textSecondary)
         }
     }
