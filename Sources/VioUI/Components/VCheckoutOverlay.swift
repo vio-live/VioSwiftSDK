@@ -712,6 +712,7 @@ public struct VCheckoutOverlay: View {
                 // Clean up timer when view disappears
                 stopVippsRetryTimer()
             }
+            .modifier(CheckoutSheetTranslucentBackground())
             .overlay {
             if isLoading {
                 loadingOverlay
@@ -4866,6 +4867,39 @@ struct CountryPicker: View {
                 RoundedRectangle(cornerRadius: VioBorderRadius.medium)
                     .stroke(VioColors.border, lineWidth: 1)
             )
+        }
+    }
+}
+
+// MARK: - Sheet translucent background (iOS 16.4+)
+
+/// Replaces the default opaque sheet background with a translucent
+/// frosted-glass layer: `ultraThinMaterial` (system blur of whatever
+/// content is behind the sheet) tinted with `VioColors.background` at
+/// 40% opacity (white in light theme, dark in dark theme, follows the
+/// SDK's `theme.mode` config).
+///
+/// CSS equivalent the user asked to mirror:
+/// ```
+/// background-color: rgba(255, 255, 255, 0.4);  /* tint */
+/// backdrop-filter: blur(5px);                  /* blur backdrop */
+/// ```
+///
+/// Falls back to the system default (opaque sheet) on iOS < 16.4 /
+/// macOS < 13.3 / tvOS < 16.4 / watchOS < 9.4 — those platforms don't
+/// have the `presentationBackground(_ content:)` API.
+private struct CheckoutSheetTranslucentBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 16.4, macOS 13.3, tvOS 16.4, watchOS 9.4, *) {
+            content.presentationBackground {
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    VioColors.background.opacity(0.4)
+                }
+                .ignoresSafeArea()
+            }
+        } else {
+            content
         }
     }
 }
