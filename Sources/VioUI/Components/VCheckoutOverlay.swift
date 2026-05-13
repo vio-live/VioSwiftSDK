@@ -359,15 +359,20 @@ public struct VCheckoutOverlay: View {
             // Fase Pago-1.1: direct PaymentSheet launch — skip step flow,
             // Stripe SDK collects billing/email/phone/name in-sheet.
             triggerSponsorStripe(sponsorCart)
+        case "klarna":
+            // Fase Pago-1.2: direct Klarna webview launch — skip step
+            // flow, Klarna SDK collects everything (name, email, phone,
+            // billing + shipping address) in its multi-step webview.
+            triggerSponsorKlarna(sponsorCart)
         default:
             cartManager.enterSponsorCheckoutScope(sponsorCart.sponsorId)
             // Default the orderSummary step's selected method picker to
-            // the one chosen in the cart section (Klarna / Vipps).
-            // PaymentMethod enum cases mirror our string keys. Stripe
-            // no longer routes here (handled above by triggerSponsorStripe).
+            // the one chosen in the cart section. PaymentMethod enum
+            // cases mirror our string keys. Apple Pay / Stripe / Klarna
+            // no longer route here — only fallback methods (e.g. Vipps,
+            // future methods we haven't wired direct-launch for yet)
+            // still go through the step flow.
             switch method {
-            case "klarna":
-                selectedPaymentMethod = .klarna
             case "vipps":
                 selectedPaymentMethod = .vipps
             default:
@@ -520,6 +525,169 @@ public struct VCheckoutOverlay: View {
         }
         #endif
     }
+
+    /// Tracks which sponsor's cart triggered the most-recent Klarna
+    /// direct-launch flow. Used by the existing
+    /// `HiddenKlarnaAutoAuthorize.onAuthorized` block to branch into the
+    /// minimal-confirm path (vs the legacy form-driven path which reads
+    /// firstName/email/address1/etc from this view's state).
+    @State private var pendingKlarnaSponsorId: Int? = nil
+
+    /// Fase Pago-1.2 (2026-05-13): direct-launch Klarna native sheet
+    /// from the cart action button — no step flow, no address form.
+    /// Mirrors `triggerSponsorApplePay` / `triggerSponsorStripe`.
+    ///
+    /// Klarna's webview collects name, email, phone, billing address
+    /// and shipping address internally (Klarna's UX is designed for
+    /// this — it asks the user inside its own multi-step flow). We
+    /// just need country / currency / locale to initialize.
+    ///
+    /// The corresponding confirm call sends `customer: nil`,
+    /// `billingAddress: nil`, `shippingAddress: nil` — Reachu's
+    /// `ConfirmKlarnaNative` resolver is expected to extract those
+    /// from the Klarna API response server-side (same way Apple Pay
+    /// flows shippingContact from the PassKit token). If it doesn't,
+    /// the resulting order will lack address → Fase Pago-2 catches
+    /// that and coordinates with Reachu.
+    private func triggerSponsorKlarna(_ sponsorCart: CartManager.SponsorCart) {
+        #if os(iOS) && canImport(KlarnaMobileSDK)
+        let sid = sponsorCart.sponsorId
+        pendingKlarnaSponsorId = sid
+        Task { @MainActor in
+            // 1. Ensure checkout exists for this sponsor cart.
+            let checkoutId: String?
+            if let existing = sponsorCart.checkoutId, !existing.isEmpty {
+                checkoutId = existing
+            } else {
+                checkoutId = await cartManager.createCheckout(forSponsor: sid)
+            }
+            guard let chkId = checkoutId, !chkId.isEmpty else {
+                errorMessage = "Could not create checkout for Klarna payment"
+                pendingKlarnaSponsorId = nil
+                VioLogger.error(
+                    "triggerSponsorKlarna: missing checkoutId for sponsor \(sid)",
+                    component: "VCheckoutOverlay"
+                )
+                return
+            }
+
+            // 2. Minimal init — all customer / address fields nil so
+            //    Klarna's webview prompts the user.
+            let resolvedCountry =
+                cartManager.selectedMarket?.code
+                ?? sponsorCart.country
+            let resolvedCurrency =
+                cartManager.selectedMarket?.currencyCode
+                ?? sponsorCart.currency
+            let input = KlarnaNativeInitInputDto(
+                countryCode: resolvedCountry,
+                currency: resolvedCurrency,
+                locale: klarnaLocaleFor(country: resolvedCountry),
+                intent: "buy",
+                autoCapture: true
+                // customer / billingAddress / shippingAddress = nil
+            )
+
+            // 3. Call init via sponsor's SDK.
+            guard
+                let dto = await cartManager.initKlarnaNative(
+                    input: input,
+                    sponsorId: sid
+                )
+            else {
+                errorMessage = "Could not initialize Klarna"
+                pendingKlarnaSponsorId = nil
+                return
+            }
+
+            // 4. Set up state for HiddenKlarnaAutoAuthorize to fire.
+            //    Picks the first available payment method category.
+            let categories = dto.paymentMethodCategories ?? []
+            guard let firstCategory = categories.first else {
+                errorMessage = "No Klarna payment methods available"
+                pendingKlarnaSponsorId = nil
+                return
+            }
+            klarnaAvailableCategories = categories
+            klarnaSelectedCategoryIdentifier = firstCategory.identifier
+            klarnaNativeInitData = dto
+            klarnaAutoAuthorize = true
+            // The body's HiddenKlarnaAutoAuthorize view reacts to the
+            // state changes and triggers Klarna's authorize webview.
+            // Result lands in the existing onAuthorized block which
+            // branches on pendingKlarnaSponsorId.
+        }
+        #endif
+    }
+
+    /// Maps an ISO country code to a Klarna-supported locale tag.
+    /// Klarna requires `<lang>-<country>` format. Falls back to
+    /// English in the country code's region.
+    private func klarnaLocaleFor(country: String) -> String {
+        switch country.uppercased() {
+        case "NO": return "nb-NO"
+        case "SE": return "sv-SE"
+        case "DK": return "da-DK"
+        case "FI": return "fi-FI"
+        case "DE": return "de-DE"
+        case "AT": return "de-AT"
+        case "NL": return "nl-NL"
+        case "GB", "UK": return "en-GB"
+        case "US": return "en-US"
+        default: return "en-\(country.uppercased())"
+        }
+    }
+
+    #if os(iOS) && canImport(KlarnaMobileSDK)
+    /// Confirm handler for Klarna direct-launch flow (separate from the
+    /// legacy form-based path in `HiddenKlarnaAutoAuthorize.onAuthorized`).
+    /// Sends nil customer/address — Reachu+Klarna handle that server-side.
+    private func handleSponsorKlarnaAuthorized(
+        authToken: String,
+        sponsorId sid: Int
+    ) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        klarnaAutoAuthorize = false
+
+        guard
+            let result = await cartManager.confirmKlarnaNative(
+                authorizationToken: authToken,
+                autoCapture: true,
+                customer: nil,
+                billingAddress: nil,
+                shippingAddress: nil,
+                sponsorId: sid
+            )
+        else {
+            VioLogger.error(
+                "Sponsor Klarna confirm failed for sponsor \(sid)",
+                component: "VCheckoutOverlay"
+            )
+            errorMessage = "Failed to confirm Klarna payment"
+            pendingKlarnaSponsorId = nil
+            klarnaNativeInitData = nil
+            return
+        }
+
+        VioLogger.success(
+            "Sponsor Klarna paid: sponsorId=\(sid) orderId=\(result.orderId)",
+            component: "VCheckoutOverlay"
+        )
+
+        pendingKlarnaSponsorId = nil
+        klarnaNativeInitData = nil
+
+        cartManager.markSponsorCartPaid(sid)
+        await cartManager.clearCart(forSponsor: sid)
+
+        let remaining = cartManager.cartsBySponsor.values.filter { !$0.isPaid }
+        if remaining.isEmpty {
+            cartManager.hideCheckout()
+        }
+    }
+    #endif
 
     #if os(iOS)
     /// Result handler for `triggerSponsorStripe`. Mirrors the Apple Pay
@@ -977,11 +1145,29 @@ public struct VCheckoutOverlay: View {
                             VioLogger.debug("Step 5: Usuario autorizó el pago en Klarna", component: "VCheckoutOverlay")
                             VioLogger.debug("AuthToken (primeros 20): \(authToken.prefix(20))...", component: "VCheckoutOverlay")
                             VioLogger.debug("FinalizeRequired: \(finalizeRequired)", component: "VCheckoutOverlay")
+
+                            // Fase Pago-1.2 (2026-05-13): if this auth
+                            // event came from `triggerSponsorKlarna`
+                            // (direct launch from cart, no step flow),
+                            // route to the minimal-confirm handler that
+                            // sends nil customer/addresses — Klarna's
+                            // webview already collected them, Reachu
+                            // extracts from the Klarna response
+                            // server-side. Otherwise fall through to
+                            // the legacy form-driven path below.
+                            if let sid = pendingKlarnaSponsorId {
+                                await handleSponsorKlarnaAuthorized(
+                                    authToken: authToken,
+                                    sponsorId: sid
+                                )
+                                return
+                            }
+
                             VioLogger.debug("Step 6: Llamando a backend para confirmar pago", component: "VCheckoutOverlay")
-                            
+
                             isLoading = true
                             klarnaAutoAuthorize = false
-                            
+
                             // Build input for confirm
                             let customer = KlarnaNativeCustomerInputDto(
                                 email: email,
