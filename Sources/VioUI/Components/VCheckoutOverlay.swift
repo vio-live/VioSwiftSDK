@@ -1215,7 +1215,92 @@ public struct VCheckoutOverlay: View {
                         await loadCheckoutTotals()
 
                         isLoading = false
+
+                        // Sprint feat/skip-ordersummary-after-address
+                        // (2026-05-14): fire the payment method directly
+                        // instead of advancing to `.orderSummary`.
+                        //
+                        // **Why**: in the multi-sponsor flow on align,
+                        // the 4-button method picker in
+                        // `SponsorCheckoutSection` already captured the
+                        // user's payment intent BEFORE this step (the
+                        // user tapped "Card" / "Klarna" / "Vipps" in
+                        // the cart, which set `sponsorCart.selectedPaymentMethod`
+                        // and called `handleSponsorCheckoutTap` →
+                        // `enterSponsorCheckoutScope` +
+                        // `selectedPaymentMethod = .stripe/.klarna/.vipps`
+                        // + `checkoutStep = .address`). After the user
+                        // fills the address form, going to
+                        // `orderSummaryStepView` only to ask them to
+                        // pick the method AGAIN (with a "Start betaling"
+                        // button) was the redundant step user feedback
+                        // 2026-05-14 flagged: "deberiamos ir directo a
+                        // stripe si el usuario ya lleno su info".
+                        //
+                        // For each method we reuse the existing direct-
+                        // launch triggers (the same ones that fired from
+                        // `orderSummaryStepView`'s "Initiate Payment"
+                        // button):
+                        //   • Stripe → `prepareStripePaymentSheet()` +
+                        //     `presentStripePaymentSheet()` (already
+                        //     sponsor-aware via `resolvePaymentTarget`
+                        //     reading `cartManager.activeCheckoutSponsorId`
+                        //     — Q4 L4 commit 633b6ce).
+                        //   • Klarna → `initiateKlarnaDirectFlow()`
+                        //     (sponsor-aware: passes
+                        //     `cartManager.activeCheckoutSponsorId` into
+                        //     `initKlarnaNative`).
+                        //   • Vipps → `initiateVippsFlow()` (same
+                        //     sponsor-aware pattern via
+                        //     `activeCheckoutSponsorId`).
+                        //
+                        // **Cancel paths**: each trigger already handles
+                        // user dismissal — Stripe sets
+                        // `checkoutStep = .orderSummary` on cancel,
+                        // which means a cancelled Stripe sheet drops
+                        // the user on the orderSummary screen where they
+                        // can switch method. Acceptable escape-hatch UX.
+                        //
+                        // **Legacy single-cart** (no sponsor cart, no
+                        // 4-button picker): `selectedPaymentMethod`
+                        // stays at its default `.stripe`, so the user
+                        // goes straight to PaymentSheet. To use Klarna /
+                        // Vipps they would need to cancel out and select
+                        // via `orderSummaryStepView`'s picker — minor
+                        // friction for the legacy single-cart edge case.
+                        //
+                        // **Non-iOS**: `prepareStripePaymentSheet` and
+                        // friends are #if-iOS, so the macOS / tvOS /
+                        // watchOS build falls through to the legacy
+                        // step flow (`proceedToNext`) where host code
+                        // can wire its own surface.
+                        #if os(iOS)
+                        switch selectedPaymentMethod {
+                        case .stripe:
+                            print("🟣 [Q4-DIAG addressStep direct-pay] STRIPE → prepareStripePaymentSheet (sponsorId=\(cartManager.activeCheckoutSponsorId.map(String.init) ?? "nil"))")
+                            isLoading = true
+                            let ok = await prepareStripePaymentSheet()
+                            isLoading = false
+                            if ok {
+                                shouldPresentStripeSheet = true
+                                presentStripePaymentSheet()
+                            } else {
+                                VioLogger.error(
+                                    "addressStep direct-pay STRIPE: prepareStripePaymentSheet failed",
+                                    component: "VCheckoutOverlay"
+                                )
+                                checkoutStep = .error
+                            }
+                        case .klarna:
+                            print("🟣 [Q4-DIAG addressStep direct-pay] KLARNA → initiateKlarnaDirectFlow (sponsorId=\(cartManager.activeCheckoutSponsorId.map(String.init) ?? "nil"))")
+                            await initiateKlarnaDirectFlow()
+                        case .vipps:
+                            print("🟣 [Q4-DIAG addressStep direct-pay] VIPPS → initiateVippsFlow (sponsorId=\(cartManager.activeCheckoutSponsorId.map(String.init) ?? "nil"))")
+                            await initiateVippsFlow()
+                        }
+                        #else
                         proceedToNext()
+                        #endif
 
                     }
                 }) {
