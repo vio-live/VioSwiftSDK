@@ -297,7 +297,14 @@ public struct VCheckoutOverlay: View {
                 }
                 .padding(VioSpacing.md)
             }
-            .background(VioColors.background)
+            // UX (2026-05-13): let the sheet's translucent
+            // `presentationBackground` (frosted glass + theme tint) show
+            // through the ScrollView. The sponsor section cards keep
+            // their own near-opaque surface so items stay readable; the
+            // gaps between cards reveal the blur of whatever was behind
+            // the cart before it opened.
+            .modifier(HiddenScrollContentBackground())
+            .background(Color.clear)
             .navigationTitle(VLocalizedString(VioTranslationKey.cart.rawValue))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
@@ -4898,6 +4905,20 @@ private struct CheckoutSheetTranslucentBackground: ViewModifier {
                 }
                 .ignoresSafeArea()
             }
+        } else {
+            content
+        }
+    }
+}
+
+/// Hides the default system background of `ScrollView` / `List` so the
+/// sheet's `presentationBackground` (frosted glass + tint) shows through
+/// the scroll area. iOS 16+ — older platforms keep the default opaque
+/// scroll chrome.
+private struct HiddenScrollContentBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
+            content.scrollContentBackground(.hidden)
         } else {
             content
         }
