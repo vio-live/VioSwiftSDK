@@ -637,8 +637,22 @@ public struct VCheckoutOverlay: View {
                 return
             }
 
-            // 2. Minimal init — all customer / address fields nil so
-            //    Klarna's webview prompts the user.
+            // 2. Minimal init — most customer / address fields nil so
+            //    Klarna's webview prompts the user. The ONE non-obvious
+            //    required field is `returnUrl` — Klarna API rejects the
+            //    init without it (generic 500 "Payment Klarna Native not
+            //    initialized: [object Object]" from commerce that hides
+            //    the actual Klarna error). The Vio DTO marks it as
+            //    optional but Klarna's own validation requires it for
+            //    the in-app flow. Verified via direct GraphQL probe
+            //    (`/tmp/test-klarna-returnurl.ts` 2026-05-13): all 5
+            //    test variations including legacy shape failed without
+            //    return_url, all 5 succeeded once `return_url` was
+            //    added.
+            //
+            //    The legacy `prepareKlarnaNative` does pass it (line
+            //    2859: `returnUrl: klarnaSuccessURLString`), which is
+            //    why the legacy flow worked.
             let resolvedCountry =
                 cartManager.selectedMarket?.code
                 ?? sponsorCart.country
@@ -649,9 +663,11 @@ public struct VCheckoutOverlay: View {
                 countryCode: resolvedCountry,
                 currency: resolvedCurrency,
                 locale: klarnaLocaleFor(country: resolvedCountry),
+                returnUrl: klarnaSuccessURLString,
                 intent: "buy",
                 autoCapture: true
                 // customer / billingAddress / shippingAddress = nil
+                // → Klarna webview will prompt for them
             )
 
             // 3. Call init via sponsor's SDK.
