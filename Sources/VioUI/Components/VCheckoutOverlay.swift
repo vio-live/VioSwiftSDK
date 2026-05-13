@@ -354,16 +354,27 @@ public struct VCheckoutOverlay: View {
         let method = raw.lowercased().replacingOccurrences(of: "_", with: "").replacingOccurrences(of: " ", with: "")
         switch method {
         case "apple", "applepay":
+            // Apple Pay collects everything inside PassKit — no prefill
+            // sheet needed. PKContact returns email + shipping + billing
+            // and applePayConfirm carries them to commerce.
             triggerSponsorApplePay(sponsorCart)
-        case "stripe", "stripelink":
-            // Fase Pago-1.1: direct PaymentSheet launch — skip step flow,
-            // Stripe SDK collects billing/email/phone/name in-sheet.
-            triggerSponsorStripe(sponsorCart)
-        case "klarna":
-            // Fase Pago-1.2: direct Klarna webview launch — skip step
-            // flow, Klarna SDK collects everything (name, email, phone,
-            // billing + shipping address) in its multi-step webview.
-            triggerSponsorKlarna(sponsorCart)
+        case "stripe", "stripelink", "klarna":
+            // Fase Pago-2b: present the minimal email + postal_code
+            // prefill sheet before launching the direct-launch flow.
+            // Commerce's `CreatePaymentIntentStripe` /
+            // `CreatePaymentKlarnaNative` resolvers both require
+            // pre-populated checkout data (proven empirically in
+            // /tmp/test-stripe-intent.ts + /tmp/test-klarna-noprep.ts
+            // 2026-05-13). Klarna additionally uses email + postcode +
+            // country for prequalification of payment methods inside
+            // the webview. Sheet captures real user input — replaces
+            // the hardcoded "John Doe" test data from Fase Pago-1.1b /
+            // 1.2b. Country comes from selectedMarket so the sheet
+            // only asks for 2 fields.
+            pendingPrefillLaunch = PendingPrefillLaunch(
+                sponsorCart: sponsorCart,
+                method: method
+            )
         default:
             cartManager.enterSponsorCheckoutScope(sponsorCart.sponsorId)
             // Default the orderSummary step's selected method picker to
@@ -379,6 +390,51 @@ public struct VCheckoutOverlay: View {
                 break
             }
             checkoutStep = .address
+        }
+    }
+
+    /// Identifiable wrapper so we can drive the prefill sheet via
+    /// `.sheet(item:)`. Holds the sponsor cart + method that the user
+    /// tapped, so the sheet's onSubmit callback can dispatch to the
+    /// correct trigger function with both pieces of context.
+    private struct PendingPrefillLaunch: Identifiable {
+        let id = UUID()
+        let sponsorCart: CartManager.SponsorCart
+        let method: String  // normalized: "stripe", "stripelink", "klarna"
+    }
+
+    @State private var pendingPrefillLaunch: PendingPrefillLaunch? = nil
+
+    /// Cached email + postal_code from the user's most recent submission
+    /// in this overlay's lifetime. Pre-fills the sheet on subsequent
+    /// taps in the same session so the user doesn't re-type. Persisted
+    /// to UserDefaults in a follow-up (Fase Pago-2b/A5).
+    @State private var cachedPrefillEmail: String = ""
+    @State private var cachedPrefillPostalCode: String = ""
+
+    /// Sheet → trigger dispatcher. Called when the user submits the
+    /// prefill sheet with valid email + postal_code. Mirrors the cart's
+    /// existing method dispatch but with the prefill data threaded
+    /// through so the trigger functions can seed the checkout via
+    /// `updateCheckout` and (for Klarna) the init input.
+    private func dispatchDirectLaunch(
+        for pending: PendingPrefillLaunch,
+        prefill: VPaymentPrefillData
+    ) {
+        // Cache for next tap in this overlay's lifetime.
+        cachedPrefillEmail = prefill.email
+        cachedPrefillPostalCode = prefill.postalCode
+
+        switch pending.method {
+        case "stripe", "stripelink":
+            triggerSponsorStripe(pending.sponsorCart, prefill: prefill)
+        case "klarna":
+            triggerSponsorKlarna(pending.sponsorCart, prefill: prefill)
+        default:
+            VioLogger.warning(
+                "dispatchDirectLaunch: unknown method '\(pending.method)' — dropping",
+                component: "VCheckoutOverlay"
+            )
         }
     }
 
@@ -437,7 +493,10 @@ public struct VCheckoutOverlay: View {
     ///   5. Result handler → `handleSponsorStripeResult`.
     ///
     /// User never sees `addressStepView` or `orderSummaryStepView`.
-    private func triggerSponsorStripe(_ sponsorCart: CartManager.SponsorCart) {
+    private func triggerSponsorStripe(
+        _ sponsorCart: CartManager.SponsorCart,
+        prefill: VPaymentPrefillData
+    ) {
         #if os(iOS)
         let sid = sponsorCart.sponsorId
         pendingStripeSponsorId = sid
@@ -462,55 +521,31 @@ public struct VCheckoutOverlay: View {
             // 2. PRE-FLIGHT: seed the checkout with email + addresses.
             //
             // Commerce's `CreatePaymentIntentStripe` resolver rejects an
-            // empty checkout with the generic 500 `"Payment Stripe not
-            // intent execute: [object Object]"`. Verified via direct
-            // GraphQL probe 2026-05-13 (`/tmp/test-stripe-intent.ts`):
-            // intent over an empty checkout fails, intent after
-            // `updateCheckout(email + shipping + billing)` succeeds with
-            // clientSecret + customer + ephemeral_key.
+            // empty checkout with the generic 500 "Payment Stripe not
+            // intent execute: [object Object]" (verified
+            // `/tmp/test-stripe-intent.ts` 2026-05-13). Address values
+            // come from `VPaymentPrefillSheet` — Fase Pago-2b/A2 —
+            // which collected email + postal_code from the user before
+            // this trigger fired. Country comes from selectedMarket
+            // (already known from the cart context).
             //
-            // ⚠️ TEMPORARY: hardcoded test data, matching the same pattern
-            // the legacy `prepareKlarnaNative` uses at
-            // `VCheckoutOverlay.swift:3147` (hardcoded customer +
-            // address). This unlocks the direct-launch UX for demo
-            // testing today but is NOT production-ready.
-            //
-            // Three paths to remove this hardcode (DIRECT-PAYMENT-LAUNCH-PLAN.md
-            // Fase Pago-2b):
-            //   A. Add a tiny SwiftUI mini-prompt before PaymentSheet
-            //      that collects email + shipping address from the
-            //      user. 1 form added vs current 3-step flow.
-            //   B. Stripe's `AddressElement` native sheet (Stripe-styled
-            //      address-only sheet) before PaymentSheet card-only.
-            //      2 sheets but Stripe-consistent UX.
-            //   C. Coordinate with commerce team to add
-            //      `shipping_address_collection` to the PaymentIntent
-            //      params server-side; then Stripe's PaymentSheet
-            //      collects shipping inline and we don't need pre-flight
-            //      at all (true Apple Pay parity). Tracked as
-            //      Fase Pago-2b in DIRECT-PAYMENT-LAUNCH-PLAN.md.
-            //
-            // Apple Pay doesn't hit this because PassKit returns the
-            // contact via `applePayConfirm`, which Reachu uses to
-            // hydrate the order post-payment. Stripe's PaymentSheet
-            // doesn't have an analogous post-confirm hook — webhook
-            // is the only post-success signal and it skips Vio.
-            let stripeTestAddress: [String: Any] = [
-                "first_name": "John",
-                "last_name": "Doe",
-                "address1": "Test Street 1",
-                "city": "Oslo",
-                "province": "Oslo",
-                "zip": "0150",
-                "country": "Norway",
-                "phone": "+4799999999",
+            // The bisect (`/tmp/test-minimal-address.ts` 2026-05-13)
+            // confirmed that commerce accepts shipping/billing objects
+            // with ONLY `zip + country` — the resolver checks for
+            // presence of the address structs, not their contents.
+            // Empty `{}` even passes, but populating zip + country
+            // gives Stripe useful pre-fill for the billing collection
+            // inside PaymentSheet.
+            let prefillAddress: [String: Any] = [
+                "zip": prefill.postalCode,
+                "country": prefill.country,
             ]
             let updated = await cartManager.updateCheckout(
                 forSponsor: sid,
                 checkoutId: chkId,
-                email: "test@vio.live",
-                shippingAddress: stripeTestAddress,
-                billingAddress: stripeTestAddress
+                email: prefill.email,
+                shippingAddress: prefillAddress,
+                billingAddress: prefillAddress
             )
             if !updated {
                 errorMessage = "Could not seed checkout for Stripe (pre-flight)"
@@ -615,7 +650,10 @@ public struct VCheckoutOverlay: View {
     /// flows shippingContact from the PassKit token). If it doesn't,
     /// the resulting order will lack address → Fase Pago-2 catches
     /// that and coordinates with Reachu.
-    private func triggerSponsorKlarna(_ sponsorCart: CartManager.SponsorCart) {
+    private func triggerSponsorKlarna(
+        _ sponsorCart: CartManager.SponsorCart,
+        prefill: VPaymentPrefillData
+    ) {
         #if os(iOS) && canImport(KlarnaMobileSDK)
         let sid = sponsorCart.sponsorId
         pendingKlarnaSponsorId = sid
@@ -638,38 +676,31 @@ public struct VCheckoutOverlay: View {
             }
 
             // 2. PRE-FLIGHT: seed the checkout with email + addresses
-            //    (same as `triggerSponsorStripe` does — see Fase Pago-1.1b
-            //    commit 18d763c). Commerce's `CreatePaymentKlarnaNative`
-            //    resolver requires this for the same reason Stripe does:
-            //    Klarna API expects the checkout to have customer data
-            //    before init.
+            //    (same as `triggerSponsorStripe`). Commerce's
+            //    `CreatePaymentKlarnaNative` resolver requires the
+            //    checkout to have customer data before Klarna's API
+            //    init can succeed (verified `/tmp/test-klarna-noprep.ts`
+            //    2026-05-13: without pre-update both Elkjøp + Torshov
+            //    fail with "not initialized [object Object]", with
+            //    pre-update both succeed with token len 1762).
             //
-            //    Verified via direct GraphQL probe 2026-05-13
-            //    (`/tmp/test-klarna-noprep.ts`):
-            //      Without pre-update → both Elkjøp + Torshov fail with
-            //                           "not initialized [object Object]"
-            //      With pre-update    → both succeed with token len 1762
-            //
-            //    ⚠️ TEMPORARY: hardcoded test data — same caveat as the
-            //    Stripe pre-flight. The 3 remediation paths (A/B/C) in
-            //    DIRECT-PAYMENT-LAUNCH-PLAN.md Fase Pago-2b apply to both
-            //    methods symmetrically.
-            let klarnaTestAddress: [String: Any] = [
-                "first_name": "John",
-                "last_name": "Doe",
-                "address1": "Test Street 1",
-                "city": "Oslo",
-                "province": "Oslo",
-                "zip": "0150",
-                "country": "Norway",
-                "phone": "+4799999999",
+            //    Address values come from `VPaymentPrefillSheet`
+            //    (Fase Pago-2b/A3) — real user input. Country resolved
+            //    from selectedMarket per the trigger's market context.
+            //    Klarna API officially says all customer fields are
+            //    optional for session create, but commerce requires
+            //    them present — bug in our resolver that's tracked for
+            //    follow-up cleanup with the commerce team.
+            let prefillAddress: [String: Any] = [
+                "zip": prefill.postalCode,
+                "country": prefill.country,
             ]
             let updated = await cartManager.updateCheckout(
                 forSponsor: sid,
                 checkoutId: chkId,
-                email: "test@vio.live",
-                shippingAddress: klarnaTestAddress,
-                billingAddress: klarnaTestAddress
+                email: prefill.email,
+                shippingAddress: prefillAddress,
+                billingAddress: prefillAddress
             )
             if !updated {
                 errorMessage = "Could not seed checkout for Klarna (pre-flight)"
@@ -681,33 +712,46 @@ public struct VCheckoutOverlay: View {
                 return
             }
 
-            // 3. Minimal Klarna init — most customer / address fields nil
-            //    so Klarna's webview prompts the user. The non-obvious
-            //    required field is `returnUrl`: Klarna API rejects the
-            //    init without it (generic 500 "Payment Klarna Native not
-            //    initialized: [object Object]" from commerce that hides
-            //    the actual Klarna error). The Vio DTO marks it optional
-            //    but Klarna's own validation requires it for the in-app
-            //    flow (verified `/tmp/test-klarna-returnurl.ts` 2026-05-13).
+            // 3. Klarna init with prequalification data + return_url.
             //
-            //    The legacy `prepareKlarnaNative` at line 2859 always
-            //    passed it (`returnUrl: klarnaSuccessURLString`), which
-            //    is why the legacy form-driven flow worked.
+            //    `return_url` is required by Klarna API for the in-app
+            //    flow (verified `/tmp/test-klarna-returnurl.ts`
+            //    2026-05-13 — without it, generic 500 from commerce).
+            //
+            //    `customer.email` + `billing_address.{postal_code,country}`
+            //    are passed for Klarna's PREQUALIFICATION. Per the iOS
+            //    docs (https://docs.klarna.com/payments/mobile-payments/
+            //    integrate-with-mobile-sdk/ios/klarna-payments/), this
+            //    is how Klarna decides which payment methods to offer
+            //    per region AND pre-fills the buyer's form inside the
+            //    webview. Other customer fields (name, phone, full
+            //    address) stay nil — Klarna webview prompts the user
+            //    for the rest, which is Klarna's recommended UX
+            //    according to their privacy guidance.
             let resolvedCountry =
                 cartManager.selectedMarket?.code
-                ?? sponsorCart.country
+                ?? prefill.country
             let resolvedCurrency =
                 cartManager.selectedMarket?.currencyCode
                 ?? sponsorCart.currency
+            let prequalCustomer = KlarnaNativeCustomerInputDto(
+                email: prefill.email
+            )
+            let prequalBillingAddress = KlarnaNativeAddressInputDto(
+                email: prefill.email,
+                postalCode: prefill.postalCode,
+                country: resolvedCountry
+            )
             let input = KlarnaNativeInitInputDto(
                 countryCode: resolvedCountry,
                 currency: resolvedCurrency,
                 locale: klarnaLocaleFor(country: resolvedCountry),
                 returnUrl: klarnaSuccessURLString,
                 intent: "buy",
-                autoCapture: true
-                // customer / billingAddress / shippingAddress = nil
-                // → Klarna webview will prompt for them
+                autoCapture: true,
+                customer: prequalCustomer,
+                billingAddress: prequalBillingAddress,
+                shippingAddress: prequalBillingAddress
             )
 
             // 4. Call init via sponsor's SDK.
@@ -1171,6 +1215,41 @@ public struct VCheckoutOverlay: View {
                 stopVippsRetryTimer()
             }
             .modifier(CheckoutSheetTranslucentBackground())
+            // Fase Pago-2b/A2: present VPaymentPrefillSheet when the
+            // user taps a direct-launch method (Stripe / Klarna) that
+            // needs minimal prequalification data. The sheet captures
+            // email + postal_code; country comes from selectedMarket.
+            // On submit → dispatchDirectLaunch threads the data into
+            // the corresponding triggerSponsor* function. On cancel →
+            // sheet dismisses, cart overlay stays visible, user can
+            // tap another method or close.
+            .sheet(item: $pendingPrefillLaunch) { pending in
+                let methodLabel: String = {
+                    switch pending.method {
+                    case "klarna":             return "Klarna"
+                    case "stripe", "stripelink": return "Card"
+                    default:                   return pending.method.capitalized
+                    }
+                }()
+                let resolvedCountry =
+                    cartManager.selectedMarket?.code
+                    ?? pending.sponsorCart.country
+                VPaymentPrefillSheet(
+                    methodLabel: methodLabel,
+                    countryCode: resolvedCountry,
+                    initialEmail: cachedPrefillEmail,
+                    initialPostalCode: cachedPrefillPostalCode,
+                    onSubmit: { data in
+                        let captured = pending  // capture before dismissing
+                        pendingPrefillLaunch = nil
+                        dispatchDirectLaunch(for: captured, prefill: data)
+                    },
+                    onCancel: {
+                        pendingPrefillLaunch = nil
+                    }
+                )
+                .modifier(PrefillSheetDetents())
+            }
             .overlay {
             if isLoading {
                 loadingOverlay
@@ -5403,6 +5482,26 @@ private struct HiddenScrollContentBackground: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// Applies `.presentationDetents([.medium, .large])` and the drag
+/// indicator to the prefill sheet so it doesn't take the whole screen
+/// on iOS 16+. Falls through to the default full-height sheet on iOS
+/// 15 (the Vio package's minimum supported version).
+private struct PrefillSheetDetents: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
+            content
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        } else {
+            content
+        }
+        #else
+        content
+        #endif
     }
 }
 
