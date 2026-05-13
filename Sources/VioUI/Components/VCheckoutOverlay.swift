@@ -3868,38 +3868,52 @@ extension VCheckoutOverlay {
                         .foregroundColor(VioColors.textPrimary)
                 }
 
-                if cartManager.items.contains(where: {
-                    ($0.shippingName?.isEmpty == false) || $0.shippingAmount != nil
-                }) {
-                    ForEach(cartManager.items) { item in
-                        if (item.shippingName?.isEmpty == false) || item.shippingAmount != nil {
-                            HStack(alignment: .top, spacing: VioSpacing.sm) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    if let name = item.shippingName, !name.isEmpty {
-                                        Text(name)
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(VioColors.textPrimary)
-                                    }
+                // UX-2 part 2 (2026-05-13): breakdown grouped by supplier
+                // so the row count matches the cart-level `shipping`
+                // returned by Commerce. Showing per-item rows misleads
+                // the user into thinking they're paying twice for the
+                // same consolidated shipping fee.
+                let breakdownGroups = groupedShippingItemsBySupplier()
+                    .filter { group in
+                        let first = group.items.first
+                        return (first?.shippingName?.isEmpty == false) || first?.shippingAmount != nil
+                    }
 
-                                    Text(item.title)
-                                        .font(.system(size: 12))
-                                        .foregroundColor(VioColors.textSecondary)
-                                        .lineLimit(1)
+                if !breakdownGroups.isEmpty {
+                    ForEach(breakdownGroups, id: \.key) { group in
+                        let first = group.items.first
+                        HStack(alignment: .top, spacing: VioSpacing.sm) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if let name = first?.shippingName, !name.isEmpty {
+                                    Text(name)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(VioColors.textPrimary)
                                 }
 
-                                Spacer()
-
+                                // Subtitle: list item titles when single,
+                                // or "X varer" summary when grouped.
                                 Text(
-                                    formattedShipping(
-                                        amount: item.shippingAmount,
-                                        currency: item.shippingCurrency
-                                    )
+                                    group.items.count == 1
+                                        ? (first?.title ?? "")
+                                        : "\(group.items.count) varer"
                                 )
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(VioColors.textPrimary)
+                                .font(.system(size: 12))
+                                .foregroundColor(VioColors.textSecondary)
+                                .lineLimit(1)
                             }
-                            .padding(.vertical, VioSpacing.xs)
+
+                            Spacer()
+
+                            Text(
+                                formattedShipping(
+                                    amount: first?.shippingAmount,
+                                    currency: first?.shippingCurrency
+                                )
+                            )
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(VioColors.textPrimary)
                         }
+                        .padding(.vertical, VioSpacing.xs)
                     }
                 } else {
                     Text(VLocalizedString(VioTranslationKey.shippingCalculated.rawValue))
@@ -3915,17 +3929,26 @@ extension VCheckoutOverlay {
         }
     }
 
+    /// UX-2 part 2 (2026-05-13): groups items by `supplier` for the
+    /// shipping picker — items sharing a supplier render under a single
+    /// row with one shipping selector. Tapping an option applies it to
+    /// every item in that supplier's group so Commerce returns a
+    /// consolidated `cart.shipping` (single fee + tax). Matches the
+    /// server-side behaviour verified by direct GraphQL probe.
     private var shippingOptionsSelectionView: some View {
-        let hasItemsWithoutShipping = cartManager.items.contains { $0.shippingId == nil || $0.shippingId!.isEmpty }
-        
+        let supplierGroups = groupedShippingItemsBySupplier()
+        let hasGroupsWithoutShipping = supplierGroups.contains { group in
+            group.items.first?.shippingId == nil || (group.items.first?.shippingId ?? "").isEmpty
+        }
+
         return VStack(alignment: .leading, spacing: VioSpacing.md) {
-            if cartManager.items.contains(where: { !$0.availableShippings.isEmpty }) {
+            if !supplierGroups.isEmpty {
                 HStack(spacing: 8) {
                     Text(VLocalizedString(VioTranslationKey.shippingOptions.rawValue))
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(VioColors.textPrimary)
-                    
-                    if hasItemsWithoutShipping {
+
+                    if hasGroupsWithoutShipping {
                         Text(VLocalizedString(VioTranslationKey.shippingRequired.rawValue))
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(VioColors.primary)
@@ -3940,25 +3963,29 @@ extension VCheckoutOverlay {
                 .padding(.horizontal, VioSpacing.lg)
 
                 VStack(spacing: VioSpacing.md) {
-                    ForEach(cartManager.items) { item in
-                        if !item.availableShippings.isEmpty {
-                            let itemNeedsShipping = item.shippingId == nil || item.shippingId!.isEmpty
-                            ItemShippingOptionsView(
-                                item: item,
-                                onSelect: { option in
+                    ForEach(supplierGroups, id: \.key) { group in
+                        let groupNeedsShipping = group.items.first?.shippingId == nil
+                            || (group.items.first?.shippingId ?? "").isEmpty
+                        SupplierShippingOptionsView(
+                            items: group.items,
+                            onSelect: { option in
+                                // Apply the picked option to every item
+                                // in the supplier group — Commerce will
+                                // then return cart.shipping consolidated.
+                                for item in group.items {
                                     cartManager.setShippingOption(for: item.id, optionId: option.id)
                                 }
-                            )
-                            .padding(itemNeedsShipping ? 8 : 0)
-                            .background(
-                                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
-                                    .fill(itemNeedsShipping ? VioColors.primary.opacity(0.05) : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: VioBorderRadius.medium)
-                                    .stroke(VioColors.primary.opacity(itemNeedsShipping ? 0.4 : 0), lineWidth: 2)
-                            )
-                        }
+                            }
+                        )
+                        .padding(groupNeedsShipping ? 8 : 0)
+                        .background(
+                            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                                .fill(groupNeedsShipping ? VioColors.primary.opacity(0.05) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: VioBorderRadius.medium)
+                                .stroke(VioColors.primary.opacity(groupNeedsShipping ? 0.4 : 0), lineWidth: 2)
+                        )
                     }
                 }
                 .padding(.horizontal, VioSpacing.lg)
@@ -3969,6 +3996,25 @@ extension VCheckoutOverlay {
                     .padding(.horizontal, VioSpacing.lg)
             }
         }
+    }
+
+    /// Groups cart items by `supplier` for the shipping picker, preserving
+    /// insertion order of suppliers. Items without a supplier id are kept
+    /// in their own pseudo-group keyed by item id (degenerate fallback).
+    /// Empty `availableShippings` are skipped.
+    private func groupedShippingItemsBySupplier()
+        -> [(key: String, items: [CartManager.CartItem])]
+    {
+        var ordered: [(key: String, items: [CartManager.CartItem])] = []
+        for item in cartManager.items where !item.availableShippings.isEmpty {
+            let key = (item.supplier?.isEmpty == false) ? item.supplier! : "_item_\(item.id)"
+            if let idx = ordered.firstIndex(where: { $0.key == key }) {
+                ordered[idx].items.append(item)
+            } else {
+                ordered.append((key: key, items: [item]))
+            }
+        }
+        return ordered
     }
 
     // Order summary for address step (with shipping)
@@ -4360,6 +4406,109 @@ extension VCheckoutOverlay {
             }
             
             VioLogger.debug("Using config fallback: \(fallbackMethods.map { $0.rawValue })", component: "VCheckoutOverlay")
+        }
+    }
+
+    /// UX-2 part 2 (2026-05-13): per-supplier shipping picker. Renders a
+    /// single block per supplier showing the products it covers + the
+    /// shared shipping options. Selecting an option calls back with the
+    /// chosen option; the caller applies it to every item in the group
+    /// so Commerce returns cart.shipping consolidated (1× fee + tax).
+    ///
+    /// Visual: header = supplier's item titles joined (truncated if many).
+    /// Option list = `firstItem.availableShippings` (Commerce returns the
+    /// same option set per item within a supplier).
+    fileprivate struct SupplierShippingOptionsView: View {
+        let items: [CartManager.CartItem]
+        let onSelect: (CartManager.CartItem.ShippingOption) -> Void
+
+        private var firstItem: CartManager.CartItem? { items.first }
+        private var availableShippings: [CartManager.CartItem.ShippingOption] {
+            firstItem?.availableShippings ?? []
+        }
+        // All items in a supplier group should share shipping id once
+        // a selection has been applied. Read from the first item.
+        private var selectedId: String? { firstItem?.shippingId }
+
+        private var headerTitle: String {
+            guard let first = firstItem else { return "" }
+            if items.count == 1 { return first.title }
+            let titles = items.map { $0.title }.joined(separator: ", ")
+            return titles
+        }
+
+        private var headerSubtitle: String? {
+            guard items.count > 1 else { return nil }
+            return "\(items.count) varer"  // "X items" — supplier-grouped
+        }
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(headerTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(VioColors.textPrimary)
+                        .lineLimit(2)
+
+                    if let subtitle = headerSubtitle {
+                        Text(subtitle)
+                            .font(.system(size: 11))
+                            .foregroundColor(VioColors.textSecondary)
+                    }
+                }
+
+                VStack(spacing: VioSpacing.xs) {
+                    ForEach(availableShippings) { option in
+                        Button {
+                            onSelect(option)
+                        } label: {
+                            HStack(spacing: VioSpacing.sm) {
+                                Image(
+                                    systemName: selectedId == option.id
+                                        ? "checkmark.circle.fill"
+                                        : "circle"
+                                )
+                                .foregroundColor(
+                                    selectedId == option.id
+                                        ? VioColors.primary
+                                        : VioColors.textSecondary
+                                )
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(option.name)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(VioColors.textPrimary)
+
+                                    if let description = option.description, !description.isEmpty {
+                                        Text(description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(VioColors.textSecondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Text(
+                                    option.amount > 0
+                                        ? "\(option.currency) \(String(format: "%.2f", option.amount))"
+                                        : "Free"
+                                )
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(VioColors.textPrimary)
+                            }
+                            .padding(.horizontal, VioSpacing.md)
+                            .padding(.vertical, VioSpacing.sm)
+                            .background(
+                                selectedId == option.id
+                                    ? VioColors.primary.opacity(0.08)
+                                    : VioColors.surfaceSecondary
+                            )
+                            .cornerRadius(VioBorderRadius.medium)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
         }
     }
 
