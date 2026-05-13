@@ -616,8 +616,32 @@ public struct VCheckoutOverlay: View {
                 ToolbarItem(placement: .cancellationAction) {
                     if checkoutStep != .success {
                         Button(action: {
-                            if cartManager.items.isEmpty || checkoutStep == .address {
+                            // UX (2026-05-13): back-button semantics by context.
+                            //
+                            // Q4 L4 scoped checkout: when the user arrived at
+                            // the step flow from the multi-sponsor cart
+                            // overview (`activeCheckoutSponsorId != nil`),
+                            // the address step has a *previous* state to
+                            // return to — the sponsor sections with method
+                            // picker. Back must exit the scope rather than
+                            // dismiss the entire overlay.
+                            //
+                            // Legacy flow: address is the first step, no
+                            // previous state, so back = close.
+                            if cartManager.items.isEmpty {
                                 cartManager.hideCheckout()
+                            } else if checkoutStep == .address {
+                                if cartManager.activeCheckoutSponsorId != nil {
+                                    // Scoped: persist in-flight edits back
+                                    // into the sponsor cart, then drop
+                                    // scope so the body re-renders the
+                                    // multi-sponsor sections.
+                                    cartManager.exitSponsorCheckoutScope(
+                                        syncBackToSponsor: true
+                                    )
+                                } else {
+                                    cartManager.hideCheckout()
+                                }
                             } else {
                                 goToPreviousStep()
                             }
