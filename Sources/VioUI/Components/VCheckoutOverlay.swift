@@ -355,18 +355,21 @@ public struct VCheckoutOverlay: View {
         switch method {
         case "apple", "applepay":
             triggerSponsorApplePay(sponsorCart)
+        case "stripe", "stripelink":
+            // Fase Pago-1.1: direct PaymentSheet launch — skip step flow,
+            // Stripe SDK collects billing/email/phone/name in-sheet.
+            triggerSponsorStripe(sponsorCart)
         default:
             cartManager.enterSponsorCheckoutScope(sponsorCart.sponsorId)
             // Default the orderSummary step's selected method picker to
-            // the one chosen in the cart section (Klarna / Vipps /
-            // Stripe). PaymentMethod enum cases mirror our string keys.
+            // the one chosen in the cart section (Klarna / Vipps).
+            // PaymentMethod enum cases mirror our string keys. Stripe
+            // no longer routes here (handled above by triggerSponsorStripe).
             switch method {
             case "klarna":
                 selectedPaymentMethod = .klarna
             case "vipps":
                 selectedPaymentMethod = .vipps
-            case "stripe":
-                selectedPaymentMethod = .stripe
             default:
                 break
             }
@@ -400,6 +403,164 @@ public struct VCheckoutOverlay: View {
         }
         #endif
     }
+
+    // MARK: - Direct payment launch (parity with Apple Pay)
+
+    /// Tracks which sponsor's cart triggered the most-recent Stripe
+    /// PaymentSheet launch, so the result callback knows where to send
+    /// the success cleanup (mark paid + clearCart). Mirrors
+    /// `pendingApplePaySponsorId` exactly.
+    @State private var pendingStripeSponsorId: Int? = nil
+
+    /// Fase Pago-1.1 (2026-05-13, ADR pending): direct-launch Stripe
+    /// PaymentSheet from the cart action button — no step flow.
+    /// Mirrors `triggerSponsorApplePay`'s contract:
+    ///   1. Ensure the sponsor cart has a checkoutId (create on demand).
+    ///   2. Call `cartManager.stripeIntent(... sponsorId: sid)` to fetch
+    ///      clientSecret + customer + ephemeralKey via the sponsor's
+    ///      Commerce GraphQL key (per-sponsor SDK routing already in
+    ///      place since Q4 L3).
+    ///   3. Build a PaymentSheet.Configuration that asks Stripe to
+    ///      collect billing details fully inline (address, email,
+    ///      phone, name) — `billingDetailsCollectionConfiguration`
+    ///      iOS-side. Note: Stripe also collects shipping inside the
+    ///      sheet IF the server-side PaymentIntent params include
+    ///      `shipping_address_collection`. That's a Reachu Commerce
+    ///      decision — we'll discover the answer empirically in
+    ///      Fase Pago-2 by inspecting the resulting order.
+    ///   4. Present the sheet from the top-most view controller.
+    ///   5. Result handler → `handleSponsorStripeResult`.
+    ///
+    /// User never sees `addressStepView` or `orderSummaryStepView`.
+    private func triggerSponsorStripe(_ sponsorCart: CartManager.SponsorCart) {
+        #if os(iOS)
+        let sid = sponsorCart.sponsorId
+        pendingStripeSponsorId = sid
+        Task { @MainActor in
+            // 1. Ensure checkout exists for this sponsor cart.
+            let checkoutId: String?
+            if let existing = sponsorCart.checkoutId, !existing.isEmpty {
+                checkoutId = existing
+            } else {
+                checkoutId = await cartManager.createCheckout(forSponsor: sid)
+            }
+            guard let chkId = checkoutId, !chkId.isEmpty else {
+                errorMessage = "Could not create checkout for Stripe payment"
+                pendingStripeSponsorId = nil
+                VioLogger.error(
+                    "triggerSponsorStripe: missing checkoutId for sponsor \(sid)",
+                    component: "VCheckoutOverlay"
+                )
+                return
+            }
+
+            // 2. Fetch PaymentIntent from Reachu via sponsor's SDK.
+            guard
+                let dto = await cartManager.stripeIntent(
+                    returnEphemeralKey: true,
+                    sponsorId: sid
+                ),
+                let dict = dtoToDict(dto)
+            else {
+                errorMessage = "Could not get Stripe Intent from API"
+                pendingStripeSponsorId = nil
+                return
+            }
+
+            let clientSecret: String? = pick(
+                dict,
+                [
+                    "payment_intent_client_secret", "client_secret",
+                    "paymentIntentClientSecret",
+                ]
+            )
+            guard let secret = clientSecret, !secret.isEmpty else {
+                errorMessage = "Missing Payment Intent client_secret"
+                pendingStripeSponsorId = nil
+                return
+            }
+
+            let ephemeralKey: String? = pick(
+                dict,
+                ["ephemeralKeySecret", "ephemeral_key_secret", "ephemeral_key"]
+            )
+            let customerId: String? = pick(
+                dict,
+                ["customer", "customer_id", "customerId"]
+            )
+
+            // 3. Build PaymentSheet config — collect everything inline.
+            var config = PaymentSheet.Configuration()
+            config.merchantDisplayName =
+                VioConfiguration.shared.sponsor(withId: sid)?.name ?? "Vio"
+            config.billingDetailsCollectionConfiguration.address = .full
+            config.billingDetailsCollectionConfiguration.email = .always
+            config.billingDetailsCollectionConfiguration.phone = .always
+            config.billingDetailsCollectionConfiguration.name = .always
+            if let ek = ephemeralKey, let cid = customerId {
+                config.customer = .init(id: cid, ephemeralKeySecret: ek)
+            }
+
+            // 4. Present.
+            let sheet = PaymentSheet(
+                paymentIntentClientSecret: secret,
+                configuration: config
+            )
+            self.paymentSheet = sheet
+            guard let root = topMostViewController() else {
+                errorMessage = "Could not present payment sheet"
+                pendingStripeSponsorId = nil
+                return
+            }
+            sheet.present(from: root) { result in
+                Task { @MainActor in
+                    handleSponsorStripeResult(result, sponsorId: sid)
+                }
+            }
+        }
+        #endif
+    }
+
+    #if os(iOS)
+    /// Result handler for `triggerSponsorStripe`. Mirrors the Apple Pay
+    /// pattern: on success mark sponsor cart paid + clearCart server-side,
+    /// then decide whether to close the overlay or refresh the
+    /// multi-sponsor view. No scope to exit (we never entered one).
+    private func handleSponsorStripeResult(
+        _ result: PaymentSheetResult,
+        sponsorId sid: Int
+    ) {
+        guard pendingStripeSponsorId == sid else {
+            // Stale callback (sheet was cancelled and the user already
+            // tapped a new method). Ignore.
+            return
+        }
+        switch result {
+        case .completed:
+            pendingStripeSponsorId = nil
+            cartManager.markSponsorCartPaid(sid)
+            Task {
+                await cartManager.clearCart(forSponsor: sid)
+                let remaining = cartManager.cartsBySponsor.values
+                    .filter { !$0.isPaid }
+                if remaining.isEmpty {
+                    cartManager.hideCheckout()
+                }
+            }
+        case .canceled:
+            // User dismissed the Stripe sheet. Cart stays as-is — they
+            // can tap a method again. No error UI, no state mutation.
+            pendingStripeSponsorId = nil
+        case .failed(let error):
+            pendingStripeSponsorId = nil
+            errorMessage = error.localizedDescription
+            VioLogger.error(
+                "Sponsor Stripe payment failed: \(error.localizedDescription)",
+                component: "VCheckoutOverlay"
+            )
+        }
+    }
+    #endif
 
     #if os(iOS)
     /// Handles Apple Pay completion when triggered from the cart's
