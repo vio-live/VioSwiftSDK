@@ -4900,8 +4900,20 @@ private struct CheckoutSheetTranslucentBackground: ViewModifier {
         if #available(iOS 16.4, macOS 13.3, tvOS 16.4, watchOS 9.4, *) {
             content.presentationBackground {
                 ZStack {
-                    Rectangle().fill(.ultraThinMaterial)
-                    VioColors.background.opacity(0.4)
+                    // Heaviest blur Apple exposes without going custom
+                    // CIFilter — visually closest to the user's
+                    // "100px blur" reference from NN/g glassmorphism
+                    // study. Apple's material scale by approximate
+                    // intensity:
+                    //   .ultraThin   ≈ near zero blur, almost clear
+                    //   .thin        ≈ subtle
+                    //   .regular     ≈ classic nav-bar blur
+                    //   .thick       ≈ heavy blur
+                    //   .ultraThick  ≈ near-opaque, strongest available
+                    Rectangle().fill(.ultraThickMaterial)
+                    // 30% theme-adaptive tint on top of the blur,
+                    // matching the reference's "30% opacity" overlay.
+                    VioColors.background.opacity(0.3)
                 }
                 .ignoresSafeArea()
             }
