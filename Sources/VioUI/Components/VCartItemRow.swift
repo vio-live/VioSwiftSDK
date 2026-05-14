@@ -89,7 +89,7 @@ public struct VCartItemRow: View {
                     }
 
                     Text(item.title)
-                        .font(VioTypography.bodyBold)
+                        .font(VioTypography.subheadline.weight(.semibold))
                         .foregroundColor(colors.textPrimary)
                         .lineLimit(2)
 
@@ -99,7 +99,7 @@ public struct VCartItemRow: View {
                 Spacer()
 
                 Text(formattedPrice(item.price))
-                    .font(VioTypography.bodyBold)
+                    .font(VioTypography.subheadline.weight(.semibold))
                     .foregroundColor(colors.priceColor)
             }
 
@@ -109,13 +109,13 @@ public struct VCartItemRow: View {
             // Row 3 — line total ("Total for this item")
             HStack {
                 Text("Total for this item:")
-                    .font(VioTypography.subheadline)
+                    .font(VioTypography.footnote)
                     .foregroundColor(colors.textSecondary)
 
                 Spacer()
 
                 Text(formattedPrice(item.price * Double(item.quantity)))
-                    .font(VioTypography.subheadline.weight(.semibold))
+                    .font(VioTypography.footnote.weight(.semibold))
                     .foregroundColor(colors.priceColor)
             }
         }
@@ -147,7 +147,7 @@ public struct VCartItemRow: View {
         HStack(spacing: VioSpacing.sm) {
             Button(action: onDecrement) {
                 Image(systemName: item.quantity == 1 ? "trash" : "minus")
-                    .font(VioTypography.subheadline)
+                    .font(VioTypography.footnote)
                     .foregroundColor(
                         item.quantity == 1 ? colors.error : colors.textPrimary
                     )
@@ -158,14 +158,14 @@ public struct VCartItemRow: View {
             .buttonStyle(.plain)
 
             Text("\(item.quantity)")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(colors.textPrimary)
                 .frame(width: 30)
                 .animation(.spring(), value: item.quantity)
 
             Button(action: onIncrement) {
                 Image(systemName: "plus")
-                    .font(VioTypography.subheadline)
+                    .font(VioTypography.footnote)
                     .foregroundColor(colors.textPrimary)
                     .frame(width: 28, height: 28)
                     .background(colors.surfaceSecondary)

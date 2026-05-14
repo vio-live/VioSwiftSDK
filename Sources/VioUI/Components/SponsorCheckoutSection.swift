@@ -111,7 +111,7 @@ public struct SponsorCheckoutSection: View {
             sponsorLogo
             VStack(alignment: .leading, spacing: 4) {
                 Text(sponsorName)
-                    .font(VioTypography.headline)
+                    .font(VioTypography.subheadline.weight(.semibold))
                     .foregroundColor(VioColors.textPrimary)
                 Text("\(itemCountText)")
                     .font(VioTypography.caption1)
@@ -215,32 +215,32 @@ public struct SponsorCheckoutSection: View {
         VStack(spacing: VioSpacing.xs) {
             HStack {
                 Text(VLocalizedString(VioTranslationKey.subtotal.rawValue))
-                    .font(VioTypography.body)
+                    .font(VioTypography.footnote)
                     .foregroundColor(VioColors.textSecondary)
                 Spacer()
                 Text(formatMoney(sponsorCart.subtotal, code: sponsorCart.currency))
-                    .font(VioTypography.body)
+                    .font(VioTypography.footnote)
                     .foregroundColor(VioColors.textPrimary)
             }
             if sponsorCart.shippingTotal > 0 {
                 HStack {
                     Text(VLocalizedString(VioTranslationKey.shipping.rawValue))
-                        .font(VioTypography.body)
+                        .font(VioTypography.footnote)
                         .foregroundColor(VioColors.textSecondary)
                     Spacer()
                     Text(formatMoney(sponsorCart.shippingTotal, code: sponsorCart.shippingCurrency))
-                        .font(VioTypography.body)
+                        .font(VioTypography.footnote)
                         .foregroundColor(VioColors.textPrimary)
                 }
             }
             HStack {
                 Text(VLocalizedString(VioTranslationKey.total.rawValue))
-                    .font(VioTypography.headline)
+                    .font(VioTypography.subheadline.weight(.semibold))
                     .foregroundColor(VioColors.textPrimary)
                 Spacer()
                 Text(formatMoney(sponsorCart.subtotal + sponsorCart.shippingTotal,
                                  code: sponsorCart.currency))
-                    .font(VioTypography.headline.weight(.bold))
+                    .font(VioTypography.callout.weight(.bold))
                     .foregroundColor(VioColors.textPrimary)
             }
         }
@@ -302,7 +302,7 @@ public struct SponsorCheckoutSection: View {
     private var methodActionButtons: some View {
         if availableMethods.isEmpty {
             Text(VLocalizedString(VioTranslationKey.noPaymentMethods.rawValue))
-                .font(VioTypography.body)
+                .font(VioTypography.footnote)
                 .foregroundColor(VioColors.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, VioSpacing.md)
@@ -339,7 +339,7 @@ public struct SponsorCheckoutSection: View {
             HStack(spacing: VioSpacing.sm) {
                 methodIcon(method)
                 Text(methodLabel(method))
-                    .font(VioTypography.bodyBold)
+                    .font(VioTypography.subheadline.weight(.semibold))
                     .foregroundColor(VioColors.textPrimary)
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -375,29 +375,29 @@ public struct SponsorCheckoutSection: View {
         switch method {
         case "apple", "applepay":
             Image(systemName: "applelogo")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(VioColors.textPrimary)
         case "klarna":
             Text("K.")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(Color(red: 1.0, green: 0.66, blue: 0.8))
         case "vipps":
             Text("V")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(Color(red: 1.0, green: 0.36, blue: 0.14))
         case "stripe", "stripelink":
             Image(systemName: "creditcard.fill")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(Color(red: 0.39, green: 0.36, blue: 1.0))
         case "googlepay":
             // Generic placeholder — Google branding requires asset
             // licensing not currently bundled. Card glyph for now.
             Image(systemName: "creditcard")
-                .font(VioTypography.bodyBold)
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(VioColors.textPrimary)
         default:
             Image(systemName: "creditcard")
-                .font(VioTypography.body)
+                .font(VioTypography.footnote)
                 .foregroundColor(VioColors.textSecondary)
         }
     }
@@ -422,10 +422,10 @@ public struct SponsorCheckoutSection: View {
     private var paidBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16, weight: .semibold))
+                .font(VioTypography.footnote.weight(.semibold))
                 .foregroundColor(VioColors.success)
             Text(VLocalizedString(VioTranslationKey.cartSponsorPaid.rawValue).capitalized)
-                .font(VioTypography.body.weight(.semibold))
+                .font(VioTypography.subheadline.weight(.semibold))
                 .foregroundColor(VioColors.success)
             Spacer()
         }
