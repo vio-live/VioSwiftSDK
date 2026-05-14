@@ -125,17 +125,24 @@ public struct SponsorCheckoutSection: View {
 
     @ViewBuilder
     private var sponsorLogo: some View {
-        if let logoStr = resolvedSponsorLogoUrl, let url = URL(string: logoStr) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let img):
-                    img.resizable().aspectRatio(contentMode: .fit)
-                default:
-                    placeholderLogo
-                }
-            }
-            .frame(width: 56, height: 32)
+        if let logoStr = resolvedSponsorLogoUrl {
+            // `VRemoteImage` is the SDK's format-agnostic remote image
+            // renderer (same one VProductCarousel / VProductSpotlight
+            // headers use). It routes `.svg` URLs through a WKWebView —
+            // WebKit renders any valid SVG — and raster URLs (PNG/JPEG/
+            // WebP) through `AsyncImage`. This is why e.g. XXL #7,
+            // whose `logo_url` is an `.svg`, now shows its real logo
+            // instead of the "XXX" text placeholder: the raw
+            // `AsyncImage` we used before could not decode SVG.
+            //
+            // `.leading` alignment so the logo sits at the left edge of
+            // the 56-wide frame (matches the header layout — logo, then
+            // name + item count to its right).
+            VRemoteImage(urlString: logoStr, height: 32, alignment: .leading)
+                .frame(width: 56, height: 32)
         } else {
+            // Only reached when the sponsor has neither a `logoUrl` nor
+            // an `avatarUrl` — `resolvedSponsorLogoUrl` returns nil.
             placeholderLogo
                 .frame(width: 56, height: 32)
         }
@@ -484,26 +491,25 @@ public struct SponsorCheckoutSection: View {
 
     /// The image URL the section header renders in its 56×32 logo
     /// frame. Prefers the wide `logoUrl` (fills that frame better than
-    /// the square `avatarUrl`) — **but skips it when it's an SVG**,
-    /// because SwiftUI's `AsyncImage` can't decode SVG and silently
-    /// falls back to the text placeholder. Some sponsors only have an
-    /// SVG `logo_url` (e.g. XXL #7) while their `avatar_url` is a
-    /// valid raster PNG — for those we use the avatar so a real logo
-    /// shows instead of the "XXX" placeholder box.
+    /// the square `avatarUrl`).
     ///
-    /// `nil` only when the sponsor has neither a usable logo nor an
-    /// avatar — then `sponsorLogo` renders `placeholderLogo`.
+    /// SVG `logoUrl` is fine here — `sponsorLogo` renders through
+    /// `VRemoteImage`, which routes `.svg` URLs through a WKWebView
+    /// (WebKit decodes any valid SVG). An earlier fix (commit
+    /// `5a4be2a`) skipped SVG and fell back to the avatar because the
+    /// header used a raw `AsyncImage` that can't decode SVG — that
+    /// workaround is now superseded by the `VRemoteImage` switch, so
+    /// we go back to simply preferring the wide logo.
+    ///
+    /// `nil` only when the sponsor has neither a `logoUrl` nor an
+    /// `avatarUrl` — then `sponsorLogo` renders `placeholderLogo`.
     private var resolvedSponsorLogoUrl: String? {
         let sponsor = VioConfiguration.shared.sponsor(withId: sponsorCart.sponsorId)
-        // 1. Wide logo, but only if it's not an SVG. Strip any query
-        //    string before the suffix check so `…/x.svg?v=2` is caught.
+        // 1. Wide logo (SVG or raster — VRemoteImage handles both).
         if let logo = sponsor?.logoUrl, !logo.isEmpty {
-            let path = logo.split(separator: "?").first.map(String.init) ?? logo
-            if !path.lowercased().hasSuffix(".svg") {
-                return logo
-            }
+            return logo
         }
-        // 2. Fall back to the (always-raster) square avatar.
+        // 2. Fall back to the square avatar.
         if let avatar = sponsor?.avatarUrl, !avatar.isEmpty {
             return avatar
         }
