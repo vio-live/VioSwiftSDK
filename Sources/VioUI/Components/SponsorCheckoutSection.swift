@@ -98,8 +98,14 @@ public struct SponsorCheckoutSection: View {
         .opacity(sponsorCart.isPaid ? 0.65 : 1)
     }
 
-    // MARK: - Header (logo + name + subtotal)
+    // MARK: - Header (logo + name + item count)
 
+    /// Sprint feat/skip-ordersummary-after-address (2026-05-14): the
+    /// header used to also show a trailing "Delsum + subtotal" block.
+    /// That was redundant — `totalsRow` (rendered below the items)
+    /// already shows Delsum / Frakt / Totalt, so the subtotal appeared
+    /// twice in the same card. Removed the trailing block; the header
+    /// is now just logo + name + item count.
     private var sponsorHeader: some View {
         HStack(spacing: VioSpacing.md) {
             sponsorLogo
@@ -112,14 +118,6 @@ public struct SponsorCheckoutSection: View {
                     .foregroundColor(VioColors.textSecondary)
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(VLocalizedString(VioTranslationKey.subtotal.rawValue))
-                    .font(VioTypography.caption1)
-                    .foregroundColor(VioColors.textSecondary)
-                Text(formatMoney(sponsorCart.subtotal, code: sponsorCart.currency))
-                    .font(VioTypography.headline)
-                    .foregroundColor(VioColors.textPrimary)
-            }
         }
     }
 
