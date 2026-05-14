@@ -168,76 +168,22 @@ public struct SponsorCheckoutSection: View {
         }
     }
 
+    /// One product line. Sprint feat/skip-ordersummary-after-address
+    /// (2026-05-14): replaced the inline `HStack` (which used static
+    /// `VioColors.*` + a different layout from the legacy cart) with
+    /// the shared `VCartItemRow` component. Now the multi-sponsor cart
+    /// and the legacy single-cart render product rows **identically**
+    /// and both stay config-driven (theme colours + VioTypography).
+    ///
+    /// The component is pure presentation — quantity mutations route
+    /// through the sponsor-scoped CartManager APIs
+    /// (`updateQuantity(for:to:fromSponsor:)` / `removeItem(_:fromSponsor:)`)
+    /// via the closures below, mirroring the legacy cart's "decrement,
+    /// or remove the last unit" semantics.
     private func itemRow(_ item: CartManager.CartItem) -> some View {
-        HStack(spacing: VioSpacing.md) {
-            itemImage(item)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.title)
-                    .font(VioTypography.body)
-                    .foregroundColor(VioColors.textPrimary)
-                    .lineLimit(2)
-                if let variant = item.variantTitle, !variant.isEmpty {
-                    Text(variant)
-                        .font(VioTypography.caption1)
-                        .foregroundColor(VioColors.textSecondary)
-                }
-                Text("\(item.quantity) stk")
-                    .font(VioTypography.caption1)
-                    .foregroundColor(VioColors.textSecondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(formatMoney(item.price * Double(item.quantity), code: item.currency))
-                    .font(VioTypography.body.weight(.semibold))
-                    .foregroundColor(VioColors.textPrimary)
-                quantityButtons(item)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func itemImage(_ item: CartManager.CartItem) -> some View {
-        if let urlStr = item.imageUrl, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let img):
-                    img.resizable().aspectRatio(contentMode: .fill)
-                default:
-                    Color.white.opacity(0.05)
-                }
-            }
-            .frame(width: 56, height: 56)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        } else {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.white.opacity(0.05))
-                .frame(width: 56, height: 56)
-                .overlay(
-                    Image(systemName: "shippingbox")
-                        .foregroundColor(VioColors.textSecondary)
-                )
-        }
-    }
-
-    @ViewBuilder
-    private func quantityButtons(_ item: CartManager.CartItem) -> some View {
-        HStack(spacing: 8) {
-            Button(action: {
-                Task {
-                    await cartManager.updateQuantity(
-                        for: item,
-                        to: item.quantity - 1,
-                        fromSponsor: sponsorCart.sponsorId
-                    )
-                }
-            }) {
-                Image(systemName: "minus.circle.fill")
-                    .foregroundColor(VioColors.textSecondary)
-                    .font(.system(size: 18))
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            Button(action: {
+        VCartItemRow(
+            item: item,
+            onIncrement: {
                 Task {
                     await cartManager.updateQuantity(
                         for: item,
@@ -245,13 +191,24 @@ public struct SponsorCheckoutSection: View {
                         fromSponsor: sponsorCart.sponsorId
                     )
                 }
-            }) {
-                Image(systemName: "plus.circle.fill")
-                    .foregroundColor(VioColors.primary)
-                    .font(.system(size: 18))
+            },
+            onDecrement: {
+                Task {
+                    if item.quantity > 1 {
+                        await cartManager.updateQuantity(
+                            for: item,
+                            to: item.quantity - 1,
+                            fromSponsor: sponsorCart.sponsorId
+                        )
+                    } else {
+                        await cartManager.removeItem(
+                            item,
+                            fromSponsor: sponsorCart.sponsorId
+                        )
+                    }
+                }
             }
-            .buttonStyle(PlainButtonStyle())
-        }
+        )
     }
 
     // MARK: - Totals row (subtotal + shipping + total)

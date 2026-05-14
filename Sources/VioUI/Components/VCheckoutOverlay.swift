@@ -3472,132 +3472,38 @@ extension VCheckoutOverlay {
             }
             
             ForEach(cartManager.items, id: \.id) { item in
-                VStack(spacing: VioSpacing.md) {
-                    // Product header with image and details
-                    HStack(spacing: VioSpacing.md) {
-                        // Product image
-                        LoadedImage(
-                            url: URL(string: item.imageUrl ?? ""),
-                            placeholder: AnyView(VCustomLoader(style: .rotate, size: 30)),
-                            errorView: AnyView(Rectangle().fill(VioColors.surfaceSecondary))
-                        )
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 60, height: 60)
-                        .cornerRadius(8)
-
-                        VStack(alignment: .leading, spacing: VioSpacing.xs) {
-                            Text(item.brand ?? "Vio Audio")
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundColor(VioColors.textSecondary)
-
-                            Text(item.title)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(VioColors.textPrimary)
-                                .lineLimit(2)
-
-                            // Quantity controls below title (more compact)
-                            HStack(spacing: VioSpacing.sm) {
-                                Button(action: {
-                                    Task {
-                                        if item.quantity > 1 {
-                                            await cartManager.updateQuantity(
-                                                for: item,
-                                                to: item.quantity - 1
-                                            )
-                                        } else {
-                                            // Remove item when quantity is 1
-                                            await cartManager.removeItem(item)
-                                        }
-                                    }
-                                }) {
-                                    Image(systemName: item.quantity == 1 ? "trash" : "minus")
-                                        .font(
-                                            .system(size: 14, weight: .medium)
-                                        )
-                                        .foregroundColor(
-                                            item.quantity == 1 ? VioColors.error : VioColors.textPrimary
-                                        )
-                                        .frame(width: 28, height: 28)
-                                        .background(
-                                            VioColors.surfaceSecondary
-                                        )
-                                        .cornerRadius(4)
-                                }
-
-                                Text("\(item.quantity)")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(VioColors.textPrimary)
-                                    .frame(width: 30)
-                                    .animation(.spring(), value: item.quantity)
-
-                                Button(action: {
-                                    Task {
-                                        await cartManager.updateQuantity(
-                                            for: item,
-                                            to: item.quantity + 1
-                                        )
-                                    }
-                                }) {
-                                    Image(systemName: "plus")
-                                        .font(
-                                            .system(size: 14, weight: .medium)
-                                        )
-                                        .foregroundColor(
-                                            VioColors.textPrimary
-                                        )
-                                        .frame(width: 28, height: 28)
-                                        .background(
-                                            VioColors.surfaceSecondary
-                                        )
-                                        .cornerRadius(4)
-                                }
-                            }
+                // Shared row component (sprint feat/skip-ordersummary-after-address
+                // 2026-05-14) — single source of truth for cart-item
+                // rendering, also used by `SponsorCheckoutSection.itemRow`.
+                // Fully config-driven (colours via adaptiveColors, fonts
+                // via VioTypography). Replaces the inline row that used
+                // hardcoded `.system(size:)` fonts.
+                VCartItemRow(
+                    item: item,
+                    optionDetails: optionDetails(for: item),
+                    onIncrement: {
+                        Task {
+                            await cartManager.updateQuantity(
+                                for: item,
+                                to: item.quantity + 1
+                            )
                         }
-
-                        Spacer()
-
-                        Text(
-                            "\(item.currency) \(String(format: "%.2f", item.price))"
-                        )
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(adaptiveColors.priceColor)
-                    }
-
-                    // Product details
-                    let optionDetailsList = optionDetails(for: item)
-                    if !optionDetailsList.isEmpty {
-                        VStack(spacing: VioSpacing.xs) {
-                            ForEach(Array(optionDetailsList.enumerated()), id: \.offset) { _, detail in
-                                HStack {
-                                    Text("\(detail.name):")
-                                        .font(.system(size: 14, weight: .regular))
-                                        .foregroundColor(VioColors.textSecondary)
-
-                                    Spacer()
-
-                                    Text(detail.value)
-                                        .font(.system(size: 14, weight: .regular))
-                                        .foregroundColor(VioColors.textSecondary)
-                                }
+                    },
+                    onDecrement: {
+                        Task {
+                            // Legacy semantics: decrement, or remove the
+                            // line entirely when it was the last unit.
+                            if item.quantity > 1 {
+                                await cartManager.updateQuantity(
+                                    for: item,
+                                    to: item.quantity - 1
+                                )
+                            } else {
+                                await cartManager.removeItem(item)
                             }
                         }
                     }
-
-                    // Show total for this product
-                    HStack {
-                        Text("Total for this item:")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(VioColors.textSecondary)
-
-                        Spacer()
-
-                        Text(
-                            "\(item.currency) \(String(format: "%.2f", item.price * Double(item.quantity)))"
-                        )
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(adaptiveColors.priceColor)
-                    }
-                }
+                )
             }
         }
         .padding(.horizontal, VioSpacing.lg)
