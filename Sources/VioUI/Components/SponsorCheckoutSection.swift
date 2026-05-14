@@ -37,20 +37,37 @@ public struct SponsorCheckoutSection: View {
     /// passes one SponsorCart per item from `cartManager.cartsBySponsor`.
     public let sponsorCart: CartManager.SponsorCart
 
-    /// Callback fired when the user taps the "Checkout" button for this
-    /// sponsor's cart. The parent (`VCheckoutOverlay`) is responsible
-    /// for opening the per-sponsor checkout flow and handing back to
-    /// `markSponsorCartPaid` / `clearCart(forSponsor:)` on completion.
-    /// Q4 L4 (2026-05-06): renamed from `onPaymentComplete` since the
-    /// section no longer drives the payment itself — it only signals
-    /// intent + selected method.
-    public let onCheckoutTapped: () -> Void
+    /// Callback fired when the user taps a payment-method action button
+    /// for this sponsor's cart. The parent (`VCheckoutOverlay`) is
+    /// responsible for opening the per-sponsor checkout flow and handing
+    /// back to `markSponsorCartPaid` / `clearCart(forSponsor:)` on
+    /// completion.
+    ///
+    /// **The `String` argument is the tapped method** (already
+    /// normalized — lowercase, no `_`/spaces, `stripelink`→`stripe`).
+    /// Sprint feat/skip-ordersummary-after-address (2026-05-14): the
+    /// callback used to be `() -> Void` and the parent re-read
+    /// `sponsorCart.selectedPaymentMethod` to know which method was
+    /// tapped. But `sponsorCart` is a SwiftUI value snapshot captured
+    /// at render time — by the time the button's action runs, the
+    /// `setSelectedPaymentMethod` write has updated
+    /// `cartManager.cartsBySponsor[id]` but the captured snapshot is
+    /// still stale. That caused two real bugs in the multi-sponsor
+    /// cart: (1) needing to tap a method twice (first tap read the
+    /// stale nil/previous value), and (2) tapping "Card" firing Apple
+    /// Pay (stale value was a previously-tapped "apple_pay"). Passing
+    /// the method explicitly removes the dependency on the snapshot.
+    ///
+    /// Q4 L4 (2026-05-06): originally renamed from `onPaymentComplete`
+    /// since the section no longer drives the payment itself — it only
+    /// signals intent + selected method.
+    public let onCheckoutTapped: (String) -> Void
 
     @EnvironmentObject private var cartManager: CartManager
 
     public init(
         sponsorCart: CartManager.SponsorCart,
-        onCheckoutTapped: @escaping () -> Void = {}
+        onCheckoutTapped: @escaping (String) -> Void = { _ in }
     ) {
         self.sponsorCart = sponsorCart
         self.onCheckoutTapped = onCheckoutTapped
@@ -349,8 +366,13 @@ public struct SponsorCheckoutSection: View {
     @ViewBuilder
     private func methodActionButton(_ method: String) -> some View {
         Button {
+            // Persist the choice on the sponsor cart (kept for any
+            // re-render / visual-state consumers) AND pass the method
+            // explicitly to the parent — the parent must NOT re-read
+            // `sponsorCart.selectedPaymentMethod` from its captured
+            // snapshot (stale; see `onCheckoutTapped` doc-comment).
             cartManager.setSelectedPaymentMethod(method, forSponsor: sponsorCart.sponsorId)
-            onCheckoutTapped()
+            onCheckoutTapped(method)
         } label: {
             HStack(spacing: VioSpacing.sm) {
                 methodIcon(method)

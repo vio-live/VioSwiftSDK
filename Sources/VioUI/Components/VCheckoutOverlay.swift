@@ -285,8 +285,15 @@ public struct VCheckoutOverlay: View {
                         ForEach(orderedSponsorCarts) { sponsorCart in
                             SponsorCheckoutSection(
                                 sponsorCart: sponsorCart,
-                                onCheckoutTapped: {
-                                    handleSponsorCheckoutTap(sponsorCart)
+                                onCheckoutTapped: { tappedMethod in
+                                    // Pass the tapped method through —
+                                    // do NOT let handleSponsorCheckoutTap
+                                    // re-read `sponsorCart.selectedPaymentMethod`
+                                    // from this captured (stale) snapshot.
+                                    handleSponsorCheckoutTap(
+                                        sponsorId: sponsorCart.sponsorId,
+                                        method: tappedMethod
+                                    )
                                 }
                             )
                             .environmentObject(cartManager)
@@ -349,14 +356,50 @@ public struct VCheckoutOverlay: View {
     ///   data without per-step modification. The body switches to
     ///   `mainContent` because `isMultiSponsorMode` flips false when
     ///   `activeCheckoutSponsorId` is non-nil.
-    private func handleSponsorCheckoutTap(_ sponsorCart: CartManager.SponsorCart) {
-        guard let raw = sponsorCart.selectedPaymentMethod else { return }
-        let method = raw.lowercased().replacingOccurrences(of: "_", with: "").replacingOccurrences(of: " ", with: "")
+    /// Sprint feat/skip-ordersummary-after-address (2026-05-14):
+    /// takes `sponsorId` + `method` explicitly instead of a
+    /// `CartManager.SponsorCart` value.
+    ///
+    /// **Why the signature changed**: the old version took a
+    /// `SponsorCart` and read `sponsorCart.selectedPaymentMethod` off
+    /// it. But the value was a SwiftUI snapshot captured in the
+    /// `SponsorCheckoutSection`'s `onCheckoutTapped` closure at render
+    /// time — by the time the button action ran, the button's
+    /// `setSelectedPaymentMethod` write had updated
+    /// `cartManager.cartsBySponsor[id]` but the captured snapshot was
+    /// stale. Two real multi-sponsor-cart bugs resulted:
+    ///   1. method needed two taps (1st read the stale nil/previous)
+    ///   2. tapping "Card" fired Apple Pay (stale value was a
+    ///      previously-tapped "apple_pay")
+    /// Now the method comes straight from the button (definitely
+    /// fresh) and the sponsor cart is re-fetched by id below.
+    private func handleSponsorCheckoutTap(
+        sponsorId: Int,
+        method rawMethod: String
+    ) {
+        // Re-fetch the FRESH sponsor cart by id. The value the
+        // SwiftUI closure captured is a render-time snapshot — never
+        // trust its mutable fields (selectedPaymentMethod, items,
+        // subtotal). `sponsorId` is the dict key so it's stable.
+        guard let sponsorCart = cartManager.cartsBySponsor[sponsorId] else {
+            VioLogger.warning(
+                "handleSponsorCheckoutTap: no cart for sponsor \(sponsorId)",
+                component: "VCheckoutOverlay"
+            )
+            return
+        }
+        // `method` already arrives normalized from `availableMethods`
+        // (lowercase, no `_`/spaces, stripelink→stripe). Re-normalize
+        // defensively in case a future caller passes a raw string.
+        let method = rawMethod.lowercased()
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        print("🟣 [Q4-DIAG handleSponsorCheckoutTap] sponsorId=\(sponsorId) method=\(method)")
         switch method {
         case "apple", "applepay":
             triggerSponsorApplePay(sponsorCart)
         default:
-            cartManager.enterSponsorCheckoutScope(sponsorCart.sponsorId)
+            cartManager.enterSponsorCheckoutScope(sponsorId)
             // Default the orderSummary step's selected method picker to
             // the one chosen in the cart section (Klarna / Vipps /
             // Stripe). PaymentMethod enum cases mirror our string keys.
