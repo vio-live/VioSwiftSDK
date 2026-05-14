@@ -482,9 +482,33 @@ public struct SponsorCheckoutSection: View {
             ?? "Sponsor #\(sponsorCart.sponsorId)"
     }
 
+    /// The image URL the section header renders in its 56×32 logo
+    /// frame. Prefers the wide `logoUrl` (fills that frame better than
+    /// the square `avatarUrl`) — **but skips it when it's an SVG**,
+    /// because SwiftUI's `AsyncImage` can't decode SVG and silently
+    /// falls back to the text placeholder. Some sponsors only have an
+    /// SVG `logo_url` (e.g. XXL #7) while their `avatar_url` is a
+    /// valid raster PNG — for those we use the avatar so a real logo
+    /// shows instead of the "XXX" placeholder box.
+    ///
+    /// `nil` only when the sponsor has neither a usable logo nor an
+    /// avatar — then `sponsorLogo` renders `placeholderLogo`.
     private var resolvedSponsorLogoUrl: String? {
-        let logo = VioConfiguration.shared.sponsor(withId: sponsorCart.sponsorId)?.logoUrl
-        return (logo?.isEmpty == false) ? logo : nil
+        let sponsor = VioConfiguration.shared.sponsor(withId: sponsorCart.sponsorId)
+        // 1. Wide logo, but only if it's not an SVG. Strip any query
+        //    string before the suffix check so `…/x.svg?v=2` is caught.
+        if let logo = sponsor?.logoUrl, !logo.isEmpty {
+            let path = logo.split(separator: "?").first.map(String.init) ?? logo
+            if !path.lowercased().hasSuffix(".svg") {
+                return logo
+            }
+        }
+        // 2. Fall back to the (always-raster) square avatar.
+        if let avatar = sponsor?.avatarUrl, !avatar.isEmpty {
+            return avatar
+        }
+        // 3. Nothing usable → placeholder.
+        return nil
     }
 
     private var itemCountText: String {
