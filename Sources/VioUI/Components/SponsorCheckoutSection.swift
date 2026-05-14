@@ -278,7 +278,28 @@ public struct SponsorCheckoutSection: View {
         let raw = VioConfiguration.shared.sponsor(withId: sponsorCart.sponsorId)?.commerce?.paymentMethods ?? []
         // Stable order across renders + de-dup. Backend may send "apple_pay"
         // or "applePay"; we normalise to lowercase compact keys.
-        let normalized = raw.map { $0.lowercased().replacingOccurrences(of: "_", with: "").replacingOccurrences(of: " ", with: "") }
+        let normalized = raw.map { rawMethod -> String in
+            let key = rawMethod.lowercased()
+                .replacingOccurrences(of: "_", with: "")
+                .replacingOccurrences(of: " ", with: "")
+            // Sprint feat/skip-ordersummary-after-address (2026-05-14):
+            // collapse "stripelink" → "stripe". The backend's
+            // `sponsors.payment_methods` ships "stripe_link" for every
+            // commerce sponsor, but the SDK deliberately does NOT expose
+            // Stripe Link as a distinct method — the product decision is
+            // the plain native PaymentSheet card experience, nothing
+            // cross-merchant. `PaymentMethod` enum only has `.stripe`,
+            // and `handleSponsorCheckoutTap` matches `case "stripe"`.
+            // Mapping here means one "Card" button that routes cleanly
+            // to native Stripe, instead of a "stripelink" string that
+            // falls through `handleSponsorCheckoutTap`'s `default:
+            // break` (latent bug — tapping "Card" after having tapped
+            // Klarna would leave `selectedPaymentMethod` at `.klarna`
+            // and fire the wrong flow).
+            return key == "stripelink" ? "stripe" : key
+        }
+        // de-dup also collapses the case where the backend ever sends
+        // BOTH "stripe" and "stripe_link" — both normalise to "stripe".
         var seen = Set<String>()
         return normalized.filter { seen.insert($0).inserted }
     }
