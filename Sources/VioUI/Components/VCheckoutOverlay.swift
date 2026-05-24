@@ -536,36 +536,49 @@ public struct VCheckoutOverlay: View {
     @ViewBuilder
     private var multiSponsorHeader: some View {
         let sponsorCount = cartManager.cartsBySponsor.count
-        let itemCount = cartManager.itemCountAcrossSponsors
-        VStack(alignment: .leading, spacing: VioSpacing.xs) {
-            Text("\(itemCount) varer fra \(sponsorCount) butikker")
-                .font(VioTypography.title2)
-                .foregroundColor(VioColors.textPrimary)
-            Text("Hver butikk betales separat med Apple Pay")
-                .font(VioTypography.caption1)
-                .foregroundColor(VioColors.textSecondary)
+        // Only show the multi-sponsor summary when there are 2+ sponsors.
+        // With a single sponsor the "X varer fra 1 butikker" line + the
+        // "Hver butikk betales separat" disclaimer are redundant — the
+        // single SponsorCheckoutSection below already conveys everything.
+        if sponsorCount > 1 {
+            let itemCount = cartManager.itemCountAcrossSponsors
+            VStack(alignment: .leading, spacing: VioSpacing.xs) {
+                Text("\(itemCount) varer fra \(sponsorCount) butikker")
+                    .font(VioTypography.title2)
+                    .foregroundColor(VioColors.textPrimary)
+                Text("Hver butikk betales separat med Apple Pay")
+                    .font(VioTypography.caption1)
+                    .foregroundColor(VioColors.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private var multiSponsorFooter: some View {
-        let total = cartManager.totalAcrossSponsors + cartManager.shippingTotalAcrossSponsors
-        let firstCurrency = cartManager.cartsBySponsor.values.first?.currency ?? cartManager.currency
-        VStack(spacing: VioSpacing.sm) {
-            Divider().background(Color.white.opacity(0.1))
-            HStack {
-                Text("Totalt på tvers av butikker")
-                    .font(VioTypography.body)
-                    .foregroundColor(VioColors.textSecondary)
-                Spacer()
-                Text(formatTotal(total, code: firstCurrency))
-                    .font(VioTypography.headline.weight(.bold))
-                    .foregroundColor(VioColors.textPrimary)
+        let sponsorCount = cartManager.cartsBySponsor.count
+        // Mirror multiSponsorHeader's gate: the "Totalt på tvers av butikker"
+        // framing only makes sense when there are 2+ stores. With one
+        // sponsor the SponsorCheckoutSection's own totalsRow already shows
+        // the same number — a second total below it just looks duplicated.
+        if sponsorCount > 1 {
+            let total = cartManager.totalAcrossSponsors + cartManager.shippingTotalAcrossSponsors
+            let firstCurrency = cartManager.cartsBySponsor.values.first?.currency ?? cartManager.currency
+            VStack(spacing: VioSpacing.sm) {
+                Divider().background(Color.white.opacity(0.1))
+                HStack {
+                    Text("Totalt på tvers av butikker")
+                        .font(VioTypography.body)
+                        .foregroundColor(VioColors.textSecondary)
+                    Spacer()
+                    Text(formatTotal(total, code: firstCurrency))
+                        .font(VioTypography.headline.weight(.bold))
+                        .foregroundColor(VioColors.textPrimary)
+                }
             }
+            .padding(.horizontal, VioSpacing.md)
+            .padding(.vertical, VioSpacing.sm)
         }
-        .padding(.horizontal, VioSpacing.md)
-        .padding(.vertical, VioSpacing.sm)
     }
 
     private func formatTotal(_ value: Double, code: String) -> String {
