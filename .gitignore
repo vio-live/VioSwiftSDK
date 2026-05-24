@@ -60,3 +60,4 @@ Sources/VioCore/Configuration/theme-examples/README.md
 create_trello_cards_new_features.py
 viaplay_production_plan.json
 .claude/
+.codex/
