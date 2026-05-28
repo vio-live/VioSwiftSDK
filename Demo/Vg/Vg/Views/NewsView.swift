@@ -23,6 +23,8 @@ struct NewsView: View {
     /// Called when the Maxbo advertorial teaser is tapped. The host
     /// (VGHomeView) presents the article view with a horizontal push.
     var onMaxboArticleTap: (() -> Void)?
+    /// Vev Design Test article (WKWebView + open-product deep links).
+    var onVevDesignTestTap: (() -> Void)?
 
     /// Resolve the sponsor logo URL for the in-feed advertorial badge.
     /// Prefer the wide horizontal logo (`logoUrl`) over the square avatar,
@@ -98,6 +100,8 @@ struct NewsView: View {
                 ) {
                     onMaxboArticleTap?()
                 }
+
+                vevDesignTestLink
 
                 if !viewModel.sisteNytt.isEmpty {
                     Spacer().frame(height: sectionGap + 4)
@@ -175,6 +179,23 @@ struct NewsView: View {
         // Previously this used `burgundy` which made the gaps invisible
         // (cards visually merged).
         .background(VGTheme.Colors.pageBackground)
+    }
+
+    // MARK: - Vev Design Test entry
+
+    private var vevDesignTestLink: some View {
+        Button {
+            onVevDesignTestTap?()
+        } label: {
+            Text("VEV Design Test")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .underline()
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
     }
 
     // MARK: - 2x2 grid helper

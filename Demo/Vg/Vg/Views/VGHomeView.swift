@@ -10,12 +10,19 @@ import VioUI
 import VioCore
 
 struct VGHomeView: View {
+    /// Which screen replaces the Nyheter feed (in-place, avoids modal stacking).
+    private enum NewsOverlay {
+        case feed
+        case maxboArticle
+        case vevDesignTest
+    }
+
     @State private var selectedTab = 0 // "Nyheter" (news) tab — default for VG demo
+    @State private var newsOverlay: NewsOverlay = .feed
     @State private var showMatchDetail = false
     @State private var selectedMatchTitle = ""
     @State private var selectedMatchSubtitle = ""
     @State private var showProducts = false
-    @State private var showMaxboArticle = false  // advertorial: push from right
     
     @EnvironmentObject private var cartManager: CartManager
     @EnvironmentObject private var checkoutDraft: CheckoutDraft
@@ -37,13 +44,23 @@ struct VGHomeView: View {
                 Group {
                     switch selectedTab {
                     case 0:
-                        if showMaxboArticle {
+                        switch newsOverlay {
+                        case .feed:
+                            NewsView(
+                                onMaxboArticleTap: {
+                                    newsOverlay = .maxboArticle
+                                },
+                                onVevDesignTestTap: {
+                                    newsOverlay = .vevDesignTest
+                                }
+                            )
+                        case .maxboArticle:
                             MaxboArticleView(onClose: {
-                                showMaxboArticle = false
+                                newsOverlay = .feed
                             })
-                        } else {
-                            NewsView(onMaxboArticleTap: {
-                                showMaxboArticle = true
+                        case .vevDesignTest:
+                            VGVevArticleView(onClose: {
+                                newsOverlay = .feed
                             })
                         }
                     case 1:
