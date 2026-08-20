@@ -216,6 +216,19 @@ let package = Package(
             name: "VioCoreTests",
             dependencies: [
                 "VioCore",
+                // SPM builds the whole package graph, so VioCore's
+                // canImport(Stripe*) turns true whenever VioUI builds —
+                // the test bundle must link the same products or the
+                // linker fails with undefined Stripe symbols.
+                .product(
+                    name: "StripePaymentSheet", package: "stripe-ios",
+                    condition: .when(platforms: [.iOS])),
+                .product(
+                    name: "StripeApplePay", package: "stripe-ios",
+                    condition: .when(platforms: [.iOS])),
+                .product(
+                    name: "StripePayments", package: "stripe-ios",
+                    condition: .when(platforms: [.iOS])),
             ],
             path: "Tests/VioCoreTests"
         ),

@@ -26,6 +26,8 @@ public class AnalyticsManager {
     private var impressionTimers: [String: Date] = [:]
     private var trackedComponentViews: Set<String> = [] // To avoid cumulative tracking (once per session)
     private var componentViewCounts: [String: Int] = [:] // Total view counter per component (for CPM)
+    /// Once-per-(collector session, component) guard for the Vio pipeline.
+    private var collectorImpressionKeys: Set<String> = []
     
     private init() {}
     
@@ -33,6 +35,17 @@ public class AnalyticsManager {
     
     public func configure(_ config: AnalyticsConfiguration) {
         self.configuration = config
+
+        // Vio collector transport (F5) — the primary pipeline. Independent
+        // of the legacy Mixpanel path below: on by default, api-key auth,
+        // env-aware endpoint. See VioAnalyticsClient.
+        if config.sendToVio {
+            let base = config.eventsBase ?? VioConfiguration.shared.environment.eventsURL
+            VioAnalyticsClient.shared.start(eventsBase: base) {
+                let key = VioConfiguration.shared.apiKey
+                return key.isEmpty ? nil : key
+            }
+        }
         
         guard config.enabled, let token = config.mixpanelToken, !token.isEmpty else {
             return
@@ -84,6 +97,10 @@ public class AnalyticsManager {
     // MARK: - User Identification
     
     public func identify(_ userId: String) {
+        // Explicit partner user id — forwarded to the Vio pipeline as-is.
+        // (Auto-identify from checkout emails does NOT reach here — PII
+        // never goes to the collector.)
+        VioAnalyticsClient.shared.identify(userId)
         #if canImport(Mixpanel)
         mixpanelInstance?.identify(distinctId: userId)
         #endif
@@ -172,6 +189,22 @@ public class AnalyticsManager {
             // Track unified "Component Viewed" event (only once per session)
             track("Component Viewed", properties: properties)
         }
+
+        // Vio pipeline: contract rule is ONE component_impression per
+        // (session, component) — scoped to the collector's rolling session,
+        // not this launch-scoped set.
+        let collectorKey = "\(VioAnalyticsClient.shared.currentSessionId)|\(viewKey)"
+        if !collectorImpressionKeys.contains(collectorKey) {
+            collectorImpressionKeys.insert(collectorKey)
+            VioAnalyticsClient.shared.track(
+                name: "component_impression",
+                context: contractContext(
+                    componentId: componentId,
+                    componentType: componentType,
+                    campaignId: currentCampaignId
+                )
+            )
+        }
         
         // IMPORTANT: Always track impression event for CPM
         // This event is tracked every time the component is viewed, regardless of whether it was already seen
@@ -225,6 +258,16 @@ public class AnalyticsManager {
         let eventName = "\(componentType.capitalized.replacingOccurrences(of: "_", with: " ")) Clicked"
         
         track(eventName, properties: properties)
+
+        VioAnalyticsClient.shared.track(
+            name: "component_click",
+            context: contractContext(
+                componentId: componentId,
+                componentType: componentType,
+                campaignId: campaignId ?? CampaignManager.shared.currentCampaign?.id
+            ),
+            props: ["action": .string(action)]
+        )
     }
     
     public func trackComponentImpression(
@@ -282,6 +325,23 @@ public class AnalyticsManager {
         }
         
         track("Product Viewed", properties: properties)
+
+        VioAnalyticsClient.shared.track(
+            name: "view_item",
+            context: contractContext(
+                componentId: componentId,
+                componentType: componentType,
+                campaignId: CampaignManager.shared.currentCampaign?.id
+            ),
+            commerce: VioAnalyticsClient.Commerce(
+                items: [VioAnalyticsClient.Item(
+                    productId: productId, name: productName, price: productPrice
+                )],
+                value: productPrice,
+                currency: productCurrency
+            ),
+            props: source.map { ["source": .string($0)] }
+        )
     }
     
     public func trackProductAddedToCart(
@@ -319,6 +379,24 @@ public class AnalyticsManager {
         }
         
         track("Product Added to Cart", properties: properties)
+
+        VioAnalyticsClient.shared.track(
+            name: "add_to_cart",
+            context: contractContext(
+                componentId: componentId,
+                componentType: nil,
+                campaignId: CampaignManager.shared.currentCampaign?.id
+            ),
+            commerce: VioAnalyticsClient.Commerce(
+                items: [VioAnalyticsClient.Item(
+                    productId: productId, name: productName,
+                    price: productPrice, quantity: quantity
+                )],
+                value: productPrice.map { $0 * Double(quantity) },
+                currency: productCurrency
+            ),
+            props: source.map { ["source": .string($0)] }
+        )
     }
     
     // MARK: - Transaction Tracking
@@ -390,6 +468,16 @@ public class AnalyticsManager {
         }
         
         track("Checkout Started", properties: properties)
+
+        VioAnalyticsClient.shared.track(
+            name: "begin_checkout",
+            context: contractContext(
+                componentId: nil, componentType: nil,
+                campaignId: CampaignManager.shared.currentCampaign?.id
+            ),
+            commerce: VioAnalyticsClient.Commerce(value: cartValue, currency: currency),
+            props: ["product_count": .int(productCount), "checkout_id": .string(checkoutId)]
+        )
     }
     
     public func trackTransaction(
@@ -447,6 +535,30 @@ public class AnalyticsManager {
         #endif
         
         track("Checkout Completed", properties: properties)
+
+        let contractItems: [VioAnalyticsClient.Item] = products.compactMap { product in
+            guard let id = product["product_id"] ?? product["id"] else { return nil }
+            return VioAnalyticsClient.Item(
+                productId: String(describing: id),
+                name: product["name"] as? String ?? product["product_name"] as? String,
+                price: product["price"] as? Double,
+                quantity: product["quantity"] as? Int
+            )
+        }
+        VioAnalyticsClient.shared.track(
+            name: "purchase",
+            context: contractContext(
+                componentId: nil, componentType: nil,
+                campaignId: CampaignManager.shared.currentCampaign?.id
+            ),
+            commerce: VioAnalyticsClient.Commerce(
+                items: contractItems.isEmpty ? nil : contractItems,
+                value: revenue,
+                currency: currency,
+                orderId: transactionId ?? checkoutId,
+                paymentMethod: paymentMethod
+            )
+        )
         
         // Track revenue en Mixpanel People
         #if canImport(Mixpanel)
@@ -512,6 +624,29 @@ public class AnalyticsManager {
         #endif
     }
     
+    // MARK: - Vio pipeline helpers
+
+    /// Legacy componentId strings can be a numeric campaign_component id or
+    /// a template slug — route each to the right contract dimension.
+    private func contractContext(
+        componentId: String?,
+        componentType: String?,
+        campaignId: Int?
+    ) -> VioAnalyticsClient.Context {
+        var context = VioAnalyticsClient.Context(campaignId: campaignId)
+        if let componentId {
+            if let numeric = Int(componentId) {
+                context.campaignComponentId = numeric
+            } else {
+                context.componentTemplateId = componentId
+            }
+        }
+        if let componentType, context.componentTemplateId == nil {
+            context.componentTemplateId = componentType
+        }
+        return context
+    }
+
     // MARK: - Impression Tracking Helper
     
     public func endImpression(componentId: String, componentType: String) {

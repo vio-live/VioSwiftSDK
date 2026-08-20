@@ -15,6 +15,12 @@ public struct AnalyticsConfiguration {
     public let trackProductEvents: Bool
     public let autocapture: Bool
     public let recordSessionsPercent: Int
+    /// Vio collector pipeline (contract v1) — on by default, independent of
+    /// the legacy Mixpanel path. See VioAnalyticsClient.
+    public let sendToVio: Bool
+    /// Override the collector base URL (default is env-aware:
+    /// events-dev / events.vio.live).
+    public let eventsBase: String?
     
     public static let `default` = AnalyticsConfiguration(
         enabled: false,
@@ -26,7 +32,9 @@ public struct AnalyticsConfiguration {
         trackTransactions: true,
         trackProductEvents: true,
         autocapture: false,
-        recordSessionsPercent: 0
+        recordSessionsPercent: 0,
+        sendToVio: true,
+        eventsBase: nil
     )
     
     public init(
@@ -39,7 +47,9 @@ public struct AnalyticsConfiguration {
         trackTransactions: Bool = true,
         trackProductEvents: Bool = true,
         autocapture: Bool = false,
-        recordSessionsPercent: Int = 0
+        recordSessionsPercent: Int = 0,
+        sendToVio: Bool = true,
+        eventsBase: String? = nil
     ) {
         self.enabled = enabled
         self.mixpanelToken = mixpanelToken
@@ -51,6 +61,8 @@ public struct AnalyticsConfiguration {
         self.trackProductEvents = trackProductEvents
         self.autocapture = autocapture
         self.recordSessionsPercent = recordSessionsPercent
+        self.sendToVio = sendToVio
+        self.eventsBase = eventsBase
     }
 }
 
