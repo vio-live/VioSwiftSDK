@@ -960,7 +960,7 @@ private struct JSONLocalizationConfiguration: Codable {
 }
 
 private struct JSONCampaignConfiguration: Codable {
-    let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-dev.vio.live")
+    let webSocketBaseURL: String?  // WebSocket endpoint (e.g., "https://api-staging.vio.live")
     let restAPIBaseURL: String?    // REST API endpoint (e.g., "https://api.vio.live")
     let campaignAdminApiKey: String?  // API key for campaign admin endpoints (different from SDK API key) - Only needed if autoDiscover is false
     let campaignApiKey: String?  // API key for GET /v1/sdk/broadcast and GET /v1/sdk/campaigns (contentId flow)
