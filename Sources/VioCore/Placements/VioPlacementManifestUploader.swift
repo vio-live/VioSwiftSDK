@@ -87,10 +87,13 @@ public enum VioPlacementManifestUploader {
         // Surface warnings so a typo (e.g. empty locationId) isn't silent.
         if let warnings = decoded.warnings, !warnings.isEmpty {
             for w in warnings {
-                print("⚠️ [VioPlacementManifest] \(w.kind): \(w.detail)")
+                VioLogger.warning("\(w.kind): \(w.detail)", component: "VioPlacementManifest")
             }
         }
-        print("🧩 [VioPlacementManifest] uploaded → locations=\(decoded.locations.count) deprecated=\(decoded.deprecatedCount ?? 0) warnings=\(decoded.warnings?.count ?? 0)")
+        VioLogger.debug(
+            "uploaded → locations=\(decoded.locations.count) deprecated=\(decoded.deprecatedCount ?? 0) warnings=\(decoded.warnings?.count ?? 0)",
+            component: "VioPlacementManifest"
+        )
 
         return decoded
     }

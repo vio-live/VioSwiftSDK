@@ -167,7 +167,10 @@ public struct VApplePayButton: View {
     }
 
     private func initiatePayment() {
-        print("🚀 [VApplePayButton] initiatePayment tapped for product: \(productName), amount: \(amount), sponsorId: \(sponsorId.map(String.init) ?? "-")")
+        VioLogger.debug(
+            "initiatePayment tapped for product: \(productName), amount: \(amount), sponsorId: \(sponsorId.map(String.init) ?? "-")",
+            component: "VApplePayButton"
+        )
         applePayManager.paymentResult = nil
         Task {
             // Q4 L3 (2026-04-30): when this button is rendered inside a

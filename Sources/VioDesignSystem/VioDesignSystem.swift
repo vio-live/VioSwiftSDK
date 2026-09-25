@@ -5,14 +5,15 @@
 
 import Foundation
 import SwiftUI
+import VioCore
 
 /// Main entry point for Vio Design System
 public struct VioDesignSystem {
-    
+
     /// Initialize design system
     public static func configure() {
         // Future: Load custom fonts, configure themes, etc.
-        print("🎨 Vio Design System initialized")
+        VioLogger.debug("Vio Design System initialized", component: "VioDesignSystem")
     }
 }
 
