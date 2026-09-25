@@ -201,11 +201,11 @@ public struct VFloatingCartIndicator: View {
                     .fontWeight(.medium)
                     .foregroundColor(adaptiveColors.textOnPrimary.opacity(0.9))
                 
-                Text("\(cartManager.currency) \(String(format: "%.2f", cartManager.cartTotal))")
+                Text("\(cartManager.currencyAcrossAllCarts) \(String(format: "%.2f", cartManager.totalAcrossAllCarts))")
                     .font(size == .small ? .system(size: 12, weight: .semibold) : VioTypography.bodyBold)
                     .foregroundColor(adaptiveColors.textOnPrimary)
             }
-            
+
             // Checkout arrow
             Image(systemName: "chevron.right")
                 .font(size == .small ? .system(size: 10) : .caption)
@@ -225,7 +225,7 @@ public struct VFloatingCartIndicator: View {
             cartIconWithBadge
             
             // Price only
-            Text("\(cartManager.currency) \(String(format: "%.2f", cartManager.cartTotal))")
+            Text("\(cartManager.currencyAcrossAllCarts) \(String(format: "%.2f", cartManager.totalAcrossAllCarts))")
                 .font(size == .small ? .system(size: 12, weight: .semibold) : VioTypography.bodyBold)
                 .foregroundColor(adaptiveColors.textOnPrimary)
         }

@@ -765,8 +765,14 @@ extension CartManager {
         }
     }
 
+    /// Total item quantity in cart, summed across the legacy `items` array
+    /// AND every per-sponsor cart in `cartsBySponsor`, so multi-sponsor
+    /// hosts (e.g. `VFloatingCartIndicator`) see the real count instead of
+    /// 0 when items only live in sponsor carts. Pre-Q4 hosts are unaffected
+    /// because `cartsBySponsor` is empty in that case.
     public var itemCount: Int {
-        items.reduce(0) { $0 + $1.quantity }
+        let legacy = items.reduce(0) { $0 + $1.quantity }
+        return legacy + itemCountAcrossSponsors
     }
 
     // MARK: - Helpers
