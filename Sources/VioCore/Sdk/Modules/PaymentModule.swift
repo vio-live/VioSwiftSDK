@@ -24,8 +24,9 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         -> PaymentIntentStripeDto
     {
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
-        print(
-            "💳 [PaymentModule] stripeIntent request checkoutId=\(checkoutId) returnEphemeralKey=\(returnEphemeralKey.map(String.init) ?? "nil")"
+        VioLogger.debug(
+            "stripeIntent request checkoutId=\(checkoutId) returnEphemeralKey=\(returnEphemeralKey.map(String.init) ?? "nil")",
+            component: "PaymentModule"
         )
 
         let vars: [String: Any?] = [
@@ -44,8 +45,9 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             throw SdkException("Empty response in Payment.stripeIntent", code: "EMPTY_RESPONSE")
         }
         let dto = try GraphQLPick.decodeJSON(obj, as: PaymentIntentStripeDto.self)
-        print(
-            "💳 [PaymentModule] stripeIntent response publishableKey=\(maskedStripeKey(dto.publishableKey)) customer=\(dto.customer)"
+        VioLogger.debug(
+            "stripeIntent response publishableKey=\(maskedStripeKey(dto.publishableKey)) customer=\(dto.customer)",
+            component: "PaymentModule"
         )
         return dto
     }
@@ -136,14 +138,11 @@ public final class PaymentRepositoryGQL: PaymentRepository {
         checkoutId: String,
         input: KlarnaNativeInitInputDto
     ) async throws -> InitPaymentKlarnaNativeDto {
-        print("🌐🌐🌐 [VioCore.PaymentModule] klarnaNativeInit LLAMADO")
-        print("🌐 checkoutId: \(checkoutId)")
-        print("🌐 countryCode: \(input.countryCode ?? "nil")")
-        print("🌐 currency: \(input.currency ?? "nil")")
-        print("🌐 locale: \(input.locale ?? "nil")")
-        print("🌐 returnUrl: \(input.returnUrl ?? "nil")")
-        print("🌐 customer.email: \(input.customer?.email ?? "nil")")
-        
+        VioLogger.debug(
+            "klarnaNativeInit checkoutId=\(checkoutId) countryCode=\(input.countryCode ?? "nil") currency=\(input.currency ?? "nil") locale=\(input.locale ?? "nil") returnUrl=\(input.returnUrl ?? "nil") emailPresent=\(input.customer?.email?.isEmpty == false)",
+            component: "PaymentModule"
+        )
+
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         if let country = input.countryCode { try Validation.requireCountry(country) }
         if let currency = input.currency { try Validation.requireCurrency(currency) }
@@ -173,63 +172,38 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             vars["shippingAddress"] = try encodeToDictionary(shipping)
         }
 
-        print("🌐 [VioCore] Enviando mutation a backend Vio...")
-        print("🌐 Variables: \(vars.compactMapValues { $0 })")
-        
+        VioLogger.debug("klarnaNativeInit sending mutation to Vio backend", component: "PaymentModule")
+
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.KLARNA_NATIVE_INIT_PAYMENT_MUTATION,
             variables: vars.compactMapValues { $0 }
         )
-        
-        print("🌐 [VioCore] Backend respondió")
-        if let dataKeys = res.data?.keys {
-            print("🌐 Response data keys: \(dataKeys)")
-        } else {
-            print("🌐 Response data es nil")
-        }
-        
-        // Mostrar respuesta completa del backend
-        if let data = res.data {
-            print("📦📦📦 [VioCore] RESPUESTA COMPLETA DEL BACKEND:")
-            if let jsonData = try? JSONSerialization.data(withJSONObject: data, options: .prettyPrinted),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                print(jsonString)
-            } else {
-                print("📦 \(data)")
-            }
-        }
-        
-        // Mostrar errores si los hay
+
+        VioLogger.debug(
+            "klarnaNativeInit backend responded, data keys=\(res.data?.keys.map(String.init(describing:)) ?? [])",
+            component: "PaymentModule"
+        )
+
         if let errors = res.errors, !errors.isEmpty {
-            print("⚠️⚠️⚠️ [VioCore] ERRORES EN LA RESPUESTA:")
-            for error in errors {
-                print("⚠️ \(error)")
-            }
+            VioLogger.warning("klarnaNativeInit GraphQL errors: \(errors)", component: "PaymentModule")
         }
-        
+
         guard
             let obj: [String: Any] = GraphQLPick.pickPath(
                 res.data, path: ["Payment", "CreatePaymentKlarnaNative"])
         else {
-            print("❌❌❌ [VioCore] ERROR: Empty response from backend")
-            print("❌ Path esperado: Payment -> CreatePaymentKlarnaNative")
-            print("❌ res.data completo: \(String(describing: res.data))")
-            if let errors = res.errors {
-                print("❌ GraphQL errors: \(errors)")
-            }
+            VioLogger.error(
+                "klarnaNativeInit empty response — expected Payment.CreatePaymentKlarnaNative, res.data=\(String(describing: res.data)), errors=\(res.errors ?? [])",
+                component: "PaymentModule"
+            )
             throw SdkException("Empty response in Payment.klarnaNativeInit", code: "EMPTY_RESPONSE")
         }
-        
-        print("✅ [VioCore] Objeto extraído correctamente del path")
-        print("📦 Objeto a decodificar: \(obj)")
-        
-        print("✅ [VioCore] Decodificando respuesta...")
+
         let dto = try GraphQLPick.decodeJSON(obj, as: InitPaymentKlarnaNativeDto.self)
-        print("✅✅✅ [VioCore] DTO decodificado correctamente")
-        print("✅ sessionId: \(dto.sessionId)")
-        print("✅ checkoutId: \(dto.checkoutId)")
-        print("✅ clientToken: \(dto.clientToken.prefix(30))...")
-        print("✅ paymentMethodCategories count: \(dto.paymentMethodCategories?.count ?? 0)")
+        VioLogger.debug(
+            "klarnaNativeInit decoded sessionId=\(dto.sessionId) checkoutId=\(dto.checkoutId) clientToken=\(dto.clientToken.prefix(30))... paymentMethodCategories count=\(dto.paymentMethodCategories?.count ?? 0)",
+            component: "PaymentModule"
+        )
         return dto
     }
 
@@ -292,7 +266,7 @@ public final class PaymentRepositoryGQL: PaymentRepository {
     }
 
     public func applePayInit(checkoutId: String) async throws -> InitPaymentApplePayDto {
-        print("🛠️ [PaymentModule] applePayInit(checkoutId: \(checkoutId)) calling GraphQL...")
+        VioLogger.debug("applePayInit(checkoutId: \(checkoutId)) calling GraphQL...", component: "PaymentModule")
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         let res = try await client.runMutationSafe(
             query: PaymentGraphQL.APPLE_PAY_INIT_MUTATION,
@@ -315,8 +289,9 @@ public final class PaymentRepositoryGQL: PaymentRepository {
     ) async throws -> ConfirmPaymentApplePayDto {
         try Validation.requireNonEmpty(checkoutId, field: "checkoutId")
         try Validation.requireNonEmpty(applePayToken, field: "applePayToken")
-        print(
-            "💳 [PaymentModule] applePayConfirm request checkoutId=\(checkoutId) token=\(maskedToken(applePayToken)) emailPresent=\(email?.isEmpty == false) shippingPresent=\(shippingAddress != nil)"
+        VioLogger.debug(
+            "applePayConfirm request checkoutId=\(checkoutId) token=\(maskedToken(applePayToken)) emailPresent=\(email?.isEmpty == false) shippingPresent=\(shippingAddress != nil)",
+            component: "PaymentModule"
         )
 
         var vars: [String: Any?] = [
@@ -339,7 +314,10 @@ public final class PaymentRepositoryGQL: PaymentRepository {
             throw SdkException("Empty response in Payment.applePayConfirm", code: "EMPTY_RESPONSE")
         }
         let dto = try GraphQLPick.decodeJSON(obj, as: ConfirmPaymentApplePayDto.self)
-        print("💳 [PaymentModule] applePayConfirm response status=\(dto.status ?? "nil") orderId=\(dto.orderId ?? "-")")
+        VioLogger.debug(
+            "applePayConfirm response status=\(dto.status ?? "nil") orderId=\(dto.orderId ?? "-")",
+            component: "PaymentModule"
+        )
         return dto
     }
 

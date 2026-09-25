@@ -134,7 +134,7 @@ public struct VioColors {
     public static func updateForColorScheme(_ colorScheme: SwiftUI.ColorScheme) {
         let theme = VioConfiguration.shared.theme
         _currentColorScheme = theme.colors(for: colorScheme)
-        print("🎨 [VioColors] Updated static colors for \(colorScheme == .dark ? "dark" : "light") mode")
+        VioLogger.debug("Updated static colors for \(colorScheme == .dark ? "dark" : "light") mode", component: "VioColors")
     }
     
     // MARK: - Adaptive Color Access

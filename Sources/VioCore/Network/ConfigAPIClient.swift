@@ -41,7 +41,7 @@ struct ConfigAPIClient {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/campaigns/\(campaignId)/config — apiKey len=\(currentApiKey.count) (valor no logueado)")
+                VioLogger.warning("\(httpResponse.statusCode) on /v1/campaigns/\(campaignId)/config — apiKey len=\(currentApiKey.count) (valor no logueado)", component: "ConfigAPIClient")
             }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }
@@ -82,7 +82,7 @@ struct ConfigAPIClient {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/engagement/config — apiKey len=\(currentApiKey.count) (valor no logueado)")
+                VioLogger.warning("\(httpResponse.statusCode) on /v1/engagement/config — apiKey len=\(currentApiKey.count) (valor no logueado)", component: "ConfigAPIClient")
             }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }
@@ -131,7 +131,7 @@ struct ConfigAPIClient {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                print("⚠️ [ConfigAPIClient] \(httpResponse.statusCode) on /v1/localization/\(language) — apiKey len=\(currentApiKey.count) (valor no logueado)")
+                VioLogger.warning("\(httpResponse.statusCode) on /v1/localization/\(language) — apiKey len=\(currentApiKey.count) (valor no logueado)", component: "ConfigAPIClient")
             }
             throw ConfigAPIError.httpError(statusCode: httpResponse.statusCode)
         }

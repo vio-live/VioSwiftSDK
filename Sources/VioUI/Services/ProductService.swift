@@ -22,7 +22,7 @@ public class ProductService {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.clearCache()
-                print("🎯 [ProductService] GraphQL cache cleared — vioCommerceBootstrapDidApply")
+                VioLogger.debug("GraphQL cache cleared — vioCommerceBootstrapDidApply", component: "ProductService")
             }
         }
     }
@@ -56,7 +56,7 @@ public class ProductService {
         } else {
             commerceSource = "sdk apiKey fallback (añade sponsor commerceApiKey en backend o campaigns.commerceApiKey en vio-config)"
         }
-        print("🎯 [ProductService] GraphQL Authorization: \(commerceSource) authKey len=\(client.apiKey.count) (valor no logueado)")
+        VioLogger.debug("GraphQL Authorization: \(commerceSource) authKey len=\(client.apiKey.count) (valor no logueado)", component: "ProductService")
         VioLogger.debug("Created SDK client sponsorId=\(sponsorId.map(String.init) ?? "nil") (bootstrap commerce: \(config.sdkBootstrapCommerceApiKey != nil))", component: "ProductService")
 
         return client
@@ -150,7 +150,10 @@ public class ProductService {
             if let sponsorId, VioConfiguration.shared.commerce(forSponsorId: sponsorId) != nil { return "sponsor:\(sponsorId)" }
             return VioConfiguration.shared.sdkBootstrapCommerceApiKey != nil ? "bootstrap" : "fallback"
         }()
-        print("🎯 [ProductService] loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)")
+        VioLogger.debug(
+            "loadProduct → GraphQL GET product id=\(productId) url=\(gqlURL) auth=\(keySrc) cc=\(country) cur=\(currency)",
+            component: "ProductService"
+        )
         let dtoProducts = try await runWithCommerceAuthRetry(operationName: "loadProduct", sponsorId: sponsorId) { sdk in
             try await sdk.channel.product.get(
                 currency: currency,
@@ -166,12 +169,14 @@ public class ProductService {
         
         guard let dtoProduct = dtoProducts.first else {
             VioLogger.warning("Product not found for ID: \(productId)", component: "ProductService")
-            print("🎯 [ProductService] loadProduct ← GraphQL OK pero 0 filas para id=\(productId)")
             throw ProductServiceError.productNotFound(productId)
         }
-        
+
         let product = dtoProduct.toDomainProduct()
-        print("🎯 [ProductService] loadProduct ← OK id=\(product.id) title=\(product.title) sku=\(product.sku) (commerce conectado)")
+        VioLogger.debug(
+            "loadProduct ← OK id=\(product.id) title=\(product.title) sku=\(product.sku) (commerce conectado)",
+            component: "ProductService"
+        )
         return product
     }
     

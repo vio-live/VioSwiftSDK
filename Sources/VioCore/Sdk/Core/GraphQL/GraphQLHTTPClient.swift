@@ -39,11 +39,13 @@ public final class GraphQLHTTPClient {
     {
         let requestId = String(UUID().uuidString.prefix(8))
         let operation = parseOperation(from: query)
-        print("📡 [GraphQLHTTPClient][\(requestId)] POST \(baseURL) [\(operation.kind) \(operation.name)]")
+        VioLogger.debug(
+            "[\(requestId)] POST \(baseURL) [\(operation.kind) \(operation.name)] Authorization=\(maskedApiKey(apiKey))",
+            component: "GraphQLHTTPClient"
+        )
         var req = URLRequest(url: baseURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        print("🔐 [GraphQLHTTPClient][\(requestId)] Authorization=\(maskedApiKey(apiKey))")
         req.setValue(apiKey, forHTTPHeaderField: "Authorization")
         let payload: [String: Any] = ["query": query, "variables": variables]
         req.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
@@ -53,9 +55,9 @@ public final class GraphQLHTTPClient {
             let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
             let bodyString = String(data: data, encoding: .utf8) ?? ""
 
-            print("📬 [GraphQLHTTPClient][\(requestId)] Response status: \(status)")
+            VioLogger.debug("[\(requestId)] Response status: \(status)", component: "GraphQLHTTPClient")
             if status != 200 {
-                print("⚠️ [GraphQLHTTPClient][\(requestId)] Non-200 body: \(bodyString)")
+                VioLogger.warning("[\(requestId)] Non-200 body: \(bodyString)", component: "GraphQLHTTPClient")
             }
 
             let root = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
@@ -63,7 +65,7 @@ public final class GraphQLHTTPClient {
             let dataObj = root["data"] as? [String: Any]
 
             if let errs = errors, !errs.isEmpty {
-                print("❌ [GraphQLHTTPClient][\(requestId)] GraphQL Errors: \(errs)")
+                VioLogger.error("[\(requestId)] GraphQL Errors: \(errs)", component: "GraphQLHTTPClient")
                 let first = errs[0]
                 let message = (first["message"] as? String) ?? "GraphQL error"
                 var det: [String: Any] = [:]
@@ -85,7 +87,7 @@ public final class GraphQLHTTPClient {
         } catch let e as SdkException {
             throw e
         } catch {
-            print("🛑 [GraphQLHTTPClient][\(requestId)] Network failure: \(error.localizedDescription)")
+            VioLogger.error("[\(requestId)] Network failure: \(error.localizedDescription)", component: "GraphQLHTTPClient")
             throw NetworkError("Network failure", details: ["original": String(describing: error)])
         }
     }
