@@ -79,7 +79,10 @@ public struct CacheHelper {
         }
     }
 
-    /// Clear both campaign cache and image cache when configuration changes
+    /// Clear both campaign cache and image cache when configuration changes.
+    /// Main-actor isolated because both caches are (Swift 6 / Xcode 26 refuses
+    /// the nonisolated call).
+    @MainActor
     public static func clearAllCaches() {
         // Clear campaign cache (from SDK)
         CacheManager.shared.clearCache()
