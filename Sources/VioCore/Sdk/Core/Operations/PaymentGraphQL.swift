@@ -26,6 +26,7 @@ public enum PaymentGraphQL {
           client_secret
           customer
           publishable_key
+          stripe_account
           ephemeral_key
         }
       }

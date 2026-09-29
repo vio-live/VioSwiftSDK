@@ -10,12 +10,15 @@ public struct PaymentIntentStripeDto: Codable, Equatable {
     public let customer: String
     public let publishableKey: String
     public let ephemeralKey: String?
+    /// Stripe Connect (ADR-0022): the seller's connected account. Nil otherwise.
+    public let stripeAccount: String?
 
     enum CodingKeys: String, CodingKey {
         case clientSecret = "client_secret"
         case customer
         case publishableKey = "publishable_key"
         case ephemeralKey = "ephemeral_key"
+        case stripeAccount = "stripe_account"
     }
 }
 
