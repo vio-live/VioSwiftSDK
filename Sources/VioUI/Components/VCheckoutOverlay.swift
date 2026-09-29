@@ -2310,6 +2310,18 @@ public struct VCheckoutOverlay: View {
             if let ek = ephemeralKey, let cid = customerId {
                 config.customer = .init(id: cid, ephemeralKeySecret: ek)
             }
+            // Stripe Connect (ADR-0022): the intent lives on the seller's
+            // connected account, so this sheet talks to Stripe AS that
+            // account. Scoped to this sheet only; without Connect the sheet
+            // keeps the shared client, exactly as before.
+            let stripeAccount: String? = pick(dict, ["stripe_account", "stripeAccount"])
+            let publishableKey: String? = pick(dict, ["publishable_key", "publishableKey"])
+            if let account = stripeAccount, account.hasPrefix("acct_"),
+               let key = publishableKey, !key.isEmpty {
+                let client = STPAPIClient(publishableKey: key)
+                client.stripeAccount = account
+                config.apiClient = client
+            }
 
             self.paymentSheet = PaymentSheet(
                 paymentIntentClientSecret: secret,
