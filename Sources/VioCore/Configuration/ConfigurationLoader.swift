@@ -457,7 +457,8 @@ public class ConfigurationLoader {
             enableGuestCheckout: config.enableGuestCheckout,
             requirePhoneNumber: config.requirePhoneNumber ?? true,
             defaultShippingCountry: config.defaultShippingCountry ?? "US",
-            supportedPaymentMethods: config.supportedPaymentMethods ?? ["stripe", "klarna", "paypal"]
+            supportedPaymentMethods: config.supportedPaymentMethods ?? ["stripe", "klarna", "paypal"],
+            stripeReturnURL: config.stripeReturnURL
         )
     }
     
@@ -871,6 +872,7 @@ private struct JSONCartConfiguration: Codable {
     let requirePhoneNumber: Bool?
     let defaultShippingCountry: String?
     let supportedPaymentMethods: [String]?
+    let stripeReturnURL: String?
 }
 
 private struct JSONNetworkConfiguration: Codable {

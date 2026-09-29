@@ -2310,6 +2310,12 @@ public struct VCheckoutOverlay: View {
             if let ek = ephemeralKey, let cid = customerId {
                 config.customer = .init(id: cid, ephemeralKeySecret: ek)
             }
+            // Methods that leave the app (Klarna / Vipps through Stripe) need
+            // a URL the host app owns; without one PaymentSheet hides them.
+            if let returnURL = VioConfiguration.shared.cartConfiguration.stripeReturnURL,
+               !returnURL.isEmpty {
+                config.returnURL = returnURL
+            }
             // Stripe Connect (ADR-0022): the intent lives on the seller's
             // connected account, so this sheet talks to Stripe AS that
             // account. Scoped to this sheet only; without Connect the sheet

@@ -26,6 +26,12 @@ public struct CartConfiguration {
     public let requirePhoneNumber: Bool
     public let defaultShippingCountry: String
     public let supportedPaymentMethods: [String]
+    /// The URL Stripe returns to after a method that leaves the app (Klarna,
+    /// Vipps through Stripe — Stripe Connect sellers, ADR-0022). The host app
+    /// must own this URL (custom scheme or universal link) and forward it to
+    /// `StripeAPI.handleURLCallback(with:)`. Without it, PaymentSheet simply
+    /// hides those methods — cards and Apple Pay are unaffected.
+    public let stripeReturnURL: String?
     
     public init(
         floatingCartPosition: FloatingCartPosition = .bottomRight,
@@ -38,7 +44,8 @@ public struct CartConfiguration {
         enableGuestCheckout: Bool = true,
         requirePhoneNumber: Bool = true,
         defaultShippingCountry: String = "US",
-        supportedPaymentMethods: [String] = ["stripe", "klarna", "paypal"]
+        supportedPaymentMethods: [String] = ["stripe", "klarna", "paypal"],
+        stripeReturnURL: String? = nil
     ) {
         self.floatingCartPosition = floatingCartPosition
         self.floatingCartDisplayMode = floatingCartDisplayMode
@@ -51,6 +58,7 @@ public struct CartConfiguration {
         self.requirePhoneNumber = requirePhoneNumber
         self.defaultShippingCountry = defaultShippingCountry
         self.supportedPaymentMethods = supportedPaymentMethods
+        self.stripeReturnURL = stripeReturnURL
     }
     
     public static let `default` = CartConfiguration()
